@@ -23,7 +23,6 @@ let currentTableType = "league";
 document.addEventListener("DOMContentLoaded", () => {
 
     loadHome();
-
     setupHomepageInteractions();
 
 });
@@ -41,14 +40,12 @@ async function loadHome() {
         }
     } = await supabaseClient.auth.getUser();
 
-
     if (!user) {
 
         window.location.href = "login.html";
-
         return;
-    }
 
+    }
 
     currentUser = user;
 
@@ -68,7 +65,6 @@ async function loadHome() {
         .eq("id", user.id)
         .single();
 
-
     if (
         profileError ||
         !profile ||
@@ -76,8 +72,8 @@ async function loadHome() {
     ) {
 
         window.location.href = "choose-team.html";
-
         return;
+
     }
 
 
@@ -105,14 +101,12 @@ async function loadHome() {
         )
         .single();
 
-
     if (teamError || !team) {
 
         window.location.href = "choose-team.html";
-
         return;
-    }
 
+    }
 
     currentTeam = team;
 
@@ -126,12 +120,10 @@ async function loadHome() {
         team.primary_color || "#a50044"
     );
 
-
     document.documentElement.style.setProperty(
         "--team-secondary",
         team.secondary_color || "#004d98"
     );
-
 
     if (team.slug === "barcelona") {
 
@@ -160,7 +152,6 @@ async function loadHome() {
     const teamSubtitle =
         document.getElementById("team-subtitle");
 
-
     if (teamTitle) {
 
         teamTitle.textContent =
@@ -169,7 +160,6 @@ async function loadHome() {
                 : "HALA MADRID";
 
     }
-
 
     if (teamSubtitle) {
 
@@ -220,15 +210,18 @@ async function loadFeaturedContent(teamId) {
     const track =
         document.getElementById("featured-track");
 
-
     if (!track) {
         return;
     }
 
 
+    // --------------------------------------------------------
+    // MANUALLY CREATED DESTAQUES
+    // --------------------------------------------------------
+
     const {
-        data,
-        error
+        data: contentData,
+        error: contentError
     } = await supabaseClient
         .from("content")
         .select("*")
@@ -251,33 +244,115 @@ async function loadFeaturedContent(teamId) {
         );
 
 
-    if (error) {
+    if (contentError) {
 
         console.error(
             "Erro ao carregar destaques:",
-            error
+            contentError
         );
 
-        renderEmptyFeatured();
-
-        return;
     }
 
 
-    const activeItems =
-        filterActiveContent(data || []);
+    const manualFeatured =
+        filterActiveContent(
+            contentData || []
+        );
 
 
-    if (!activeItems.length) {
+    // --------------------------------------------------------
+    // LATEST 3 NEWS
+    // --------------------------------------------------------
+
+    const {
+        data: latestNews,
+        error: newsError
+    } = await supabaseClient
+        .from("news")
+        .select(`
+            id,
+            team_id,
+            title,
+            translated_title,
+            description,
+            translated_description,
+            image_url,
+            article_url,
+            source_name,
+            author,
+            published_at,
+            imported_at,
+            category,
+            status,
+            created_at
+        `)
+        .eq(
+            "status",
+            "published"
+        )
+        .or(
+            `team_id.eq.${teamId},team_id.is.null`
+        )
+        .order(
+            "published_at",
+            {
+                ascending: false,
+                nullsFirst: false
+            }
+        )
+        .order(
+            "created_at",
+            {
+                ascending: false
+            }
+        )
+        .limit(3);
+
+
+    if (newsError) {
+
+        console.error(
+            "Erro ao carregar notícias para destaques:",
+            newsError
+        );
+
+    }
+
+
+    const featuredNews =
+        (latestNews || [])
+            .filter(
+                item =>
+                    item.article_url
+            )
+            .map(
+                item => ({
+                    ...item,
+                    __source: "news"
+                })
+            );
+
+
+    // --------------------------------------------------------
+    // NEWS FIRST + MANUAL DESTAQUES
+    // --------------------------------------------------------
+
+    const combined = [
+        ...featuredNews,
+        ...manualFeatured
+    ];
+
+
+    if (!combined.length) {
 
         renderEmptyFeatured();
-
         return;
+
     }
 
 
     renderFeaturedSlides(
-        activeItems
+        combined
     );
 
 }
@@ -295,14 +370,11 @@ function renderFeaturedSlides(items) {
     const dots =
         document.getElementById("featured-dots");
 
-
     if (!track) {
         return;
     }
 
-
     track.innerHTML = "";
-
 
     if (dots) {
         dots.innerHTML = "";
@@ -315,13 +387,33 @@ function renderFeaturedSlides(items) {
             const slide =
                 document.createElement("article");
 
-
             slide.className =
                 "featured-slide";
 
-
             slide.dataset.index =
                 index;
+
+
+            const isNews =
+                item.__source === "news";
+
+
+            const title =
+                isNews
+                    ? (
+                        item.translated_title ||
+                        item.title
+                    )
+                    : item.title;
+
+
+            const description =
+                isNews
+                    ? (
+                        item.translated_description ||
+                        item.description
+                    )
+                    : item.description;
 
 
             slide.innerHTML = `
@@ -336,7 +428,7 @@ function renderFeaturedSlides(items) {
                                         item.image_url
                                     )}"
                                     alt="${escapeAttribute(
-                                        item.title ||
+                                        title ||
                                         "Destaque"
                                     )}"
                                     loading="${
@@ -348,7 +440,7 @@ function renderFeaturedSlides(items) {
                             `
                             : `
                                 <div class="featured-placeholder">
-                                    DESTAQUE
+                                    ${isNews ? "NOTÍCIA" : "DESTAQUE"}
                                 </div>
                             `
                     }
@@ -360,23 +452,27 @@ function renderFeaturedSlides(items) {
                 <div class="featured-content">
 
                     <div class="featured-tag">
-                        ${getFeaturedLabel(item)}
+                        ${
+                            isNews
+                                ? getNewsCategory(item)
+                                : getFeaturedLabel(item)
+                        }
                     </div>
 
                     <h2>
                         ${escapeHTML(
-                            item.title ||
+                            title ||
                             "Sem título"
                         )}
                     </h2>
 
                     ${
-                        item.description
+                        description
                             ? `
                                 <p>
                                     ${escapeHTML(
                                         stripHTML(
-                                            item.description
+                                            description
                                         )
                                     )}
                                 </p>
@@ -433,8 +529,8 @@ function renderFeaturedSlides(items) {
                     if (slideMoved) {
 
                         slideMoved = false;
-
                         return;
+
                     }
 
 
@@ -445,10 +541,19 @@ function renderFeaturedSlides(items) {
                     ) {
 
                         return;
+
                     }
 
 
-                    openContent(item);
+                    if (isNews) {
+
+                        openNewsArticle(item);
+
+                    } else {
+
+                        openContent(item);
+
+                    }
 
                 }
             );
@@ -489,14 +594,11 @@ function renderFeaturedSlides(items) {
                 const dot =
                     document.createElement("button");
 
-
                 dot.type =
                     "button";
 
-
                 dot.className =
                     "featured-dot";
-
 
                 if (index === 0) {
 
@@ -504,16 +606,13 @@ function renderFeaturedSlides(items) {
 
                 }
 
-
                 dot.dataset.index =
                     index;
-
 
                 dot.setAttribute(
                     "aria-label",
                     `Destaque ${index + 1}`
                 );
-
 
                 dots.appendChild(
                     dot
@@ -542,7 +641,6 @@ function getFeaturedLabel(item) {
 
     }
 
-
     if (
         item.content_type ===
         "story"
@@ -551,7 +649,6 @@ function getFeaturedLabel(item) {
         return "HISTÓRIA";
 
     }
-
 
     if (
         item.area ===
@@ -562,7 +659,6 @@ function getFeaturedLabel(item) {
 
     }
 
-
     if (
         item.area ===
         "analysis"
@@ -571,7 +667,6 @@ function getFeaturedLabel(item) {
         return "ANÁLISE";
 
     }
-
 
     return "DESTAQUE";
 
@@ -589,7 +684,6 @@ function renderEmptyFeatured() {
 
     const dots =
         document.getElementById("featured-dots");
-
 
     if (track) {
 
@@ -622,7 +716,6 @@ function renderEmptyFeatured() {
         `;
 
     }
-
 
     if (dots) {
 
@@ -657,7 +750,6 @@ function playFeaturedAudio(
 
         featuredAudio.pause();
 
-
         if (
             featuredAudio.currentSrc ===
             url
@@ -665,13 +757,12 @@ function playFeaturedAudio(
 
             featuredAudio = null;
 
-
             if (button) {
                 button.textContent = "🔊";
             }
 
-
             return;
+
         }
 
     }
@@ -731,7 +822,6 @@ function setupFeaturedCarousel() {
     const dots =
         document.getElementById("featured-dots");
 
-
     if (!track) {
         return;
     }
@@ -786,16 +876,13 @@ function setupFeaturedCarousel() {
         const slides =
             getSlides();
 
-
         if (!slides.length) {
             return;
         }
 
-
         if (index < 0) {
             index = slides.length - 1;
         }
-
 
         if (
             index >=
@@ -806,14 +893,11 @@ function setupFeaturedCarousel() {
 
         }
 
-
         currentIndex =
             index;
 
-
         const slide =
             slides[index];
-
 
         track.scrollTo({
             left: slide.offsetLeft,
@@ -822,7 +906,6 @@ function setupFeaturedCarousel() {
                     ? "smooth"
                     : "auto"
         });
-
 
         updateDots(
             currentIndex
@@ -836,15 +919,12 @@ function setupFeaturedCarousel() {
         const slides =
             getSlides();
 
-
         if (!slides.length) {
             return;
         }
 
-
         const scrollPosition =
             track.scrollLeft;
-
 
         let closestIndex = 0;
 
@@ -860,7 +940,6 @@ function setupFeaturedCarousel() {
                         slide.offsetLeft -
                         scrollPosition
                     );
-
 
                 if (
                     distance <
@@ -881,7 +960,6 @@ function setupFeaturedCarousel() {
 
         currentIndex =
             closestIndex;
-
 
         updateDots(
             currentIndex
@@ -909,7 +987,6 @@ function setupFeaturedCarousel() {
 
         stopAutoPlay();
 
-
         if (
             getSlides().length <=
             1
@@ -918,7 +995,6 @@ function setupFeaturedCarousel() {
             return;
 
         }
-
 
         autoPlay =
             setInterval(
@@ -945,12 +1021,10 @@ function setupFeaturedCarousel() {
 
                         event.stopPropagation();
 
-
                         const index =
                             Number(
                                 dot.dataset.index
                             );
-
 
                         if (
                             Number.isNaN(
@@ -961,7 +1035,6 @@ function setupFeaturedCarousel() {
                             return;
 
                         }
-
 
                         goToSlide(index);
 
@@ -1014,11 +1087,9 @@ function setupFeaturedCarousel() {
                 return;
             }
 
-
             const distance =
                 event.pageX -
                 startX;
-
 
             if (
                 Math.abs(distance) >
@@ -1028,7 +1099,6 @@ function setupFeaturedCarousel() {
                 moved = true;
 
             }
-
 
             track.scrollLeft =
                 startScrollLeft -
@@ -1044,18 +1114,15 @@ function setupFeaturedCarousel() {
             return;
         }
 
-
         isDragging = false;
 
         track.classList.remove(
             "dragging"
         );
 
-
         if (moved) {
             detectCurrentSlide();
         }
-
 
         startAutoPlay();
 
@@ -1066,7 +1133,6 @@ function setupFeaturedCarousel() {
         "mouseup",
         stopDragging
     );
-
 
     track.addEventListener(
         "mouseleave",
@@ -1086,7 +1152,6 @@ function setupFeaturedCarousel() {
                 return;
 
             }
-
 
             startX =
                 event.touches[0].pageX;
@@ -1113,20 +1178,16 @@ function setupFeaturedCarousel() {
             ) {
 
                 startAutoPlay();
-
                 return;
 
             }
 
-
             const endX =
                 event.changedTouches[0].pageX;
-
 
             const distance =
                 endX -
                 startX;
-
 
             if (
                 Math.abs(distance) >
@@ -1152,7 +1213,6 @@ function setupFeaturedCarousel() {
                 detectCurrentSlide();
 
             }
-
 
             startAutoPlay();
 
@@ -1190,7 +1250,6 @@ function setupFeaturedCarousel() {
         false
     );
 
-
     startAutoPlay();
 
 }
@@ -1207,7 +1266,6 @@ async function loadNews(teamId) {
             "news-home-grid"
         );
 
-
     if (!container) {
         return;
     }
@@ -1222,7 +1280,10 @@ async function loadNews(teamId) {
             id,
             team_id,
             title,
+            translated_title,
             description,
+            translated_description,
+            article_body,
             image_url,
             article_url,
             source_name,
@@ -1283,10 +1344,17 @@ async function loadNews(teamId) {
 
 
     newsItems =
-        (data || []).filter(
-            item =>
-                item.article_url
-        );
+        (data || [])
+            .filter(
+                item =>
+                    item.article_url
+            )
+            .map(
+                item => ({
+                    ...item,
+                    __source: "news"
+                })
+            );
 
 
     if (!newsItems.length) {
@@ -1326,14 +1394,11 @@ function renderNews(items) {
             "news-home-grid"
         );
 
-
     if (!container) {
         return;
     }
 
-
     container.innerHTML = "";
-
 
     if (!items.length) {
         return;
@@ -1348,10 +1413,20 @@ function renderNews(items) {
         items[0];
 
 
+    const mainTitle =
+        main.translated_title ||
+        main.title ||
+        "Sem título";
+
+
+    const mainDescription =
+        main.translated_description ||
+        main.description ||
+        "";
+
+
     const mainStory =
-        document.createElement(
-            "article"
-        );
+        document.createElement("article");
 
 
     mainStory.className =
@@ -1370,8 +1445,7 @@ function renderNews(items) {
                                 main.image_url
                             )}"
                             alt="${escapeAttribute(
-                                main.title ||
-                                "Notícia"
+                                mainTitle
                             )}"
                             loading="eager"
                         >
@@ -1389,8 +1463,6 @@ function renderNews(items) {
 
             <div class="news-main-meta">
 
-                ${getNewsSource(main)}
-
                 ${getNewsCategory(main)}
 
                 ${getNewsDate(main)}
@@ -1399,18 +1471,17 @@ function renderNews(items) {
 
             <h3>
                 ${escapeHTML(
-                    main.title ||
-                    "Sem título"
+                    mainTitle
                 )}
             </h3>
 
             ${
-                main.description
+                mainDescription
                     ? `
                         <p>
                             ${escapeHTML(
                                 stripHTML(
-                                    main.description
+                                    mainDescription
                                 )
                             )}
                         </p>
@@ -1439,9 +1510,7 @@ function renderNews(items) {
     // --------------------------------------------------------
 
     const smallWrapper =
-        document.createElement(
-            "div"
-        );
+        document.createElement("div");
 
 
     smallWrapper.className =
@@ -1456,10 +1525,20 @@ function renderNews(items) {
         .forEach(
             item => {
 
+                const title =
+                    item.translated_title ||
+                    item.title ||
+                    "Sem título";
+
+
+                const description =
+                    item.translated_description ||
+                    item.description ||
+                    "";
+
+
                 const card =
-                    document.createElement(
-                        "article"
-                    );
+                    document.createElement("article");
 
 
                 card.className =
@@ -1478,8 +1557,7 @@ function renderNews(items) {
                                             item.image_url
                                         )}"
                                         alt="${escapeAttribute(
-                                            item.title ||
-                                            "Notícia"
+                                            title
                                         )}"
                                         loading="lazy"
                                     >
@@ -1497,8 +1575,6 @@ function renderNews(items) {
 
                         <div class="news-small-meta">
 
-                            ${getNewsSource(item)}
-
                             ${getNewsCategory(item)}
 
                             ${getNewsDate(item)}
@@ -1507,18 +1583,17 @@ function renderNews(items) {
 
                         <h3>
                             ${escapeHTML(
-                                item.title ||
-                                "Sem título"
+                                title
                             )}
                         </h3>
 
                         ${
-                            item.description
+                            description
                                 ? `
                                     <p>
                                         ${escapeHTML(
                                             stripHTML(
-                                                item.description
+                                                description
                                             )
                                         )}
                                     </p>
@@ -1553,38 +1628,20 @@ function renderNews(items) {
 
 
 // ============================================================
-// OPEN ORIGINAL NEWS ARTICLE
+// OPEN NEWS INSIDE BR
 // ============================================================
 
 function openNewsArticle(item) {
 
-    if (
-        !item ||
-        !item.article_url
-    ) {
-
+    if (!item) {
         return;
-
     }
 
 
-    const newWindow =
-        window.open(
-            item.article_url,
-            "_blank",
-            "noopener,noreferrer"
-        );
-
-
-    if (newWindow) {
-
-        try {
-
-            newWindow.opener = null;
-
-        } catch {}
-
-    }
+    openContent({
+        ...item,
+        __source: "news"
+    });
 
 }
 
@@ -1595,23 +1652,10 @@ function openNewsArticle(item) {
 
 function getNewsSource(item) {
 
-    if (!item) {
-        return "";
-    }
+    // Source is deliberately NOT displayed
+    // on News cards.
 
-
-    const source =
-        item.source_name ||
-        "BR";
-
-
-    return `
-
-        <span class="news-source">
-            ${escapeHTML(source)}
-        </span>
-
-    `;
+    return "";
 
 }
 
@@ -1634,7 +1678,7 @@ function getNewsCategory(item) {
 
 
     const category =
-        labels[item.category] ||
+        labels[item?.category] ||
         "NOTÍCIAS";
 
 
@@ -1656,9 +1700,9 @@ function getNewsCategory(item) {
 function getNewsDate(item) {
 
     const date =
-        item.published_at ||
-        item.imported_at ||
-        item.created_at;
+        item?.published_at ||
+        item?.imported_at ||
+        item?.created_at;
 
 
     if (!date) {
@@ -1740,9 +1784,9 @@ function formatRelativeDate(date) {
                 day: "2-digit",
                 month: "short"
             }
-        ).format(
-            published
-        ).toUpperCase();
+        )
+            .format(published)
+            .toUpperCase();
 
     } catch {
 
@@ -1763,7 +1807,6 @@ async function loadOpinion(teamId) {
         document.getElementById(
             "opinion-home-grid"
         );
-
 
     if (!container) {
         return;
@@ -1874,14 +1917,11 @@ function renderOpinion(items) {
             "opinion-home-grid"
         );
 
-
     if (!container) {
         return;
     }
 
-
     container.innerHTML = "";
-
 
     if (!items.length) {
         return;
@@ -1897,9 +1937,7 @@ function renderOpinion(items) {
     // --------------------------------------------------------
 
     const feature =
-        document.createElement(
-            "article"
-        );
+        document.createElement("article");
 
 
     feature.className =
@@ -1983,9 +2021,7 @@ function renderOpinion(items) {
     // --------------------------------------------------------
 
     const list =
-        document.createElement(
-            "div"
-        );
+        document.createElement("div");
 
 
     list.className =
@@ -2001,9 +2037,7 @@ function renderOpinion(items) {
             item => {
 
                 const card =
-                    document.createElement(
-                        "article"
-                    );
+                    document.createElement("article");
 
 
                 card.className =
@@ -2104,7 +2138,6 @@ async function loadFixtures(team) {
         document.getElementById(
             "fixtures-container"
         );
-
 
     if (!container) {
         return;
@@ -2274,9 +2307,7 @@ function renderFixtures(fixtures) {
         fixture => {
 
             const card =
-                document.createElement(
-                    "div"
-                );
+                document.createElement("div");
 
 
             card.className =
@@ -2313,6 +2344,7 @@ function renderFixtures(fixtures) {
                     )}
 
                 </div>
+
             `;
 
 
@@ -2341,7 +2373,6 @@ function renderFixtures(fixtures) {
 async function loadLeagueTable(team) {
 
     setupTableTabs();
-
 
     await renderLeagueTable(
         team,
@@ -2483,9 +2514,7 @@ async function renderLeagueTable(
         (row, index) => {
 
             const tr =
-                document.createElement(
-                    "tr"
-                );
+                document.createElement("tr");
 
 
             if (
@@ -2687,9 +2716,7 @@ async function loadPlayerRatings(team) {
         (player, index) => {
 
             const row =
-                document.createElement(
-                    "div"
-                );
+                document.createElement("div");
 
 
             row.className =
@@ -2926,9 +2953,7 @@ function renderVideos(items) {
             item => {
 
                 const card =
-                    document.createElement(
-                        "article"
-                    );
+                    document.createElement("article");
 
 
                 card.className =
@@ -3106,32 +3131,105 @@ function openContent(item) {
     hideHomepage();
 
 
+    const isNews =
+        item?.__source === "news";
+
+
+    const title =
+        isNews
+            ? (
+                item.translated_title ||
+                item.title ||
+                "Sem título"
+            )
+            : (
+                item.title ||
+                "Sem título"
+            );
+
+
+    const description =
+        isNews
+            ? (
+                item.translated_description ||
+                item.description ||
+                ""
+            )
+            : (
+                item.description ||
+                ""
+            );
+
+
+    const publicationDate =
+        isNews
+            ? (
+                item.published_at ||
+                item.imported_at ||
+                item.created_at
+            )
+            : item.created_at;
+
+
+    const bodyText =
+        isNews
+            ? (
+                item.article_body ||
+                item.translated_description ||
+                item.description ||
+                ""
+            )
+            : getArticleBody(item);
+
+
     body.innerHTML = `
 
         <div class="br-view-type">
-            ${getContentLabel(item)}
+
+            ${
+                isNews
+                    ? getNewsCategory(item)
+                    : escapeHTML(
+                        getContentLabel(item)
+                    )
+            }
+
         </div>
 
         <h1 class="br-view-title">
-            ${escapeHTML(
-                item.title ||
-                "Sem título"
-            )}
+            ${escapeHTML(title)}
         </h1>
 
         <div class="br-view-meta">
 
-            ${escapeHTML(
-                getAuthor(item)
-            )}
-
             ${
-                item.created_at
-                    ? " • " +
-                      formatDate(
-                          item.created_at
-                      )
-                    : ""
+                isNews
+                    ? `
+                        ${publicationDate
+                            ? escapeHTML(
+                                formatDateTime(
+                                    publicationDate
+                                )
+                            )
+                            : ""
+                        }
+                    `
+                    : `
+                        ${escapeHTML(
+                            getAuthor(item)
+                        )}
+
+                        ${
+                            publicationDate
+                                ? " • " +
+                                  escapeHTML(
+                                      formatDate(
+                                          publicationDate
+                                      )
+                                  )
+                                : ""
+                        }
+                    `
             }
 
         </div>
@@ -3144,31 +3242,101 @@ function openContent(item) {
                         src="${escapeAttribute(
                             item.image_url
                         )}"
-                        alt=""
+                        alt="${escapeAttribute(
+                            title
+                        )}"
                     >
                 `
                 : ""
         }
 
         ${
-            item.description
+            description
                 ? `
                     <div class="br-view-description">
+
                         ${escapeHTML(
                             stripHTML(
-                                item.description
+                                description
                             )
                         )}
+
                     </div>
                 `
                 : ""
         }
 
         <div class="br-view-body">
-            ${escapeHTML(
-                getArticleBody(item)
-            )}
+
+            ${
+                isNews
+                    ? renderArticleText(
+                        bodyText
+                    )
+                    : escapeHTML(
+                        bodyText
+                    )
+            }
+
         </div>
+
+        ${
+            isNews
+                ? `
+
+                    <div class="br-news-source-section">
+
+                        <div class="br-news-source-label">
+                            FONTE ORIGINAL
+                        </div>
+
+                        <p>
+                            Consulta a publicação original
+                            para ver a notícia completa na
+                            fonte que a publicou.
+                        </p>
+
+                        ${
+                            item.article_url
+                                ? `
+                                    <a
+                                        class="br-action-button"
+                                        href="${escapeAttribute(
+                                            item.article_url
+                                        )}"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                    >
+                                        LER ARTIGO ORIGINAL
+                                    </a>
+                                `
+                                : ""
+                        }
+
+                    </div>
+
+                    <div class="br-fan-interaction">
+
+                        <div class="br-view-type">
+                            COMUNIDADE BR
+                        </div>
+
+                        <h2>
+                            CONVERSA DOS ADEPTOS
+                        </h2>
+
+                        <p>
+                            Em breve poderás comentar esta notícia,
+                            trocar opiniões com outros adeptos e
+                            acompanhar os comentários de membros
+                            importantes da nossa comunidade.
+                        </p>
+
+                    </div>
+
+                `
+                : ""
+        }
 
     `;
 
@@ -3187,6 +3355,69 @@ function openContent(item) {
 
 
 // ============================================================
+// RENDER ARTICLE TEXT
+// ============================================================
+
+function renderArticleText(
+    text
+) {
+
+    if (!text) {
+        return "";
+    }
+
+
+    const clean =
+        stripHTML(text)
+            .replace(
+                /\r\n/g,
+                "\n"
+            )
+            .replace(
+                /\r/g,
+                "\n"
+            );
+
+
+    const paragraphs =
+        clean
+            .split(
+                /\n\s*\n/
+            )
+            .map(
+                paragraph =>
+                    paragraph.trim()
+            )
+            .filter(Boolean);
+
+
+    if (!paragraphs.length) {
+
+        return `
+            <p>
+                ${escapeHTML(clean)}
+            </p>
+        `;
+
+    }
+
+
+    return paragraphs
+        .map(
+            paragraph => `
+                <p>
+                    ${escapeHTML(
+                        paragraph
+                    )}
+                </p>
+            `
+        )
+        .join("");
+
+}
+
+
+// ============================================================
 // CONTENT VIEW ELEMENTS
 // ============================================================
 
@@ -3194,10 +3425,10 @@ function getContentView() {
 
     return (
         document.getElementById(
-            "content-view"
+            "focused-content-view"
         ) ||
         document.getElementById(
-            "focused-content-view"
+            "content-view"
         )
     );
 
@@ -3208,10 +3439,10 @@ function getContentViewBody() {
 
     return (
         document.getElementById(
-            "content-view-body"
+            "focused-content"
         ) ||
         document.getElementById(
-            "focused-content"
+            "content-view-body"
         )
     );
 
@@ -3255,11 +3486,11 @@ function openListView(
 
         <div class="br-view-type">
 
-            ${escapeHTML(
+            ${
                 type === "news"
                     ? "NOTÍCIAS"
                     : "OPINIÃO & ANÁLISE"
-            )}
+            }
 
         </div>
 
@@ -3281,10 +3512,38 @@ function openListView(
     items.forEach(
         item => {
 
+            const isNews =
+                type === "news";
+
+
+            const itemTitle =
+                isNews
+                    ? (
+                        item.translated_title ||
+                        item.title ||
+                        ""
+                    )
+                    : (
+                        item.title ||
+                        ""
+                    );
+
+
+            const itemDescription =
+                isNews
+                    ? (
+                        item.translated_description ||
+                        item.description ||
+                        ""
+                    )
+                    : (
+                        item.description ||
+                        ""
+                    );
+
+
             const card =
-                document.createElement(
-                    "article"
-                );
+                document.createElement("article");
 
 
             card.className =
@@ -3302,6 +3561,7 @@ function openListView(
                                     item.image_url
                                 )}"
                                 alt=""
+                                loading="lazy"
                             >
                         `
                         : `
@@ -3314,9 +3574,15 @@ function openListView(
                     <div class="br-story-meta">
 
                         ${
-                            type === "news"
-                                ? getNewsSource(item)
-                                : getAuthor(item)
+                            isNews
+                                ? `
+                                    ${getNewsCategory(item)}
+
+                                    ${getNewsDate(item)}
+                                `
+                                : escapeHTML(
+                                    getAuthor(item)
+                                )
                         }
 
                     </div>
@@ -3324,8 +3590,7 @@ function openListView(
                     <div class="br-list-view-title">
 
                         ${escapeHTML(
-                            item.title ||
-                            ""
+                            itemTitle
                         )}
 
                     </div>
@@ -3334,8 +3599,7 @@ function openListView(
 
                         ${escapeHTML(
                             stripHTML(
-                                item.description ||
-                                ""
+                                itemDescription
                             )
                         )}
 
@@ -3350,10 +3614,7 @@ function openListView(
                 "click",
                 () => {
 
-                    if (
-                        type === "news" &&
-                        item.article_url
-                    ) {
+                    if (isNews) {
 
                         openNewsArticle(item);
 
@@ -3459,10 +3720,38 @@ function openLibraryView(
     items.forEach(
         item => {
 
+            const isNews =
+                type === "news";
+
+
+            const itemTitle =
+                isNews
+                    ? (
+                        item.translated_title ||
+                        item.title ||
+                        ""
+                    )
+                    : (
+                        item.title ||
+                        ""
+                    );
+
+
+            const itemDescription =
+                isNews
+                    ? (
+                        item.translated_description ||
+                        item.description ||
+                        ""
+                    )
+                    : (
+                        item.description ||
+                        ""
+                    );
+
+
             const card =
-                document.createElement(
-                    "article"
-                );
+                document.createElement("article");
 
 
             card.className =
@@ -3493,8 +3782,12 @@ function openLibraryView(
                     <div class="br-story-meta">
 
                         ${
-                            type === "news"
-                                ? getNewsSource(item)
+                            isNews
+                                ? `
+                                    ${getNewsCategory(item)}
+
+                                    ${getNewsDate(item)}
+                                `
                                 : escapeHTML(
                                     getAuthor(item)
                                 )
@@ -3505,8 +3798,7 @@ function openLibraryView(
                     <div class="br-list-view-title">
 
                         ${escapeHTML(
-                            item.title ||
-                            ""
+                            itemTitle
                         )}
 
                     </div>
@@ -3515,8 +3807,7 @@ function openLibraryView(
 
                         ${escapeHTML(
                             stripHTML(
-                                item.description ||
-                                ""
+                                itemDescription
                             )
                         )}
 
@@ -3531,10 +3822,7 @@ function openLibraryView(
                 "click",
                 () => {
 
-                    if (
-                        type === "news" &&
-                        item.article_url
-                    ) {
+                    if (isNews) {
 
                         openNewsArticle(item);
 
@@ -3592,7 +3880,7 @@ function closeLibraryView() {
 
     const homepage =
         document.getElementById(
-            "homepage-content"
+            "home-content"
         );
 
 
@@ -3907,7 +4195,7 @@ function hideHomepage() {
 
     const homepage =
         document.getElementById(
-            "homepage-content"
+            "home-content"
         );
 
 
@@ -3976,7 +4264,7 @@ function closeFocusedView() {
 
     const homepage =
         document.getElementById(
-            "homepage-content"
+            "home-content"
         );
 
 
@@ -4282,6 +4570,43 @@ function formatDate(
                 day: "2-digit",
                 month: "long",
                 year: "numeric"
+            }
+        ).format(
+            new Date(date)
+        );
+
+    } catch {
+
+        return "";
+
+    }
+
+}
+
+
+// ============================================================
+// FORMAT DATE + TIME
+// ============================================================
+
+function formatDateTime(
+    date
+) {
+
+    if (!date) {
+        return "";
+    }
+
+
+    try {
+
+        return new Intl.DateTimeFormat(
+            "pt-PT",
+            {
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit"
             }
         ).format(
             new Date(date)
