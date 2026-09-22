@@ -341,7 +341,6 @@ async function loadFeaturedContent(teamId) {
     }
 }
 
-
 function renderFeaturedSlides(items) {
     const track = $("#featured-track");
     const dots = $("#featured-dots");
@@ -355,180 +354,165 @@ function renderFeaturedSlides(items) {
                     BR
                 </div>
 
-                <div class="featured-slide-overlay"></div>
-
                 <div class="featured-content">
-                    <span class="featured-tag">
-                        BARÇA REAL
-                    </span>
-
                     <h2>
                         Sem destaques disponíveis
                     </h2>
-
-                    <p>
-                        Os próximos destaques aparecerão aqui.
-                    </p>
                 </div>
             </article>
         `;
 
-        if (dots) dots.innerHTML = "";
+        if (dots) {
+            dots.innerHTML = "";
+        }
 
         return;
     }
 
-    track.innerHTML = items.map((item, index) => {
-        const isNews =
-            item.__source === "news";
+    track.innerHTML =
+        items.map((item, index) => {
 
-        const title =
-            isNews
-                ? (
-                    item.translated_title ||
-                    item.title ||
-                    "Sem título"
-                )
-                : (
-                    item.title ||
-                    "Sem título"
-                );
+            const isNews =
+                item.__source === "news";
 
-        const description =
-            isNews
-                ? (
-                    item.translated_description ||
-                    item.description ||
-                    ""
-                )
-                : (
-                    item.description ||
-                    ""
-                );
+            const title =
+                isNews
+                    ? (
+                        item.translated_title ||
+                        item.title ||
+                        "Sem título"
+                    )
+                    : (
+                        item.title ||
+                        "Sem título"
+                    );
 
-        const imageUrl =
-            item.image_url ||
-            "";
+            const imageUrl =
+                item.image_url ||
+                "";
 
-        const category =
-            isNews
-                ? (
-                    item.category ||
-                    "NOTÍCIA"
-                )
-                : (
-                    getContentLabel(item)
-                );
-
-        return `
-            <article
-                class="featured-slide"
-                data-featured-index="${index}"
-                tabindex="0"
-            >
-
-                ${
-                    imageUrl
-                        ? `
-                            <div class="featured-slide-image">
-                                <img
-                                    src="${escapeAttribute(imageUrl)}"
-                                    alt="${escapeAttribute(title)}"
-                                    loading="${index === 0 ? "eager" : "lazy"}"
-                                    onerror="this.parentElement.innerHTML='<div class=&quot;featured-slide-placeholder&quot;>BR</div>';"
-                                >
-                            </div>
-                        `
-                        : `
-                            <div class="featured-slide-placeholder">
-                                BR
-                            </div>
-                        `
-                }
-
-                <div class="featured-slide-overlay"></div>
-
-                <div class="featured-content">
-
-                    <span class="featured-tag">
-                        ${escapeHTML(category)}
-                    </span>
-
-                    <h2>
-                        ${escapeHTML(title)}
-                    </h2>
+            return `
+                <article
+                    class="featured-slide"
+                    data-featured-index="${index}"
+                    tabindex="0"
+                >
 
                     ${
-                        description
+                        imageUrl
                             ? `
-                                <p>
-                                    ${escapeHTML(
-                                        stripHTML(description)
-                                    )}
-                                </p>
+                                <div class="featured-slide-image">
+
+                                    <img
+                                        src="${escapeAttribute(imageUrl)}"
+                                        alt="${escapeAttribute(title)}"
+                                        loading="${index === 0 ? "eager" : "lazy"}"
+                                        onerror="
+                                            this.style.display='none';
+                                            this.parentElement.classList.add('image-error');
+                                        "
+                                    >
+
+                                    <div class="featured-slide-placeholder">
+                                        BR
+                                    </div>
+
+                                </div>
                             `
-                            : ""
+                            : `
+                                <div class="featured-slide-placeholder">
+                                    BR
+                                </div>
+                            `
                     }
 
-                </div>
+                    <div class="featured-slide-overlay"></div>
 
-            </article>
-        `;
-    }).join("");
+                    <div class="featured-content">
+
+                        <h2>
+                            ${escapeHTML(title)}
+                        </h2>
+
+                    </div>
+
+                </article>
+            `;
+
+        }).join("");
 
     if (dots) {
-        dots.innerHTML = items
-            .map((_, index) => `
-                <button
-                    class="featured-dot ${index === 0 ? "active" : ""}"
-                    type="button"
-                    data-dot-index="${index}"
-                    aria-label="Destaque ${index + 1}"
-                ></button>
-            `)
-            .join("");
+        dots.innerHTML =
+            items
+                .map((_, index) => `
+                    <button
+                        class="featured-dot ${
+                            index === 0
+                                ? "active"
+                                : ""
+                        }"
+                        type="button"
+                        data-dot-index="${index}"
+                        aria-label="Destaque ${index + 1}"
+                    ></button>
+                `)
+                .join("");
     }
 
     $$("#featured-track .featured-slide")
         .forEach(slide => {
 
-            slide.addEventListener("click", event => {
-                if (
-                    event.target.closest(
-                        ".featured-audio-button"
-                    )
-                ) {
-                    return;
+            slide.addEventListener(
+                "click",
+                event => {
+
+                    if (
+                        event.target.closest(
+                            ".featured-audio-button"
+                        )
+                    ) {
+                        return;
+                    }
+
+                    const index =
+                        Number(
+                            slide.dataset.featuredIndex
+                        );
+
+                    const item =
+                        items[index];
+
+                    if (!item) return;
+
+                    if (
+                        item.__source === "news"
+                    ) {
+                        openNewsArticle(item);
+                    } else {
+                        openContent(item);
+                    }
                 }
+            );
 
-                const index =
-                    Number(slide.dataset.featuredIndex);
+            slide.addEventListener(
+                "keydown",
+                event => {
 
-                const item = items[index];
+                    if (
+                        event.key !== "Enter" &&
+                        event.key !== " "
+                    ) {
+                        return;
+                    }
 
-                if (!item) return;
+                    event.preventDefault();
 
-                if (item.__source === "news") {
-                    openNewsArticle(item);
-                } else {
-                    openContent(item);
+                    slide.click();
                 }
-            });
+            );
 
-            slide.addEventListener("keydown", event => {
-                if (
-                    event.key !== "Enter" &&
-                    event.key !== " "
-                ) {
-                    return;
-                }
-
-                event.preventDefault();
-                slide.click();
-            });
         });
 }
-
 
 /* ============================================================
    FEATURED CAROUSEL
@@ -739,11 +723,33 @@ async function loadNews(teamId) {
 
 
 function renderNews(items) {
-    const grid = $("#news-home-grid");
+    const grid =
+        $("#news-home-grid");
 
     if (!grid) return;
 
-    if (!items.length) {
+    /*
+     * Keep only real news records with an ID and
+     * at least a usable title.
+     */
+    const validItems =
+        (items || [])
+            .filter(item => {
+
+                if (!item || !item.id) {
+                    return false;
+                }
+
+                const title =
+                    item.translated_title ||
+                    item.title ||
+                    "";
+
+                return String(title).trim() !== "";
+            });
+
+    if (!validItems.length) {
+
         grid.innerHTML = `
             <div class="homepage-empty">
                 Ainda não existem notícias publicadas.
@@ -753,11 +759,17 @@ function renderNews(items) {
         return;
     }
 
+    /*
+     * FIRST VALID NEWS = MAIN STORY
+     */
     const main =
-        items[0];
+        validItems[0];
 
+    /*
+     * NEXT SIX NEWS STORIES
+     */
     const small =
-        items.slice(1, 7);
+        validItems.slice(1, 7);
 
     const mainTitle =
         main.translated_title ||
@@ -773,20 +785,41 @@ function renderNews(items) {
         main.image_url ||
         "";
 
+    /*
+     * Main image.
+     *
+     * If the URL is missing or fails,
+     * show the BR placeholder instead.
+     */
     const mainImageHTML =
         mainImage
             ? `
-                <img
-                    class="news-main-image"
-                    src="${escapeAttribute(mainImage)}"
-                    alt="${escapeAttribute(mainTitle)}"
-                    loading="eager"
-                    onerror="this.outerHTML='<div class=&quot;news-main-placeholder&quot;>BR</div>';"
-                >
+                <div class="news-main-image-wrapper">
+
+                    <img
+                        class="news-main-image"
+                        src="${escapeAttribute(mainImage)}"
+                        alt="${escapeAttribute(mainTitle)}"
+                        loading="eager"
+                        onerror="
+                            this.style.display='none';
+                            this.parentElement.classList.add('image-error');
+                        "
+                    >
+
+                    <div class="news-main-placeholder">
+                        BR
+                    </div>
+
+                </div>
             `
             : `
-                <div class="news-main-placeholder">
-                    BR
+                <div class="news-main-image-wrapper image-error">
+
+                    <div class="news-main-placeholder">
+                        BR
+                    </div>
+
                 </div>
             `;
 
@@ -797,6 +830,9 @@ function renderNews(items) {
             main.created_at
         );
 
+    /*
+     * SMALL NEWS
+     */
     const smallHTML =
         small.map((item, index) => {
 
@@ -821,16 +857,31 @@ function renderNews(items) {
             const imageHTML =
                 image
                     ? `
-                        <img
-                            src="${escapeAttribute(image)}"
-                            alt="${escapeAttribute(title)}"
-                            loading="lazy"
-                            onerror="this.outerHTML='<div class=&quot;news-small-placeholder&quot;>BR</div>';"
-                        >
+                        <div class="news-small-image-wrapper">
+
+                            <img
+                                src="${escapeAttribute(image)}"
+                                alt="${escapeAttribute(title)}"
+                                loading="lazy"
+                                onerror="
+                                    this.style.display='none';
+                                    this.parentElement.classList.add('image-error');
+                                "
+                            >
+
+                            <div class="news-small-placeholder">
+                                BR
+                            </div>
+
+                        </div>
                     `
                     : `
-                        <div class="news-small-placeholder">
-                            BR
+                        <div class="news-small-image-wrapper image-error">
+
+                            <div class="news-small-placeholder">
+                                BR
+                            </div>
+
                         </div>
                     `;
 
@@ -874,6 +925,9 @@ function renderNews(items) {
             `;
         }).join("");
 
+    /*
+     * HOMEPAGE NEWS HTML
+     */
     grid.innerHTML = `
         <article
             class="news-main-card"
@@ -890,6 +944,7 @@ function renderNews(items) {
                         main.category ||
                         "NOTÍCIA"
                     )}
+
                     ${
                         mainDate
                             ? ` · ${escapeHTML(mainDate)}`
@@ -924,6 +979,9 @@ function renderNews(items) {
         </div>
     `;
 
+    /*
+     * MAIN NEWS CLICK
+     */
     const mainCard =
         $("#main-news-card");
 
@@ -942,7 +1000,9 @@ function renderNews(items) {
                     event.key === "Enter" ||
                     event.key === " "
                 ) {
+
                     event.preventDefault();
+
                     openNewsArticle(main);
                 }
 
@@ -950,14 +1010,19 @@ function renderNews(items) {
         );
     }
 
+    /*
+     * SMALL NEWS CLICK
+     */
     $$(".news-small-card")
         .forEach(card => {
 
             const index =
-                Number(card.dataset.newsIndex);
+                Number(
+                    card.dataset.newsIndex
+                );
 
             const item =
-                items[index];
+                validItems[index];
 
             if (!item) return;
 
@@ -974,15 +1039,17 @@ function renderNews(items) {
                         event.key === "Enter" ||
                         event.key === " "
                     ) {
+
                         event.preventDefault();
+
                         openNewsArticle(item);
                     }
 
                 }
             );
+
         });
 }
-
 
 /* ============================================================
    OPEN NEWS ARTICLE
