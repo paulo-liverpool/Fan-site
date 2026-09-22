@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt">
 <head>
     <meta charset="UTF-8">
+
     <meta
         name="viewport"
         content="width=device-width, initial-scale=1.0"
@@ -168,6 +169,8 @@
         .team-name {
             font-size: clamp(28px, 6vw, 52px);
 
+            line-height: 1;
+
             font-weight: 900;
 
             letter-spacing: -2px;
@@ -219,7 +222,8 @@
 
             border-radius: 20px;
 
-            animation: loadingProgress 1.7s ease-in-out infinite;
+            animation:
+                loadingProgress 1.7s ease-in-out infinite;
         }
 
 
@@ -228,6 +232,7 @@
            ======================================================== */
 
         @keyframes pulse {
+
             0%,
             100% {
                 transform: scale(0.92);
@@ -241,6 +246,7 @@
         }
 
         @keyframes loadingProgress {
+
             0% {
                 transform: translateX(-180px);
             }
@@ -290,178 +296,220 @@
 
 <body>
 
-    <main class="team-loading" id="loading-screen">
+<main
+    class="team-loading"
+    id="loading-screen"
+>
 
-        <div class="loading-content">
+    <div class="loading-content">
 
-            <div class="loading-brand">
-                BARÇA REAL
-            </div>
+        <div class="loading-brand">
+            BARÇA REAL
+        </div>
 
-            <div class="player-visual">
+        <div class="player-visual">
 
-                <div class="player-glow"></div>
+            <div class="player-glow"></div>
 
-                <div class="player-circle">
-                    <div class="player-initial" id="player-initial">
-                        BR
-                    </div>
+            <div class="player-circle">
+
+                <div
+                    class="player-initial"
+                    id="player-initial"
+                >
+                    BR
                 </div>
 
             </div>
 
-            <div class="team-name" id="team-name">
-                Loading...
-            </div>
+        </div>
 
-            <div class="player-name" id="player-name">
-                Loading...
-            </div>
+        <div
+            class="team-name"
+            id="team-name"
+        >
+            A carregar...
+        </div>
 
-            <div class="loading-line">
-                <div class="loading-progress"></div>
-            </div>
+        <div
+            class="player-name"
+            id="player-name"
+        >
+            A preparar a tua experiência
+        </div>
+
+        <div class="loading-line">
+
+            <div class="loading-progress"></div>
 
         </div>
 
-    </main>
+    </div>
+
+</main>
 
 
-    <!-- ========================================================
-         SUPABASE
-         ======================================================== -->
-
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
 
 
-    <script>
-        // ========================================================
-        // TEAM LOADING
-        // ========================================================
+<script>
 
-        async function loadTeamExperience() {
+    // ============================================================
+    // TEAM LOADING
+    // ============================================================
 
-            const params = new URLSearchParams(
+    async function loadTeamExperience() {
+
+        const params =
+            new URLSearchParams(
                 window.location.search
             );
 
-            const teamSlug = params.get("team");
-
-            if (
-                teamSlug !== "barcelona" &&
-                teamSlug !== "real-madrid"
-            ) {
-                window.location.href = "home.html";
-                return;
-            }
+        const teamSlug =
+            params.get("team");
 
 
-            // ----------------------------------------------------
-            // Get current user
-            // ----------------------------------------------------
+        if (
+            teamSlug !== "barcelona" &&
+            teamSlug !== "real-madrid"
+        ) {
 
-            const {
-                data: {
-                    user
-                }
-            } = await supabaseClient.auth.getUser();
+            window.location.href =
+                "home.html";
 
-
-            if (!user) {
-                window.location.href = "login.html";
-                return;
-            }
-
-
-            // ----------------------------------------------------
-            // Get selected team
-            // ----------------------------------------------------
-
-            const {
-                data: team,
-                error
-            } = await supabaseClient
-                .from("teams")
-                .select(`
-                    id,
-                    name,
-                    slug,
-                    short_name,
-                    primary_color,
-                    secondary_color,
-                    loading_player
-                `)
-                .eq("slug", teamSlug)
-                .eq("is_active", true)
-                .single();
-
-
-            if (error || !team) {
-                window.location.href = "choose-team.html";
-                return;
-            }
-
-
-            // ----------------------------------------------------
-            // Update visual identity
-            // ----------------------------------------------------
-
-            const screen =
-                document.getElementById("loading-screen");
-
-            const teamName =
-                document.getElementById("team-name");
-
-            const playerName =
-                document.getElementById("player-name");
-
-            const playerInitial =
-                document.getElementById("player-initial");
-
-
-            teamName.textContent =
-                team.name;
-
-            playerName.textContent =
-                team.loading_player;
-
-
-            if (teamSlug === "barcelona") {
-
-                screen.style.setProperty(
-                    "--team-glow",
-                    "rgba(161, 20, 55, 0.55)"
-                );
-
-                playerInitial.textContent = "LM";
-
-            } else {
-
-                screen.style.setProperty(
-                    "--team-glow",
-                    "rgba(255, 190, 0, 0.45)"
-                );
-
-                playerInitial.textContent = "CR";
-
-            }
-
-
-            // ----------------------------------------------------
-            // Continue to home
-            // ----------------------------------------------------
-
-            setTimeout(() => {
-
-                window.location.href = "home.html";
-
-            }, 2300);
+            return;
         }
 
 
-        loadTeamExperience();
-    </script>
+        // --------------------------------------------------------
+        // Get current user
+        // --------------------------------------------------------
+
+        const {
+            data: {
+                user
+            }
+        } = await supabaseClient.auth.getUser();
+
+
+        if (!user) {
+
+            window.location.href =
+                "login.html";
+
+            return;
+        }
+
+
+        // --------------------------------------------------------
+        // Get selected team
+        // --------------------------------------------------------
+
+        const {
+            data: team,
+            error
+        } = await supabaseClient
+            .from("teams")
+            .select(`
+                id,
+                name,
+                slug,
+                short_name,
+                primary_color,
+                secondary_color,
+                loading_player
+            `)
+            .eq("slug", teamSlug)
+            .eq("is_active", true)
+            .single();
+
+
+        if (error || !team) {
+
+            window.location.href =
+                "choose-team.html";
+
+            return;
+        }
+
+
+        // --------------------------------------------------------
+        // Elements
+        // --------------------------------------------------------
+
+        const screen =
+            document.getElementById(
+                "loading-screen"
+            );
+
+        const teamName =
+            document.getElementById(
+                "team-name"
+            );
+
+        const playerName =
+            document.getElementById(
+                "player-name"
+            );
+
+        const playerInitial =
+            document.getElementById(
+                "player-initial"
+            );
+
+
+        // --------------------------------------------------------
+        // Team information
+        // --------------------------------------------------------
+
+        teamName.textContent =
+            team.name;
+
+        playerName.textContent =
+            team.loading_player;
+
+
+        // --------------------------------------------------------
+        // Team visual identity
+        // --------------------------------------------------------
+
+        if (teamSlug === "barcelona") {
+
+            screen.style.setProperty(
+                "--team-glow",
+                "rgba(161, 20, 55, 0.55)"
+            );
+
+            playerInitial.textContent = "LM";
+
+        } else {
+
+            screen.style.setProperty(
+                "--team-glow",
+                "rgba(255, 190, 0, 0.45)"
+            );
+
+            playerInitial.textContent = "CR";
+        }
+
+
+        // --------------------------------------------------------
+        // Continue
+        // --------------------------------------------------------
+
+        setTimeout(() => {
+
+            window.location.href =
+                "home.html";
+
+        }, 2300);
+    }
+
+
+    loadTeamExperience();
+
+</script>
 
 </body>
 </html>
