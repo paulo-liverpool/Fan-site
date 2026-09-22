@@ -2298,10 +2298,10 @@ async function loadLeagueTable(teamId) {
                 ? 2
                 : 140;
 
-        const competitionName =
-            currentTableType === "champions"
-                ? "Champions League"
-                : "La Liga";
+        const competitionName = 
+           currentTableType === "champions"
+             ? "UEFA Champions League"
+             : "La Liga";
 
         const { data, error } = await client
             .from("football_standings")
