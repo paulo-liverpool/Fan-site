@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Barça Real</title>
+
+    <link rel="stylesheet" href="css/global.css">
+
+    <style>
+        /* ========================================================
+           LOADING PAGE
+           ======================================================== */
+
+        body {
+            overflow: hidden;
+        }
+
+        .team-loading {
+            min-height: 100vh;
+
+            position: relative;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            overflow: hidden;
+
+            background:
+                radial-gradient(
+                    circle at 50% 35%,
+                    var(--team-glow),
+                    transparent 45%
+                ),
+                #08090c;
+
+            transition: background 0.5s ease;
+        }
+
+        .team-loading::before {
+            content: "";
+
+            position: absolute;
+            inset: 0;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    rgba(255,255,255,0.025) 1px,
+                    transparent 1px
+                );
+
+            background-size: 40px 40px;
+
+            opacity: 0.35;
+        }
+
+
+        /* ========================================================
+           CONTENT
+           ======================================================== */
+
+        .loading-content {
+            position: relative;
+            z-index: 2;
+
+            width: min(90%, 700px);
+
+            display: flex;
+            flex-direction: column;
+
+            align-items: center;
+            text-align: center;
+        }
+
+        .loading-brand {
+            font-size: 12px;
+            font-weight: 800;
+
+            letter-spacing: 6px;
+
+            opacity: 0.7;
+
+            margin-bottom: 42px;
+        }
+
+
+        /* ========================================================
+           PLAYER VISUAL
+           ======================================================== */
+
+        .player-visual {
+            width: 250px;
+            height: 250px;
+
+            position: relative;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            margin-bottom: 35px;
+        }
+
+        .player-glow {
+            position: absolute;
+
+            width: 210px;
+            height: 210px;
+
+            border-radius: 50%;
+
+            background: var(--team-glow);
+
+            filter: blur(35px);
+
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .player-circle {
+            position: relative;
+            z-index: 2;
+
+            width: 190px;
+            height: 190px;
+
+            border-radius: 50%;
+
+            border: 1px solid rgba(255,255,255,0.22);
+
+            background:
+                linear-gradient(
+                    145deg,
+                    rgba(255,255,255,0.14),
+                    rgba(255,255,255,0.025)
+                );
+
+            box-shadow:
+                0 0 60px var(--team-glow),
+                inset 0 0 50px rgba(255,255,255,0.04);
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            backdrop-filter: blur(8px);
+        }
+
+        .player-initial {
+            font-size: 72px;
+            font-weight: 900;
+
+            letter-spacing: -5px;
+
+            color: rgba(255,255,255,0.92);
+        }
+
+
+        /* ========================================================
+           TEXT
+           ======================================================== */
+
+        .team-name {
+            font-size: clamp(28px, 6vw, 52px);
+
+            font-weight: 900;
+
+            letter-spacing: -2px;
+
+            margin-bottom: 10px;
+        }
+
+        .player-name {
+            font-size: 14px;
+
+            font-weight: 700;
+
+            letter-spacing: 4px;
+
+            text-transform: uppercase;
+
+            opacity: 0.55;
+
+            margin-bottom: 38px;
+        }
+
+
+        /* ========================================================
+           PROGRESS
+           ======================================================== */
+
+        .loading-line {
+            width: 180px;
+            height: 2px;
+
+            position: relative;
+
+            overflow: hidden;
+
+            background: rgba(255,255,255,0.12);
+
+            border-radius: 20px;
+        }
+
+        .loading-progress {
+            position: absolute;
+            top: 0;
+            left: 0;
+
+            width: 45%;
+            height: 100%;
+
+            background: #ffffff;
+
+            border-radius: 20px;
+
+            animation: loadingProgress 1.7s ease-in-out infinite;
+        }
+
+
+        /* ========================================================
+           ANIMATIONS
+           ======================================================== */
+
+        @keyframes pulse {
+            0%,
+            100% {
+                transform: scale(0.92);
+                opacity: 0.55;
+            }
+
+            50% {
+                transform: scale(1.08);
+                opacity: 0.9;
+            }
+        }
+
+        @keyframes loadingProgress {
+            0% {
+                transform: translateX(-180px);
+            }
+
+            100% {
+                transform: translateX(400px);
+            }
+        }
+
+
+        /* ========================================================
+           MOBILE
+           ======================================================== */
+
+        @media (max-width: 600px) {
+
+            .loading-brand {
+                margin-bottom: 30px;
+            }
+
+            .player-visual {
+                width: 210px;
+                height: 210px;
+            }
+
+            .player-circle {
+                width: 160px;
+                height: 160px;
+            }
+
+            .player-glow {
+                width: 180px;
+                height: 180px;
+            }
+
+            .player-initial {
+                font-size: 58px;
+            }
+
+            .player-name {
+                font-size: 11px;
+                letter-spacing: 3px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <main class="team-loading" id="loading-screen">
+
+        <div class="loading-content">
+
+            <div class="loading-brand">
+                BARÇA REAL
+            </div>
+
+            <div class="player-visual">
+
+                <div class="player-glow"></div>
+
+                <div class="player-circle">
+                    <div class="player-initial" id="player-initial">
+                        BR
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="team-name" id="team-name">
+                Loading...
+            </div>
+
+            <div class="player-name" id="player-name">
+                Loading...
+            </div>
+
+            <div class="loading-line">
+                <div class="loading-progress"></div>
+            </div>
+
+        </div>
+
+    </main>
+
+
+    <!-- ========================================================
+         SUPABASE
+         ======================================================== -->
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js"></script>
+
+
+    <script>
+        // ========================================================
+        // TEAM LOADING
+        // ========================================================
+
+        async function loadTeamExperience() {
+
+            const params = new URLSearchParams(
+                window.location.search
+            );
+
+            const teamSlug = params.get("team");
+
+            if (
+                teamSlug !== "barcelona" &&
+                teamSlug !== "real-madrid"
+            ) {
+                window.location.href = "home.html";
+                return;
+            }
+
+
+            // ----------------------------------------------------
+            // Get current user
+            // ----------------------------------------------------
+
+            const {
+                data: {
+                    user
+                }
+            } = await supabaseClient.auth.getUser();
+
+
+            if (!user) {
+                window.location.href = "login.html";
+                return;
+            }
+
+
+            // ----------------------------------------------------
+            // Get selected team
+            // ----------------------------------------------------
+
+            const {
+                data: team,
+                error
+            } = await supabaseClient
+                .from("teams")
+                .select(`
+                    id,
+                    name,
+                    slug,
+                    short_name,
+                    primary_color,
+                    secondary_color,
+                    loading_player
+                `)
+                .eq("slug", teamSlug)
+                .eq("is_active", true)
+                .single();
+
+
+            if (error || !team) {
+                window.location.href = "choose-team.html";
+                return;
+            }
+
+
+            // ----------------------------------------------------
+            // Update visual identity
+            // ----------------------------------------------------
+
+            const screen =
+                document.getElementById("loading-screen");
+
+            const teamName =
+                document.getElementById("team-name");
+
+            const playerName =
+                document.getElementById("player-name");
+
+            const playerInitial =
+                document.getElementById("player-initial");
+
+
+            teamName.textContent =
+                team.name;
+
+            playerName.textContent =
+                team.loading_player;
+
+
+            if (teamSlug === "barcelona") {
+
+                screen.style.setProperty(
+                    "--team-glow",
+                    "rgba(161, 20, 55, 0.55)"
+                );
+
+                playerInitial.textContent = "LM";
+
+            } else {
+
+                screen.style.setProperty(
+                    "--team-glow",
+                    "rgba(255, 190, 0, 0.45)"
+                );
+
+                playerInitial.textContent = "CR";
+
+            }
+
+
+            // ----------------------------------------------------
+            // Continue to home
+            // ----------------------------------------------------
+
+            setTimeout(() => {
+
+                window.location.href = "home.html";
+
+            }, 2300);
+        }
+
+
+        loadTeamExperience();
+    </script>
+
+</body>
+</html>
