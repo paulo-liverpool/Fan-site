@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Barça Real</title>
+
+    <link rel="stylesheet" href="css/global.css">
+</head>
+
+<body>
+
+    <div class="app-loading">
+
+        <div class="loading-logo">
+            BR
+        </div>
+
+        <div class="loading-text">
+            BARÇA REAL
+        </div>
+
+    </div>
+
+
+    <!-- ======================================================
+         SUPABASE
+         ====================================================== -->
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script src="js/supabase.js"></script>
+
+
+    <!-- ======================================================
+         APPLICATION START
+         ====================================================== -->
+
+    <script>
+
+        async function startApp() {
+
+            const {
+                data: { session }
+            } = await supabaseClient.auth.getSession();
+
+
+            // --------------------------------------------------
+            // No logged-in user
+            // --------------------------------------------------
+
+            if (!session) {
+
+                window.location.href = "login.html";
+
+                return;
+            }
+
+
+            // --------------------------------------------------
+            // Logged-in user
+            // Check whether they selected a team
+            // --------------------------------------------------
+
+            const { data: profile, error } =
+                await supabaseClient
+                    .from("profiles")
+                    .select("supported_team_id")
+                    .eq("id", session.user.id)
+                    .single();
+
+
+            if (error || !profile || !profile.supported_team_id) {
+
+                window.location.href = "choose-team.html";
+
+                return;
+            }
+
+
+            // --------------------------------------------------
+            // User already has a team
+            // --------------------------------------------------
+
+            window.location.href = "home.html";
+        }
+
+
+        startApp();
+
+    </script>
+
+</body>
+</html>
