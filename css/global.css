@@ -1,4 +1,4 @@
-/* ============================================================
+ /* ============================================================
    BR
    GLOBAL STYLES
    ============================================================ */
@@ -19,7 +19,7 @@ body {
     font-family: Arial, Helvetica, sans-serif;
     background: #08090c;
     color: #fff;
-    padding-bottom: 80px;
+    padding-bottom: 82px;
 }
 
 button,
@@ -43,7 +43,7 @@ button {
 
 
 /* ============================================================
-   INITIAL LOADING SCREEN
+   INITIAL LOADING
    ============================================================ */
 
 .app-loading {
@@ -98,7 +98,7 @@ button {
     background: rgba(8,9,12,0.92);
     position: sticky;
     top: 0;
-    z-index: 20;
+    z-index: 100;
     backdrop-filter: blur(15px);
 }
 
@@ -222,8 +222,29 @@ button {
 
 
 /* ============================================================
+   PAGE VIEW STATES
+   IMPORTANT
+   ============================================================ */
+
+[hidden] {
+    display: none !important;
+}
+
+.focused-content-view,
+.library-view,
+.prediction-view {
+    width: 100%;
+}
+
+.focused-content-view.active,
+.library-view.active,
+.prediction-view.active {
+    display: block;
+}
+
+
+/* ============================================================
    DESTAQUE / CAROUSEL
-   EXISTING DESIGN — PRESERVED
    ============================================================ */
 
 .featured-carousel {
@@ -263,16 +284,15 @@ button {
             var(--team-secondary),
             var(--team-primary)
         );
+    cursor: pointer;
 }
 
 .featured-slide-image {
     position: absolute;
     inset: 0;
+    z-index: 0;
     width: 100%;
     height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     overflow: hidden;
     background: #111318;
 }
@@ -280,9 +300,25 @@ button {
 .featured-slide-image img {
     width: 100%;
     height: 100%;
-    object-fit: contain;
-    object-position: center;
     display: block;
+    object-fit: cover;
+    object-position: center;
+}
+
+.featured-slide-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+        linear-gradient(
+            135deg,
+            var(--team-secondary),
+            var(--team-primary)
+        );
+    font-size: 38px;
+    font-weight: 900;
 }
 
 .featured-slide-overlay {
@@ -293,8 +329,8 @@ button {
     background:
         linear-gradient(
             to top,
-            rgba(0,0,0,0.88) 0%,
-            rgba(0,0,0,0.45) 45%,
+            rgba(0,0,0,0.92) 0%,
+            rgba(0,0,0,0.52) 45%,
             rgba(0,0,0,0.08) 100%
         );
 }
@@ -311,7 +347,7 @@ button {
     display: inline-block;
     padding: 6px 9px;
     border-radius: 6px;
-    background: rgba(0,0,0,0.35);
+    background: rgba(0,0,0,0.45);
     font-size: 9px;
     font-weight: 800;
     letter-spacing: 1.5px;
@@ -329,7 +365,7 @@ button {
 .featured-slide p {
     margin-top: 10px;
     font-size: 13px;
-    color: rgba(255,255,255,0.7);
+    color: rgba(255,255,255,0.72);
     max-width: 560px;
 }
 
@@ -349,15 +385,7 @@ button {
     background: rgba(0,0,0,0.65);
     color: #fff;
     font-size: 16px;
-    cursor: pointer;
-    pointer-events: auto;
     backdrop-filter: blur(8px);
-    transition: transform 0.2s ease, background 0.2s ease;
-}
-
-.featured-audio-button:hover {
-    transform: translateY(-1px);
-    background: rgba(0,0,0,0.8);
 }
 
 .featured-dots {
@@ -378,10 +406,6 @@ button {
     border-radius: 50%;
     background: rgba(255,255,255,0.45);
     opacity: 0.65;
-    transition:
-        width 0.2s ease,
-        opacity 0.2s ease,
-        background 0.2s ease;
 }
 
 .featured-dot.active {
@@ -394,8 +418,6 @@ button {
 
 /* ============================================================
    NEWS
-   ONE LARGE + SIX SMALL
-   12-COLUMN EDITORIAL LAYOUT
    ============================================================ */
 
 .news-home-grid {
@@ -422,13 +444,19 @@ button {
     border-color: rgba(255,255,255,0.15);
 }
 
-/* RESPONSIVE MAIN NEWS FRAME */
 .news-main-card > img,
+.news-main-image,
 .news-main-placeholder {
     width: 100%;
     height: clamp(220px, 28vw, 310px);
     display: block;
+}
+
+.news-main-card > img,
+.news-main-image {
     object-fit: cover;
+    object-position: center;
+    background: #111318;
 }
 
 .news-main-placeholder {
@@ -479,14 +507,6 @@ button {
     border: 1px solid var(--border);
     background: var(--surface);
     cursor: pointer;
-    transition:
-        transform 0.2s ease,
-        border-color 0.2s ease;
-}
-
-.news-small-card:hover {
-    transform: translateY(-1px);
-    border-color: rgba(255,255,255,0.14);
 }
 
 .news-small-card img,
@@ -525,6 +545,13 @@ button {
     font-weight: 800;
 }
 
+.news-small-body p {
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.35;
+}
+
 .news-small-meta,
 .news-main-meta {
     margin-bottom: 7px;
@@ -541,7 +568,7 @@ button {
 
 
 /* ============================================================
-   OPINION & ANALYSIS
+   OPINION
    ============================================================ */
 
 .editorial-home-grid {
@@ -558,14 +585,6 @@ button {
     border: 1px solid var(--border);
     background: var(--surface);
     cursor: pointer;
-    transition:
-        transform 0.2s ease,
-        border-color 0.2s ease;
-}
-
-.opinion-main-card:hover {
-    transform: translateY(-2px);
-    border-color: rgba(255,255,255,0.15);
 }
 
 .opinion-main-card > img,
@@ -630,14 +649,6 @@ button {
     border: 1px solid var(--border);
     background: var(--surface);
     cursor: pointer;
-    transition:
-        transform 0.2s ease,
-        border-color 0.2s ease;
-}
-
-.opinion-small-card:hover {
-    transform: translateY(-1px);
-    border-color: rgba(255,255,255,0.14);
 }
 
 .opinion-small-card img,
@@ -700,16 +711,11 @@ button {
     color: rgba(255,255,255,0.7);
     font-size: 11px;
     font-weight: 800;
-    transition:
-        background 0.2s ease,
-        color 0.2s ease,
-        border-color 0.2s ease;
 }
 
 .section-more-button:hover {
     background: rgba(255,255,255,0.06);
     color: #fff;
-    border-color: rgba(255,255,255,0.18);
 }
 
 
@@ -847,7 +853,7 @@ button {
 
 
 /* ============================================================
-   LEAGUE TABLE
+   TABLE
    ============================================================ */
 
 .table-tabs {
@@ -1052,13 +1058,11 @@ button {
 
 
 /* ============================================================
-   FOCUSED CONTENT
+   FOCUSED ARTICLE VIEW
    ============================================================ */
 
-.focused-content-view,
-.library-view,
-.prediction-view {
-    padding-bottom: 40px;
+.focused-content-view {
+    padding-bottom: 35px;
 }
 
 .focused-back-button {
@@ -1084,15 +1088,17 @@ button {
 
 .focused-content-image {
     width: 100%;
-    max-height: 500px;
+    max-height: 560px;
     overflow: hidden;
+    background: #111318;
 }
 
 .focused-content-image img {
     width: 100%;
-    max-height: 500px;
+    max-height: 560px;
     display: block;
     object-fit: cover;
+    object-position: center;
 }
 
 .focused-image-placeholder {
@@ -1116,6 +1122,7 @@ button {
     font-size: 9px;
     font-weight: 900;
     letter-spacing: 1.5px;
+    text-transform: uppercase;
 }
 
 #focused-content h1 {
@@ -1123,6 +1130,12 @@ button {
     font-size: clamp(26px, 6vw, 42px);
     line-height: 1.05;
     font-weight: 900;
+}
+
+.focused-content-date {
+    padding: 10px 22px 0;
+    color: rgba(255,255,255,0.35);
+    font-size: 10px;
 }
 
 .focused-content-author {
@@ -1134,25 +1147,75 @@ button {
 
 #focused-content-description {
     padding: 18px 22px 25px;
-    color: rgba(255,255,255,0.65);
+    color: rgba(255,255,255,0.68);
     font-size: 14px;
     line-height: 1.7;
     white-space: pre-line;
 }
 
-.focused-content-media {
-    padding: 0 22px 25px;
+.focused-article-body {
+    padding: 0 22px 28px;
+    color: rgba(255,255,255,0.82);
+    font-size: 15px;
+    line-height: 1.8;
 }
 
-.focused-content-media audio,
-.focused-content-media video {
-    width: 100%;
+.focused-article-body p {
+    margin-bottom: 16px;
+}
+
+.focused-source {
+    margin: 0 22px 25px;
+    padding: 18px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.07);
+    background: rgba(255,255,255,0.025);
+}
+
+.focused-source-label {
+    color: rgba(255,255,255,0.35);
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+}
+
+.focused-source-name {
+    margin-top: 6px;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.focused-source-button {
+    display: inline-flex;
+    margin-top: 13px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: var(--team-primary);
+    color: #fff;
+    text-decoration: none;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.focused-community {
+    margin: 0 22px 25px;
+    padding: 18px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.35);
+    font-size: 11px;
+    line-height: 1.5;
 }
 
 
 /* ============================================================
    LIBRARY
    ============================================================ */
+
+.library-view,
+.prediction-view {
+    padding-bottom: 35px;
+}
 
 .library-grid {
     display: grid;
@@ -1201,7 +1264,7 @@ button {
 
 
 /* ============================================================
-   PREDICTION VIEW
+   PREDICTION
    ============================================================ */
 
 .prediction-card {
@@ -1345,18 +1408,55 @@ button {
 
 
 /* ============================================================
-   CLICK FEEDBACK
+   BOTTOM NAVIGATION
+   ALWAYS VISIBLE
    ============================================================ */
 
-.content-clickable {
-    transition:
-        transform 0.2s ease,
-        border-color 0.2s ease;
+.bottom-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 72px;
+    z-index: 9999;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    background: rgba(8,9,12,0.96);
+    border-top: 1px solid rgba(255,255,255,0.09);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
 }
 
-.content-clickable:hover {
-    transform: translateY(-2px);
-    border-color: rgba(255,255,255,0.14);
+.nav-item {
+    flex: 1;
+    max-width: 150px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    border: 0;
+    background: transparent;
+    color: rgba(255,255,255,0.38);
+    text-decoration: none;
+    font-size: 9px;
+    font-weight: 800;
+}
+
+.nav-item.active,
+.nav-item:hover {
+    color: #fff;
+}
+
+.nav-icon {
+    font-size: 19px;
+    line-height: 1;
+}
+
+.nav-item.active .nav-icon {
+    color: var(--team-primary);
 }
 
 
@@ -1381,6 +1481,7 @@ button {
 
     .bottom-nav {
         left: 50%;
+        right: auto;
         width: min(600px, 100%);
         transform: translateX(-50%);
         border: 1px solid rgba(255,255,255,0.08);
@@ -1388,8 +1489,8 @@ button {
         border-radius: 18px 18px 0 0;
     }
 
-    /* DESKTOP NEWS FRAME */
     .news-main-card > img,
+    .news-main-image,
     .news-main-placeholder {
         height: 300px;
     }
@@ -1397,12 +1498,13 @@ button {
 
 
 /* ============================================================
-   TABLET / SMALL DESKTOP
+   TABLET
    ============================================================ */
 
 @media (min-width: 651px) and (max-width: 799px) {
 
     .news-main-card > img,
+    .news-main-image,
     .news-main-placeholder {
         height: 260px;
     }
@@ -1432,11 +1534,6 @@ button {
         margin-bottom: 34px;
     }
 
-
-    /* -------------------------
-       NEWS
-       ------------------------- */
-
     .news-home-grid,
     .editorial-home-grid {
         grid-template-columns: 1fr;
@@ -1453,8 +1550,8 @@ button {
         grid-column: 1;
     }
 
-    /* MOBILE NEWS FRAME */
     .news-main-card > img,
+    .news-main-image,
     .news-main-placeholder {
         height: 190px;
     }
@@ -1498,11 +1595,6 @@ button {
         height: 210px;
     }
 
-
-    /* -------------------------
-       DESTAQUE
-       ------------------------- */
-
     .featured-carousel {
         height: 280px;
         border-radius: 18px;
@@ -1532,11 +1624,6 @@ button {
         bottom: 12px;
     }
 
-
-    /* -------------------------
-       FIXTURES
-       ------------------------- */
-
     .fixture-teams {
         gap: 10px;
     }
@@ -1554,11 +1641,6 @@ button {
         grid-template-columns: 1fr;
     }
 
-
-    /* -------------------------
-       VIDEOS
-       ------------------------- */
-
     .videos-home-grid {
         grid-template-columns: 1fr;
     }
@@ -1567,20 +1649,10 @@ button {
         height: 210px;
     }
 
-
-    /* -------------------------
-       TABLE
-       ------------------------- */
-
     .league-table-head,
     .league-table-row {
         grid-template-columns: 30px 1fr 35px 45px 45px;
     }
-
-
-    /* -------------------------
-       LIBRARY
-       ------------------------- */
 
     .library-grid {
         grid-template-columns: 1fr;
@@ -1591,19 +1663,27 @@ button {
         height: 190px;
     }
 
-
-    /* -------------------------
-       FOCUSED CONTENT
-       ------------------------- */
-
     .focused-content-image img {
         max-height: 350px;
     }
 
+    .focused-content-image {
+        max-height: 350px;
+    }
 
-    /* -------------------------
-       FOOTER
-       ------------------------- */
+    #focused-content h1 {
+        font-size: 27px;
+    }
+
+    .focused-content-description,
+    #focused-content-description {
+        font-size: 13px;
+    }
+
+    .focused-article-body {
+        font-size: 14px;
+        line-height: 1.7;
+    }
 
     .footer-links {
         gap: 12px;
@@ -1630,8 +1710,8 @@ button {
         width: calc(100% - 20px);
     }
 
-    /* EXTRA SMALL NEWS FRAME */
     .news-main-card > img,
+    .news-main-image,
     .news-main-placeholder {
         height: 175px;
     }
@@ -1647,5 +1727,8 @@ button {
     .opinion-small-placeholder {
         width: 90px;
     }
-}
 
+    .bottom-nav {
+        height: 68px;
+    }
+}
