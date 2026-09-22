@@ -2,1157 +2,298 @@
 <html lang="pt">
 <head>
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Início | Barça Real</title>
 
-    <link
-        rel="stylesheet"
-        href="css/global.css"
-    >
-
-    <style>
-        /* ============================================================
-           BARÇA REAL HOME
-           Scoped homepage styling.
-           Existing global.css remains untouched.
-           ============================================================ */
-
-        .br-home {
-            --br-primary: var(--team-primary, #a50044);
-            --br-secondary: var(--team-secondary, #004d98);
-            --br-bg: #f5f5f5;
-            --br-card: #ffffff;
-            --br-text: #111111;
-            --br-muted: #777777;
-            --br-border: #e7e7e7;
-            --br-dark: #111111;
-        }
-
-        .br-home * {
-            box-sizing: border-box;
-        }
-
-        .br-home button {
-            font: inherit;
-        }
-
-        .br-main {
-            width: 100%;
-            max-width: 1180px;
-            margin: 0 auto;
-            padding: 0 18px 110px;
-        }
-
-        /* ============================================================
-           SECTION HEADINGS
-           ============================================================ */
-
-        .br-section {
-            margin-top: 42px;
-        }
-
-        .br-section-heading {
-            display: flex;
-            align-items: flex-end;
-            justify-content: space-between;
-            gap: 20px;
-            margin-bottom: 18px;
-            border-bottom: 3px solid var(--br-primary);
-            padding-bottom: 9px;
-        }
-
-        .br-section-heading h2 {
-            margin: 0;
-            font-size: 25px;
-            line-height: 1.1;
-            font-weight: 900;
-            color: var(--br-text);
-        }
-
-        .br-section-heading span {
-            font-size: 11px;
-            font-weight: 800;
-            letter-spacing: 1.4px;
-            color: var(--br-primary);
-        }
-
-        /* ============================================================
-           NEWS
-           ============================================================ */
-
-        .br-news-grid {
-            display: grid;
-            grid-template-columns: minmax(0, 1.35fr) minmax(360px, 1fr);
-            gap: 26px;
-        }
-
-        .br-main-story {
-            cursor: pointer;
-            background: var(--br-card);
-            border: 1px solid var(--br-border);
-            transition: transform .2s ease, box-shadow .2s ease;
-        }
-
-        .br-main-story:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 30px rgba(0,0,0,.08);
-        }
-
-        .br-main-story-image {
-            width: 100%;
-            aspect-ratio: 16 / 9;
-            background: #ddd;
-            overflow: hidden;
-        }
-
-        .br-main-story-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
-        }
-
-        .br-story-placeholder {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background:
-                linear-gradient(
-                    135deg,
-                    var(--br-primary),
-                    var(--br-secondary)
-                );
-            color: #fff;
-            font-size: 13px;
-            font-weight: 800;
-            letter-spacing: 1px;
-        }
-
-        .br-main-story-body {
-            padding: 18px 20px 21px;
-        }
-
-        .br-story-meta {
-            font-size: 10px;
-            font-weight: 900;
-            letter-spacing: 1.2px;
-            text-transform: uppercase;
-            color: var(--br-primary);
-            margin-bottom: 7px;
-        }
-
-        .br-main-story-title {
-            font-size: 27px;
-            line-height: 1.12;
-            font-weight: 900;
-            margin: 0 0 9px;
-            color: var(--br-text);
-        }
-
-        .br-main-story-description {
-            margin: 0;
-            color: #555;
-            font-size: 15px;
-            line-height: 1.55;
-        }
-
-        .br-small-news {
-            display: flex;
-            flex-direction: column;
-            gap: 13px;
-        }
-
-        .br-small-story {
-            display: grid;
-            grid-template-columns: 145px minmax(0, 1fr);
-            gap: 14px;
-            cursor: pointer;
-            background: var(--br-card);
-            border-bottom: 1px solid var(--br-border);
-            padding-bottom: 13px;
-        }
-
-        .br-small-story:last-child {
-            border-bottom: 0;
-        }
-
-        .br-small-story-image {
-            width: 145px;
-            height: 92px;
-            background: #ddd;
-            overflow: hidden;
-        }
-
-        .br-small-story-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
-        }
-
-        .br-small-story-title {
-            margin: 0 0 6px;
-            font-size: 16px;
-            line-height: 1.25;
-            font-weight: 850;
-            color: var(--br-text);
-        }
-
-        .br-small-story-description {
-            margin: 0;
-            font-size: 12px;
-            line-height: 1.4;
-            color: var(--br-muted);
-        }
-
-        .br-more-wrap {
-            display: flex;
-            justify-content: center;
-            margin-top: 22px;
-        }
-
-        .br-more-button,
-        .br-action-button {
-            border: 0;
-            background: var(--br-primary);
-            color: #fff;
-            padding: 11px 22px;
-            border-radius: 3px;
-            font-size: 12px;
-            font-weight: 900;
-            letter-spacing: .7px;
-            cursor: pointer;
-            text-transform: uppercase;
-        }
-
-        .br-more-button:hover,
-        .br-action-button:hover {
-            opacity: .9;
-        }
-
-        /* ============================================================
-           OPINION
-           ============================================================ */
-
-        .br-opinion-grid {
-            display: grid;
-            grid-template-columns: minmax(0, 1.35fr) minmax(360px, 1fr);
-            gap: 26px;
-        }
-
-        .br-opinion-card {
-            cursor: pointer;
-            background: var(--br-card);
-            border: 1px solid var(--br-border);
-        }
-
-        .br-opinion-card:hover {
-            box-shadow: 0 10px 28px rgba(0,0,0,.07);
-        }
-
-        .br-opinion-feature-image {
-            aspect-ratio: 16 / 9;
-            overflow: hidden;
-        }
-
-        .br-opinion-feature-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .br-opinion-feature-body {
-            padding: 17px 20px 20px;
-        }
-
-        .br-opinion-list {
-            display: flex;
-            flex-direction: column;
-            gap: 13px;
-        }
-
-        .br-opinion-small {
-            display: grid;
-            grid-template-columns: 145px 1fr;
-            gap: 14px;
-            cursor: pointer;
-            padding-bottom: 13px;
-            border-bottom: 1px solid var(--br-border);
-        }
-
-        .br-opinion-small:last-child {
-            border-bottom: 0;
-        }
-
-        .br-opinion-small-image {
-            width: 145px;
-            height: 92px;
-            overflow: hidden;
-            background: #ddd;
-        }
-
-        .br-opinion-small-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .br-opinion-author {
-            font-size: 10px;
-            color: var(--br-primary);
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 5px;
-        }
-
-        /* ============================================================
-           FIXTURES
-           ============================================================ */
-
-        .br-fixtures {
-            background: #fff;
-            border: 1px solid var(--br-border);
-        }
-
-        .br-next-match {
-            padding: 27px 20px 24px;
-            text-align: center;
-            border-bottom: 1px solid var(--br-border);
-        }
-
-        .br-competition {
-            color: var(--br-primary);
-            font-size: 10px;
-            font-weight: 900;
-            letter-spacing: 1.2px;
-            text-transform: uppercase;
-            margin-bottom: 8px;
-        }
-
-        .br-match-date {
-            color: var(--br-muted);
-            font-size: 12px;
-            margin-bottom: 22px;
-        }
-
-        .br-match-teams {
-            display: grid;
-            grid-template-columns: 1fr 80px 1fr;
-            align-items: center;
-            max-width: 650px;
-            margin: 0 auto;
-        }
-
-        .br-match-team {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .br-team-logo {
-            width: 70px;
-            height: 70px;
-            object-fit: contain;
-        }
-
-        .br-team-name {
-            font-size: 16px;
-            font-weight: 900;
-        }
-
-        .br-vs {
-            font-size: 14px;
-            font-weight: 900;
-            color: #999;
-        }
-
-        .br-prediction {
-            margin-top: 22px;
-        }
-
-        .br-upcoming-fixtures {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-        }
-
-        .br-upcoming-card {
-            padding: 20px;
-            text-align: center;
-            cursor: pointer;
-        }
-
-        .br-upcoming-card + .br-upcoming-card {
-            border-left: 1px solid var(--br-border);
-        }
-
-        .br-upcoming-card .br-match-teams {
-            grid-template-columns: 1fr 40px 1fr;
-        }
-
-        .br-upcoming-card .br-team-logo {
-            width: 42px;
-            height: 42px;
-        }
-
-        .br-upcoming-card .br-team-name {
-            font-size: 12px;
-        }
-
-        /* ============================================================
-           TABLE
-           ============================================================ */
-
-        .br-table-box {
-            background: #fff;
-            border: 1px solid var(--br-border);
-        }
-
-        .br-tabs {
-            display: flex;
-            border-bottom: 1px solid var(--br-border);
-        }
-
-        .br-tab {
-            flex: 1;
-            border: 0;
-            background: transparent;
-            padding: 13px 10px;
-            font-size: 11px;
-            font-weight: 900;
-            text-transform: uppercase;
-            cursor: pointer;
-            color: #777;
-        }
-
-        .br-tab.active {
-            color: var(--br-primary);
-            box-shadow: inset 0 -3px 0 var(--br-primary);
-        }
-
-        .br-table-scroll {
-            overflow-x: auto;
-        }
-
-        .br-league-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 12px;
-        }
-
-        .br-league-table th,
-        .br-league-table td {
-            padding: 11px 10px;
-            text-align: center;
-            border-bottom: 1px solid #eee;
-        }
-
-        .br-league-table th:nth-child(2),
-        .br-league-table td:nth-child(2) {
-            text-align: left;
-        }
-
-        .br-league-table th {
-            color: #777;
-            font-size: 9px;
-            text-transform: uppercase;
-            letter-spacing: .8px;
-        }
-
-        .br-team-cell {
-            display: flex;
-            align-items: center;
-            gap: 9px;
-            font-weight: 800;
-        }
-
-        .br-mini-logo {
-            width: 25px;
-            height: 25px;
-            object-fit: contain;
-        }
-
-        .br-highlight {
-            background: rgba(165,0,68,.06);
-            font-weight: 900;
-        }
-
-        /* ============================================================
-           PLAYER RATINGS
-           ============================================================ */
-
-        .br-ratings-box {
-            background: #fff;
-            border: 1px solid var(--br-border);
-        }
-
-        .br-rating-list {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-        }
-
-        .br-rating-row {
-            display: grid;
-            grid-template-columns: 34px 48px 1fr 55px;
-            align-items: center;
-            gap: 10px;
-            padding: 13px;
-            border-bottom: 1px solid #eee;
-        }
-
-        .br-rating-rank {
-            font-weight: 900;
-            color: #999;
-        }
-
-        .br-player-image {
-            width: 43px;
-            height: 43px;
-            border-radius: 50%;
-            object-fit: cover;
-            background: #eee;
-        }
-
-        .br-player-name {
-            font-size: 13px;
-            font-weight: 850;
-        }
-
-        .br-player-votes {
-            display: block;
-            font-size: 10px;
-            color: #999;
-            margin-top: 2px;
-        }
-
-        .br-rating-score {
-            text-align: right;
-            font-size: 17px;
-            font-weight: 900;
-            color: var(--br-primary);
-        }
-
-        /* ============================================================
-           VIDEOS
-           ============================================================ */
-
-        .br-videos-box {
-            background: #111;
-            padding: 20px;
-        }
-
-        .br-video-feature {
-            cursor: pointer;
-            color: #fff;
-        }
-
-        .br-video-image {
-            position: relative;
-            aspect-ratio: 16 / 9;
-            overflow: hidden;
-            background: #222;
-        }
-
-        .br-video-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .br-play-button {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            width: 58px;
-            height: 58px;
-            border-radius: 50%;
-            border: 0;
-            background: rgba(255,255,255,.95);
-            color: #111;
-            font-size: 20px;
-            cursor: pointer;
-        }
-
-        .br-video-title {
-            padding-top: 13px;
-            font-size: 18px;
-            font-weight: 900;
-        }
-
-        .br-video-list {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 14px;
-            margin-top: 18px;
-        }
-
-        .br-video-small {
-            cursor: pointer;
-            color: #fff;
-        }
-
-        .br-video-small-image {
-            aspect-ratio: 16 / 9;
-            background: #222;
-            overflow: hidden;
-        }
-
-        .br-video-small-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .br-video-small-title {
-            font-size: 13px;
-            font-weight: 800;
-            line-height: 1.3;
-            margin-top: 7px;
-        }
-
-        /* ============================================================
-           FOOTER
-           ============================================================ */
-
-        .br-footer {
-            background: #151515;
-            color: #fff;
-            margin-top: 50px;
-            padding: 42px 20px 100px;
-        }
-
-        .br-footer-inner {
-            width: 100%;
-            max-width: 1180px;
-            margin: 0 auto;
-        }
-
-        .br-footer-brand {
-            font-size: 30px;
-            font-weight: 950;
-            margin-bottom: 9px;
-        }
-
-        .br-footer-brand span {
-            color: var(--br-primary);
-        }
-
-        .br-footer-description {
-            color: #aaa;
-            max-width: 550px;
-            font-size: 13px;
-            line-height: 1.6;
-        }
-
-        .br-footer-links {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px 25px;
-            margin-top: 25px;
-        }
-
-        .br-footer-links button {
-            border: 0;
-            background: transparent;
-            color: #ddd;
-            padding: 0;
-            cursor: pointer;
-            font-size: 12px;
-        }
-
-        .br-footer-copy {
-            margin-top: 28px;
-            padding-top: 18px;
-            border-top: 1px solid #333;
-            color: #777;
-            font-size: 11px;
-        }
-
-        /* ============================================================
-           FOCUSED CONTENT VIEW
-           ============================================================ */
-
-        .br-content-view {
-            display: none;
-            max-width: 900px;
-            margin: 35px auto 120px;
-            padding: 0 18px;
-        }
-
-        .br-content-view.active {
-            display: block;
-        }
-
-        .br-home.hidden-home {
-            display: none;
-        }
-
-        .br-view-back {
-            border: 0;
-            background: transparent;
-            padding: 0;
-            color: var(--br-primary);
-            font-size: 12px;
-            font-weight: 900;
-            cursor: pointer;
-            text-transform: uppercase;
-            margin-bottom: 25px;
-        }
-
-        .br-view-type {
-            color: var(--br-primary);
-            font-size: 10px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 1.3px;
-            margin-bottom: 8px;
-        }
-
-        .br-view-title {
-            font-size: 40px;
-            line-height: 1.08;
-            margin: 0 0 13px;
-            font-weight: 950;
-        }
-
-        .br-view-meta {
-            color: #888;
-            font-size: 12px;
-            margin-bottom: 25px;
-        }
-
-        .br-view-image {
-            width: 100%;
-            max-height: 540px;
-            object-fit: cover;
-            display: block;
-            margin-bottom: 28px;
-        }
-
-        .br-view-description {
-            font-size: 18px;
-            line-height: 1.6;
-            font-weight: 600;
-            margin-bottom: 22px;
-        }
-
-        .br-view-body {
-            font-size: 16px;
-            line-height: 1.8;
-            color: #333;
-            white-space: pre-wrap;
-        }
-
-        .br-list-view {
-            display: grid;
-            gap: 15px;
-        }
-
-        .br-list-view-card {
-            display: grid;
-            grid-template-columns: 210px 1fr;
-            gap: 18px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid var(--br-border);
-            cursor: pointer;
-        }
-
-        .br-list-view-image {
-            width: 210px;
-            height: 125px;
-            object-fit: cover;
-            background: #ddd;
-        }
-
-        .br-list-view-title {
-            font-size: 19px;
-            line-height: 1.25;
-            font-weight: 900;
-            margin-bottom: 7px;
-        }
-
-        .br-list-view-description {
-            color: #777;
-            font-size: 13px;
-            line-height: 1.45;
-        }
-
-        /* ============================================================
-           LOADING / EMPTY
-           ============================================================ */
-
-        .br-loading,
-        .br-empty {
-            background: #fff;
-            border: 1px solid var(--br-border);
-            padding: 25px;
-            color: #777;
-            font-size: 13px;
-        }
-
-        /* ============================================================
-           RESPONSIVE
-           ============================================================ */
-
-        @media (max-width: 850px) {
-
-            .br-news-grid,
-            .br-opinion-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .br-rating-list {
-                grid-template-columns: 1fr;
-            }
-
-            .br-video-list {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 600px) {
-
-            .br-main {
-                padding-left: 12px;
-                padding-right: 12px;
-            }
-
-            .br-section {
-                margin-top: 32px;
-            }
-
-            .br-section-heading h2 {
-                font-size: 21px;
-            }
-
-            .br-section-heading span {
-                display: none;
-            }
-
-            .br-small-story,
-            .br-opinion-small {
-                grid-template-columns: 105px minmax(0, 1fr);
-            }
-
-            .br-small-story-image,
-            .br-opinion-small-image {
-                width: 105px;
-                height: 75px;
-            }
-
-            .br-small-story-title {
-                font-size: 14px;
-            }
-
-            .br-small-story-description {
-                display: none;
-            }
-
-            .br-main-story-title {
-                font-size: 22px;
-            }
-
-            .br-match-teams {
-                grid-template-columns: 1fr 45px 1fr;
-            }
-
-            .br-team-logo {
-                width: 55px;
-                height: 55px;
-            }
-
-            .br-team-name {
-                font-size: 13px;
-            }
-
-            .br-upcoming-fixtures {
-                grid-template-columns: 1fr;
-            }
-
-            .br-upcoming-card + .br-upcoming-card {
-                border-left: 0;
-                border-top: 1px solid var(--br-border);
-            }
-
-            .br-video-list {
-                grid-template-columns: 1fr;
-            }
-
-            .br-view-title {
-                font-size: 29px;
-            }
-
-            .br-list-view-card {
-                grid-template-columns: 110px 1fr;
-            }
-
-            .br-list-view-image {
-                width: 110px;
-                height: 80px;
-            }
-
-            .br-list-view-title {
-                font-size: 15px;
-            }
-
-            .br-list-view-description {
-                display: none;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="css/global.css">
 </head>
 
 <body>
 
-<div
-    class="home br-home"
-    id="home-shell"
->
+<div class="home">
 
-    <!-- ============================================================
-         EXISTING TOP BAR
-         ============================================================ -->
-
+    <!-- =========================================================
+         TOPBAR — EXISTING
+         ========================================================= -->
     <header class="topbar">
-
         <div class="brand">
             BARÇA <span>REAL</span>
         </div>
 
-        <button
-            class="profile-button"
-            onclick="window.location.href='profile.html'"
-        >
+        <a href="profile.html" class="profile-button" id="profile-button">
             U
-        </button>
-
+        </a>
     </header>
 
 
-    <!-- ============================================================
-         EXISTING PERSONALIZED CLUB HEADER
-         ============================================================ -->
-
+    <!-- =========================================================
+         TEAM HEADER — EXISTING
+         ========================================================= -->
     <section class="team-header">
 
         <div class="eyebrow">
             O TEU FUTEBOL. O TEU LADO.
         </div>
 
-        <h1
-            class="team-title"
-            id="team-title"
-        >
+        <h1 class="team-title" id="team-title">
             A carregar...
         </h1>
 
-        <p
-            class="team-subtitle"
-            id="team-subtitle"
-        >
+        <p class="team-subtitle" id="team-subtitle">
             A preparar a tua experiência...
         </p>
 
     </section>
 
 
-    <!-- ============================================================
-         HOMEPAGE CONTENT
-         ============================================================ -->
+    <!-- =========================================================
+         MAIN CONTENT
+         ========================================================= -->
+    <main class="content" id="home-content">
 
-    <main
-        class="br-main"
-        id="homepage-content"
-    >
 
-        <!-- ========================================================
-             NEWS
-             ======================================================== -->
+        <!-- =====================================================
+             DESTAQUE — EXISTENTE / NÃO ALTERAR
+             ===================================================== -->
+        <section class="section">
 
-        <section
-            class="br-section"
-            id="news-section"
-        >
+            <div class="section-heading">
+                <h2>Destaque</h2>
+                <span>PARA TI</span>
+            </div>
 
-            <div class="br-section-heading">
+            <div class="featured-carousel" id="featured-carousel">
 
-                <h2>
-                    Últimas Notícias
-                </h2>
+                <div class="featured-track" id="featured-track">
 
-                <span>
-                    NOTÍCIAS
-                </span>
+                    <article class="featured-slide">
+                        <div class="featured-content">
+                            <span class="featured-tag">DESTAQUE</span>
+                            <h2>A carregar conteúdo...</h2>
+                            <p>Estamos a preparar os destaques para ti.</p>
+                        </div>
+                    </article>
+
+                    <article class="featured-slide">
+                        <div class="featured-content">
+                            <span class="featured-tag">BARÇA REAL</span>
+                            <h2>O teu futebol.</h2>
+                            <p>Notícias, jogos, opinião e comunidade.</p>
+                        </div>
+                    </article>
+
+                    <article class="featured-slide">
+                        <div class="featured-content">
+                            <span class="featured-tag">COMUNIDADE</span>
+                            <h2>Vive o futebol.</h2>
+                            <p>Partilha a tua paixão com outros adeptos.</p>
+                        </div>
+                    </article>
+
+                </div>
+
+                <div class="featured-dots" id="featured-dots">
+                    <button class="featured-dot active" type="button"></button>
+                    <button class="featured-dot" type="button"></button>
+                    <button class="featured-dot" type="button"></button>
+                </div>
 
             </div>
 
-            <div
-                class="br-news-grid"
-                id="news-grid"
-            >
+        </section>
 
-                <div class="br-loading">
+
+        <!-- =====================================================
+             NOTÍCIAS
+             ===================================================== -->
+        <section class="section homepage-section" id="news-section">
+
+            <div class="section-heading">
+                <h2>Notícias</h2>
+                <span>ÚLTIMAS</span>
+            </div>
+
+            <div class="news-home-grid" id="news-home-grid">
+
+                <div class="homepage-loading">
                     A carregar notícias...
                 </div>
 
             </div>
 
-            <div class="br-more-wrap">
-
-                <button
-                    class="br-more-button"
-                    id="more-news-button"
-                    type="button"
-                >
-                    Mais Notícias
-                </button>
-
-            </div>
+            <button
+                class="section-more-button"
+                id="more-news-button"
+                type="button">
+                Mais notícias
+            </button>
 
         </section>
 
 
-        <!-- ========================================================
-             OPINION & ANALYSIS
-             ======================================================== -->
+        <!-- =====================================================
+             OPINIÃO & ANÁLISE
+             ===================================================== -->
+        <section class="section homepage-section" id="opinion-section">
 
-        <section
-            class="br-section"
-            id="opinion-section"
-        >
-
-            <div class="br-section-heading">
-
-                <h2>
-                    Opinião &amp; Análise
-                </h2>
-
-                <span>
-                    A VOZ DOS ADEPTOS
-                </span>
-
+            <div class="section-heading">
+                <h2>Opinião &amp; Análise</h2>
+                <span>VOZES</span>
             </div>
 
-            <div
-                class="br-opinion-grid"
-                id="opinion-grid"
-            >
+            <div class="editorial-home-grid" id="opinion-home-grid">
 
-                <div class="br-loading">
+                <div class="homepage-loading">
                     A carregar opiniões...
                 </div>
 
             </div>
 
-            <div class="br-more-wrap">
+            <button
+                class="section-more-button"
+                id="more-opinion-button"
+                type="button">
+                Mais opiniões
+            </button>
+
+        </section>
+
+
+        <!-- =====================================================
+             PRÓXIMOS JOGOS
+             ===================================================== -->
+        <section class="section homepage-section" id="fixtures-section">
+
+            <div class="section-heading">
+                <h2>Próximos Jogos</h2>
+                <span>CENTRAL DE JOGOS</span>
+            </div>
+
+            <div id="fixtures-container">
+
+                <div class="fixture-main-card">
+
+                    <div class="fixture-label">
+                        PRÓXIMO JOGO
+                    </div>
+
+                    <div class="fixture-competition" id="main-fixture-competition">
+                        —
+                    </div>
+
+                    <div class="fixture-date" id="main-fixture-date">
+                        A carregar...
+                    </div>
+
+                    <div class="fixture-teams">
+
+                        <div class="fixture-team">
+                            <div class="fixture-badge" id="main-home-badge">
+                                —
+                            </div>
+
+                            <strong id="main-home-name">
+                                —
+                            </strong>
+                        </div>
+
+                        <div class="fixture-vs">
+                            VS
+                        </div>
+
+                        <div class="fixture-team">
+                            <div class="fixture-badge" id="main-away-badge">
+                                —
+                            </div>
+
+                            <strong id="main-away-name">
+                                —
+                            </strong>
+                        </div>
+
+                    </div>
+
+                    <button
+                        class="prediction-button"
+                        id="prediction-button"
+                        type="button">
+                        Enviar previsão
+                    </button>
+
+                </div>
+
+
+                <div class="fixture-next-list" id="next-fixtures">
+
+                    <div class="fixture-small-card">
+                        <div class="fixture-small-date">—</div>
+                        <div class="fixture-small-teams">
+                            <strong>—</strong>
+                            <span>vs</span>
+                            <strong>—</strong>
+                        </div>
+                        <div class="fixture-small-competition">—</div>
+                    </div>
+
+                    <div class="fixture-small-card">
+                        <div class="fixture-small-date">—</div>
+                        <div class="fixture-small-teams">
+                            <strong>—</strong>
+                            <span>vs</span>
+                            <strong>—</strong>
+                        </div>
+                        <div class="fixture-small-competition">—</div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =====================================================
+             CLASSIFICAÇÃO
+             ===================================================== -->
+        <section class="section homepage-section" id="table-section">
+
+            <div class="section-heading">
+                <h2>Classificação</h2>
+                <span>TABELA</span>
+            </div>
+
+            <div class="table-tabs">
 
                 <button
-                    class="br-more-button"
-                    id="more-opinion-button"
+                    class="table-tab active"
                     type="button"
-                >
-                    Mais Opinião
+                    data-competition="league">
+                    Liga
+                </button>
+
+                <button
+                    class="table-tab"
+                    type="button"
+                    data-competition="champions">
+                    Champions League
                 </button>
 
             </div>
 
-        </section>
+            <div class="league-table-wrapper">
 
-
-        <!-- ========================================================
-             FIXTURES
-             ======================================================== -->
-
-        <section
-            class="br-section"
-            id="fixtures-section"
-        >
-
-            <div class="br-section-heading">
-
-                <h2>
-                    Fixtures
-                </h2>
-
-                <span>
-                    CENTRAL DE JOGOS
-                </span>
-
-            </div>
-
-            <div
-                class="br-fixtures"
-                id="fixtures-container"
-            >
-
-                <div class="br-loading">
-                    A carregar jogos...
+                <div class="league-table-head">
+                    <span>#</span>
+                    <span>Equipa</span>
+                    <span>J</span>
+                    <span>DG</span>
+                    <span>Pts</span>
                 </div>
 
-            </div>
+                <div id="league-table-body">
 
-        </section>
-
-
-        <!-- ========================================================
-             LEAGUE TABLE
-             ======================================================== -->
-
-        <section
-            class="br-section"
-            id="table-section"
-        >
-
-            <div class="br-section-heading">
-
-                <h2>
-                    League Table
-                </h2>
-
-                <span>
-                    CLASSIFICAÇÃO
-                </span>
-
-            </div>
-
-            <div class="br-table-box">
-
-                <div class="br-tabs">
-
-                    <button
-                        class="br-tab active"
-                        type="button"
-                        data-table="league"
-                    >
-                        Liga
-                    </button>
-
-                    <button
-                        class="br-tab"
-                        type="button"
-                        data-table="champions"
-                    >
-                        Champions League
-                    </button>
-
-                </div>
-
-                <div
-                    class="br-table-scroll"
-                    id="league-table-container"
-                >
-
-                    <div class="br-loading">
-                        A carregar classificação...
+                    <div class="table-empty">
+                        Classificação a carregar...
                     </div>
 
                 </div>
@@ -1162,49 +303,36 @@
         </section>
 
 
-        <!-- ========================================================
+        <!-- =====================================================
              FAN PLAYER RATINGS
-             ======================================================== -->
+             ===================================================== -->
+        <section class="section homepage-section" id="ratings-section">
 
-        <section
-            class="br-section"
-            id="ratings-section"
-        >
-
-            <div class="br-section-heading">
-
-                <h2>
-                    Fan Player Ratings
-                </h2>
-
-                <span>
-                    AVALIAÇÃO DOS ADEPTOS
-                </span>
-
+            <div class="section-heading">
+                <h2>Avaliações dos Adeptos</h2>
+                <span>PLAYER RATINGS</span>
             </div>
 
-            <div class="br-ratings-box">
+            <div class="ratings-card">
 
-                <div
-                    class="br-rating-list"
-                    id="ratings-list"
-                >
-
-                    <div class="br-loading">
-                        A carregar avaliações...
+                <div class="ratings-header">
+                    <div>
+                        <strong>Último jogo</strong>
+                        <span id="ratings-match-name">
+                            Avaliações da comunidade
+                        </span>
                     </div>
 
+                    <div class="ratings-score" id="ratings-average">
+                        —
+                    </div>
                 </div>
 
-                <div class="br-more-wrap">
+                <div class="ratings-list" id="ratings-list">
 
-                    <button
-                        class="br-more-button"
-                        id="submit-ratings-button"
-                        type="button"
-                    >
-                        Avaliar Jogadores
-                    </button>
+                    <div class="table-empty">
+                        As avaliações aparecerão aqui depois dos jogos.
+                    </div>
 
                 </div>
 
@@ -1213,35 +341,178 @@
         </section>
 
 
-        <!-- ========================================================
-             VIDEOS
-             ======================================================== -->
+        <!-- =====================================================
+             VÍDEOS
+             ===================================================== -->
+        <section class="section homepage-section" id="videos-section">
 
-        <section
-            class="br-section"
-            id="videos-section"
-        >
-
-            <div class="br-section-heading">
-
-                <h2>
-                    Vídeos
-                </h2>
-
-                <span>
-                    BARÇA REAL TV
-                </span>
-
+            <div class="section-heading">
+                <h2>Vídeos</h2>
+                <span>BARÇA REAL TV</span>
             </div>
 
-            <div
-                class="br-videos-box"
-                id="videos-container"
-            >
+            <div class="videos-home-grid" id="videos-home-grid">
 
-                <div class="br-loading">
+                <div class="homepage-loading">
                     A carregar vídeos...
                 </div>
+
+            </div>
+
+            <button
+                class="section-more-button"
+                id="more-videos-button"
+                type="button">
+                Mais vídeos
+            </button>
+
+        </section>
+
+
+        <!-- =====================================================
+             FOCUSED CONTENT VIEW
+             ===================================================== -->
+        <section
+            class="focused-content-view"
+            id="focused-content-view"
+            hidden>
+
+            <button
+                class="focused-back-button"
+                id="focused-back-button"
+                type="button">
+                ← Voltar
+            </button>
+
+            <article id="focused-content">
+
+                <div class="focused-content-image" id="focused-content-image"></div>
+
+                <div class="focused-content-meta" id="focused-content-meta">
+                    BARÇA REAL
+                </div>
+
+                <h1 id="focused-content-title">
+                    —
+                </h1>
+
+                <div class="focused-content-author" id="focused-content-author"></div>
+
+                <p id="focused-content-description">
+                    —
+                </p>
+
+                <div
+                    class="focused-content-media"
+                    id="focused-content-media">
+                </div>
+
+            </article>
+
+        </section>
+
+
+        <!-- =====================================================
+             LIBRARY VIEW
+             ===================================================== -->
+        <section
+            class="library-view"
+            id="library-view"
+            hidden>
+
+            <button
+                class="focused-back-button"
+                id="library-back-button"
+                type="button">
+                ← Voltar
+            </button>
+
+            <div class="section-heading">
+                <h2 id="library-title">
+                    Biblioteca
+                </h2>
+
+                <span id="library-label">
+                    BARÇA REAL
+                </span>
+            </div>
+
+            <div
+                class="library-grid"
+                id="library-grid">
+            </div>
+
+        </section>
+
+
+        <!-- =====================================================
+             PREDICTION VIEW
+             ===================================================== -->
+        <section
+            class="prediction-view"
+            id="prediction-view"
+            hidden>
+
+            <button
+                class="focused-back-button"
+                id="prediction-back-button"
+                type="button">
+                ← Voltar
+            </button>
+
+            <div class="prediction-card">
+
+                <div class="fixture-label">
+                    A TUA PREVISÃO
+                </div>
+
+                <h2 id="prediction-match-title">
+                    —
+                </h2>
+
+                <div class="prediction-teams">
+
+                    <div>
+                        <strong id="prediction-home-name">
+                            —
+                        </strong>
+
+                        <input
+                            type="number"
+                            min="0"
+                            max="99"
+                            id="prediction-home-score"
+                            placeholder="0">
+                    </div>
+
+                    <span>:</span>
+
+                    <div>
+                        <input
+                            type="number"
+                            min="0"
+                            max="99"
+                            id="prediction-away-score"
+                            placeholder="0">
+
+                        <strong id="prediction-away-name">
+                            —
+                        </strong>
+                    </div>
+
+                </div>
+
+                <button
+                    class="prediction-submit"
+                    id="prediction-submit"
+                    type="button">
+                    Confirmar previsão
+                </button>
+
+                <p
+                    class="prediction-message"
+                    id="prediction-message">
+                </p>
 
             </div>
 
@@ -1250,160 +521,103 @@
     </main>
 
 
-    <!-- ============================================================
-         FOCUSED CONTENT VIEW
-
-         Homepage disappears when this becomes active.
-         ============================================================ -->
-
-    <section
-        class="br-content-view"
-        id="content-view"
-    >
-
-        <button
-            type="button"
-            class="br-view-back"
-            id="content-back-button"
-        >
-            ← Voltar
-        </button>
-
-        <div id="content-view-body"></div>
-
-    </section>
-
-
-    <!-- ============================================================
+    <!-- =========================================================
          FOOTER
-         ============================================================ -->
+         ========================================================= -->
+    <footer class="site-footer">
 
-    <footer class="br-footer">
+        <div class="footer-brand">
+            BARÇA <span>REAL</span>
+        </div>
 
-        <div class="br-footer-inner">
+        <p>
+            A tua comunidade de futebol.
+        </p>
 
-            <div class="br-footer-brand">
-                BARÇA <span>REAL</span>
-            </div>
+        <div class="footer-links">
 
-            <p class="br-footer-description">
-                A casa dos adeptos do Barça e do Real Madrid.
-                Notícias, opinião, jogos, comunidade e tudo o que
-                acontece dentro e fora do campo.
-            </p>
+            <a href="about.html">
+                Sobre nós
+            </a>
 
-            <div class="br-footer-links">
+            <a href="advertise.html">
+                Publicidade
+            </a>
 
-                <button type="button">
-                    Sobre Nós
-                </button>
+            <a href="contact.html">
+                Contacto
+            </a>
 
-                <button type="button">
-                    Publicidade
-                </button>
+            <a href="privacy.html">
+                Privacidade
+            </a>
 
-                <button type="button">
-                    Contacto
-                </button>
+            <a href="terms.html">
+                Termos
+            </a>
 
-                <button type="button">
-                    Privacidade
-                </button>
+        </div>
 
-                <button type="button">
-                    Termos
-                </button>
-
-            </div>
-
-            <div class="br-footer-copy">
-                © 2026 Barça Real. Todos os direitos reservados.
-            </div>
-
+        <div class="footer-copy">
+            © 2026 Barça Real. Todos os direitos reservados.
         </div>
 
     </footer>
 
 
-    <!-- ============================================================
-         EXISTING BOTTOM NAVIGATION
-         ============================================================ -->
-
+    <!-- =========================================================
+         BOTTOM NAV — EXISTING
+         ========================================================= -->
     <nav class="bottom-nav">
 
-        <button
-            class="nav-item active"
-            onclick="window.location.href='home.html'"
-        >
+        <a
+            href="home.html"
+            class="nav-item active">
 
-            <span class="nav-icon">
-                ⌂
-            </span>
+            <span class="nav-icon">⌂</span>
+            <span>Início</span>
 
-            INÍCIO
-
-        </button>
-
+        </a>
 
         <button
             class="nav-item"
-            onclick="alert('A Comunidade estará disponível em breve.')"
-        >
+            id="community-nav"
+            type="button">
 
-            <span class="nav-icon">
-                ◉
-            </span>
-
-            COMUNIDADE
+            <span class="nav-icon">◉</span>
+            <span>Comunidade</span>
 
         </button>
-
 
         <button
             class="nav-item"
-            onclick="alert('A Central de Jogos estará disponível em breve.')"
-        >
+            id="games-nav"
+            type="button">
 
-            <span class="nav-icon">
-                ⚽
-            </span>
-
-            JOGOS
+            <span class="nav-icon">⚽</span>
+            <span>Jogos</span>
 
         </button>
 
+        <a
+            href="profile.html"
+            class="nav-item">
 
-        <button
-            class="nav-item"
-            onclick="window.location.href='profile.html'"
-        >
+            <span class="nav-icon">○</span>
+            <span>Perfil</span>
 
-            <span class="nav-icon">
-                ●
-            </span>
-
-            PERFIL
-
-        </button>
+        </a>
 
     </nav>
 
 </div>
 
 
-<!-- ================================================================
+<!-- =============================================================
      SUPABASE
-     ================================================================ -->
-
+     ============================================================= -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <script src="js/supabase.js"></script>
-
-
-<!-- ================================================================
-     HOME JAVASCRIPT
-     ================================================================ -->
-
 <script src="js/home.js"></script>
 
 </body>
