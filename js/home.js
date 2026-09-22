@@ -1,5 +1,5 @@
 // ============================================================
-// BARÇA REAL
+// BR
 // HOME PAGE
 // ============================================================
 
@@ -218,18 +218,13 @@ async function loadHome() {
 async function loadFeaturedContent(teamId) {
 
     const track =
-        document.getElementById(
-            "featured-track"
-        );
+        document.getElementById("featured-track");
+
 
     if (!track) {
         return;
     }
 
-
-    // --------------------------------------------------------
-    // LOAD PUBLISHED FEATURED CONTENT
-    // --------------------------------------------------------
 
     const {
         data,
@@ -237,14 +232,8 @@ async function loadFeaturedContent(teamId) {
     } = await supabaseClient
         .from("content")
         .select("*")
-        .eq(
-            "area",
-            "featured"
-        )
-        .eq(
-            "status",
-            "published"
-        )
+        .eq("area", "featured")
+        .eq("status", "published")
         .or(
             `team_id.eq.${teamId},team_id.is.null`
         )
@@ -275,19 +264,9 @@ async function loadFeaturedContent(teamId) {
     }
 
 
-    // --------------------------------------------------------
-    // FILTER ACTIVE DATES
-    // --------------------------------------------------------
-
     const activeItems =
-        filterActiveContent(
-            data || []
-        );
+        filterActiveContent(data || []);
 
-
-    // --------------------------------------------------------
-    // RENDER
-    // --------------------------------------------------------
 
     if (!activeItems.length) {
 
@@ -311,14 +290,10 @@ async function loadFeaturedContent(teamId) {
 function renderFeaturedSlides(items) {
 
     const track =
-        document.getElementById(
-            "featured-track"
-        );
+        document.getElementById("featured-track");
 
     const dots =
-        document.getElementById(
-            "featured-dots"
-        );
+        document.getElementById("featured-dots");
 
 
     if (!track) {
@@ -338,9 +313,7 @@ function renderFeaturedSlides(items) {
         (item, index) => {
 
             const slide =
-                document.createElement(
-                    "article"
-                );
+                document.createElement("article");
 
 
             slide.className =
@@ -402,7 +375,9 @@ function renderFeaturedSlides(items) {
                             ? `
                                 <p>
                                     ${escapeHTML(
-                                        item.description
+                                        stripHTML(
+                                            item.description
+                                        )
                                     )}
                                 </p>
                             `
@@ -427,10 +402,6 @@ function renderFeaturedSlides(items) {
 
             `;
 
-
-            // ------------------------------------------------
-            // OPEN FEATURED CONTENT
-            // ------------------------------------------------
 
             let slideMoved = false;
 
@@ -477,17 +448,11 @@ function renderFeaturedSlides(items) {
                     }
 
 
-                    openContent(
-                        item
-                    );
+                    openContent(item);
 
                 }
             );
 
-
-            // ------------------------------------------------
-            // AUDIO
-            // ------------------------------------------------
 
             const audioButton =
                 slide.querySelector(
@@ -495,28 +460,23 @@ function renderFeaturedSlides(items) {
                 );
 
 
-           if (audioButton) {
+            if (audioButton) {
 
-    audioButton.addEventListener(
-        "click",
-        event => {
+                audioButton.addEventListener(
+                    "click",
+                    event => {
 
-            event.stopPropagation();
+                        event.stopPropagation();
 
-            console.log(
-                "FEATURED AUDIO URL:",
-                item.audio_url
-            );
+                        playFeaturedAudio(
+                            item.audio_url,
+                            audioButton
+                        );
 
-            playFeaturedAudio(
-                item.audio_url,
-                audioButton
-            );
+                    }
+                );
 
-        }
-    );
-
-}
+            }
 
 
             track.appendChild(
@@ -524,16 +484,10 @@ function renderFeaturedSlides(items) {
             );
 
 
-            // ------------------------------------------------
-            // DOT
-            // ------------------------------------------------
-
             if (dots) {
 
                 const dot =
-                    document.createElement(
-                        "button"
-                    );
+                    document.createElement("button");
 
 
                 dot.type =
@@ -546,9 +500,7 @@ function renderFeaturedSlides(items) {
 
                 if (index === 0) {
 
-                    dot.classList.add(
-                        "active"
-                    );
+                    dot.classList.add("active");
 
                 }
 
@@ -633,14 +585,10 @@ function getFeaturedLabel(item) {
 function renderEmptyFeatured() {
 
     const track =
-        document.getElementById(
-            "featured-track"
-        );
+        document.getElementById("featured-track");
 
     const dots =
-        document.getElementById(
-            "featured-dots"
-        );
+        document.getElementById("featured-dots");
 
 
     if (track) {
@@ -702,10 +650,6 @@ function playFeaturedAudio(
     }
 
 
-    // --------------------------------------------------------
-    // STOP CURRENT AUDIO
-    // --------------------------------------------------------
-
     if (
         featuredAudio &&
         !featuredAudio.paused
@@ -732,10 +676,6 @@ function playFeaturedAudio(
 
     }
 
-
-    // --------------------------------------------------------
-    // PLAY AUDIO
-    // --------------------------------------------------------
 
     featuredAudio =
         new Audio(url);
@@ -786,15 +726,10 @@ function playFeaturedAudio(
 function setupFeaturedCarousel() {
 
     const track =
-        document.getElementById(
-            "featured-track"
-        );
-
+        document.getElementById("featured-track");
 
     const dots =
-        document.getElementById(
-            "featured-dots"
-        );
+        document.getElementById("featured-dots");
 
 
     if (!track) {
@@ -819,21 +754,12 @@ function setupFeaturedCarousel() {
 
 
     let currentIndex = 0;
-
     let autoPlay = null;
-
     let isDragging = false;
-
     let startX = 0;
-
     let startScrollLeft = 0;
-
     let moved = false;
 
-
-    // --------------------------------------------------------
-    // UPDATE DOTS
-    // --------------------------------------------------------
 
     function updateDots(index) {
 
@@ -852,10 +778,6 @@ function setupFeaturedCarousel() {
     }
 
 
-    // --------------------------------------------------------
-    // GO TO SLIDE
-    // --------------------------------------------------------
-
     function goToSlide(
         index,
         smooth = true
@@ -871,10 +793,7 @@ function setupFeaturedCarousel() {
 
 
         if (index < 0) {
-
-            index =
-                slides.length - 1;
-
+            index = slides.length - 1;
         }
 
 
@@ -911,10 +830,6 @@ function setupFeaturedCarousel() {
 
     }
 
-
-    // --------------------------------------------------------
-    // DETECT CURRENT SLIDE
-    // --------------------------------------------------------
 
     function detectCurrentSlide() {
 
@@ -975,10 +890,6 @@ function setupFeaturedCarousel() {
     }
 
 
-    // --------------------------------------------------------
-    // AUTOPLAY
-    // --------------------------------------------------------
-
     function stopAutoPlay() {
 
         if (autoPlay) {
@@ -1024,10 +935,6 @@ function setupFeaturedCarousel() {
     }
 
 
-    // --------------------------------------------------------
-    // DOT CLICKS
-    // --------------------------------------------------------
-
     getDots()
         .forEach(
             dot => {
@@ -1056,10 +963,7 @@ function setupFeaturedCarousel() {
                         }
 
 
-                        goToSlide(
-                            index
-                        );
-
+                        goToSlide(index);
 
                         startAutoPlay();
 
@@ -1069,10 +973,6 @@ function setupFeaturedCarousel() {
             }
         );
 
-
-    // --------------------------------------------------------
-    // SCROLL
-    // --------------------------------------------------------
 
     track.addEventListener(
         "scroll",
@@ -1087,23 +987,14 @@ function setupFeaturedCarousel() {
     );
 
 
-    // --------------------------------------------------------
-    // MOUSE DRAG
-    // --------------------------------------------------------
-
     track.addEventListener(
         "mousedown",
         event => {
 
             isDragging = true;
-
             moved = false;
-
-            startX =
-                event.pageX;
-
-            startScrollLeft =
-                track.scrollLeft;
+            startX = event.pageX;
+            startScrollLeft = track.scrollLeft;
 
             stopAutoPlay();
 
@@ -1162,9 +1053,7 @@ function setupFeaturedCarousel() {
 
 
         if (moved) {
-
             detectCurrentSlide();
-
         }
 
 
@@ -1184,10 +1073,6 @@ function setupFeaturedCarousel() {
         stopDragging
     );
 
-
-    // --------------------------------------------------------
-    // TOUCH / MOBILE SWIPE
-    // --------------------------------------------------------
 
     track.addEventListener(
         "touchstart",
@@ -1278,10 +1163,6 @@ function setupFeaturedCarousel() {
     );
 
 
-    // --------------------------------------------------------
-    // PAUSE ON HOVER
-    // --------------------------------------------------------
-
     track.addEventListener(
         "mouseenter",
         () => {
@@ -1297,18 +1178,12 @@ function setupFeaturedCarousel() {
         () => {
 
             if (!isDragging) {
-
                 startAutoPlay();
-
             }
 
         }
     );
 
-
-    // --------------------------------------------------------
-    // INITIAL POSITION
-    // --------------------------------------------------------
 
     goToSlide(
         0,
@@ -1319,6 +1194,8 @@ function setupFeaturedCarousel() {
     startAutoPlay();
 
 }
+
+
 // ============================================================
 // NEWS
 // ============================================================
@@ -1327,7 +1204,7 @@ async function loadNews(teamId) {
 
     const container =
         document.getElementById(
-            "news-grid"
+            "news-home-grid"
         );
 
 
@@ -1340,15 +1217,25 @@ async function loadNews(teamId) {
         data,
         error
     } = await supabaseClient
-        .from("content")
-        .select("*")
-        .in(
-            "area",
-            [
-                "news",
-                "both"
-            ]
-        )
+        .from("news")
+        .select(`
+            id,
+            team_id,
+            title,
+            description,
+            image_url,
+            article_url,
+            source_name,
+            source_url,
+            author,
+            published_at,
+            imported_at,
+            category,
+            status,
+            is_featured,
+            sort_order,
+            created_at
+        `)
         .eq(
             "status",
             "published"
@@ -1357,9 +1244,10 @@ async function loadNews(teamId) {
             `team_id.eq.${teamId},team_id.is.null`
         )
         .order(
-            "sort_order",
+            "published_at",
             {
-                ascending: true
+                ascending: false,
+                nullsFirst: false
             }
         )
         .order(
@@ -1367,7 +1255,8 @@ async function loadNews(teamId) {
             {
                 ascending: false
             }
-        );
+        )
+        .limit(30);
 
 
     if (error) {
@@ -1377,35 +1266,39 @@ async function loadNews(teamId) {
             error
         );
 
+        newsItems = [];
+
         container.innerHTML = `
+
             <div class="br-empty">
+
                 Não foi possível carregar as notícias.
+
             </div>
+
         `;
 
         return;
     }
 
 
-    const valid =
-        filterActiveContent(
-            data || []
-        );
-
-
     newsItems =
-        valid.slice(
-            0,
-            7
+        (data || []).filter(
+            item =>
+                item.article_url
         );
 
 
     if (!newsItems.length) {
 
         container.innerHTML = `
+
             <div class="br-empty">
+
                 Ainda não existem notícias publicadas.
+
             </div>
+
         `;
 
         return;
@@ -1413,7 +1306,10 @@ async function loadNews(teamId) {
 
 
     renderNews(
-        newsItems
+        newsItems.slice(
+            0,
+            7
+        )
     );
 
 }
@@ -1427,12 +1323,26 @@ function renderNews(items) {
 
     const container =
         document.getElementById(
-            "news-grid"
+            "news-home-grid"
         );
+
+
+    if (!container) {
+        return;
+    }
 
 
     container.innerHTML = "";
 
+
+    if (!items.length) {
+        return;
+    }
+
+
+    // --------------------------------------------------------
+    // MAIN NEWS
+    // --------------------------------------------------------
 
     const main =
         items[0];
@@ -1445,49 +1355,77 @@ function renderNews(items) {
 
 
     mainStory.className =
-        "br-main-story";
+        "news-main-card";
 
 
     mainStory.innerHTML = `
 
-        <div class="br-main-story-image">
+        <div class="news-main-image">
 
-            ${imageHTML(
-                main.image_url,
-                "Notícia"
-            )}
+            ${
+                main.image_url
+                    ? `
+                        <img
+                            src="${escapeAttribute(
+                                main.image_url
+                            )}"
+                            alt="${escapeAttribute(
+                                main.title ||
+                                "Notícia"
+                            )}"
+                            loading="eager"
+                        >
+                    `
+                    : `
+                        <div class="news-main-placeholder">
+                            NOTÍCIA
+                        </div>
+                    `
+            }
 
         </div>
 
-        <div class="br-main-story-body">
+        <div class="news-main-body">
 
-            <div class="br-story-meta">
-                ${getContentLabel(main)}
+            <div class="news-main-meta">
+
+                ${getNewsSource(main)}
+
+                ${getNewsCategory(main)}
+
+                ${getNewsDate(main)}
+
             </div>
 
-            <h3 class="br-main-story-title">
+            <h3>
                 ${escapeHTML(
                     main.title ||
                     "Sem título"
                 )}
             </h3>
 
-            <p class="br-main-story-description">
-                ${escapeHTML(
-                    main.description ||
-                    ""
-                )}
-            </p>
+            ${
+                main.description
+                    ? `
+                        <p>
+                            ${escapeHTML(
+                                stripHTML(
+                                    main.description
+                                )
+                            )}
+                        </p>
+                    `
+                    : ""
+            }
 
         </div>
+
     `;
 
 
     mainStory.addEventListener(
         "click",
-        () => openContent(
-            main
-        )
+        () => openNewsArticle(main)
     );
 
 
@@ -1496,6 +1434,10 @@ function renderNews(items) {
     );
 
 
+    // --------------------------------------------------------
+    // SMALL NEWS LIST
+    // --------------------------------------------------------
+
     const smallWrapper =
         document.createElement(
             "div"
@@ -1503,7 +1445,7 @@ function renderNews(items) {
 
 
     smallWrapper.className =
-        "br-small-news";
+        "news-small-list";
 
 
     items
@@ -1521,49 +1463,77 @@ function renderNews(items) {
 
 
                 card.className =
-                    "br-small-story";
+                    "news-small-card";
 
 
                 card.innerHTML = `
 
-                    <div class="br-small-story-image">
+                    <div class="news-small-image">
 
-                        ${imageHTML(
-                            item.image_url,
-                            "Notícia"
-                        )}
+                        ${
+                            item.image_url
+                                ? `
+                                    <img
+                                        src="${escapeAttribute(
+                                            item.image_url
+                                        )}"
+                                        alt="${escapeAttribute(
+                                            item.title ||
+                                            "Notícia"
+                                        )}"
+                                        loading="lazy"
+                                    >
+                                `
+                                : `
+                                    <div class="news-small-placeholder">
+                                        NOTÍCIA
+                                    </div>
+                                `
+                        }
 
                     </div>
 
-                    <div>
+                    <div class="news-small-body">
 
-                        <div class="br-story-meta">
-                            ${getContentLabel(item)}
+                        <div class="news-small-meta">
+
+                            ${getNewsSource(item)}
+
+                            ${getNewsCategory(item)}
+
+                            ${getNewsDate(item)}
+
                         </div>
 
-                        <h3 class="br-small-story-title">
+                        <h3>
                             ${escapeHTML(
                                 item.title ||
                                 "Sem título"
                             )}
                         </h3>
 
-                        <p class="br-small-story-description">
-                            ${escapeHTML(
-                                item.description ||
-                                ""
-                            )}
-                        </p>
+                        ${
+                            item.description
+                                ? `
+                                    <p>
+                                        ${escapeHTML(
+                                            stripHTML(
+                                                item.description
+                                            )
+                                        )}
+                                    </p>
+                                `
+                                : ""
+                        }
 
                     </div>
+
                 `;
 
 
                 card.addEventListener(
                     "click",
-                    () => openContent(
-                        item
-                    )
+                    () => openNewsArticle(item)
                 );
 
 
@@ -1583,6 +1553,207 @@ function renderNews(items) {
 
 
 // ============================================================
+// OPEN ORIGINAL NEWS ARTICLE
+// ============================================================
+
+function openNewsArticle(item) {
+
+    if (
+        !item ||
+        !item.article_url
+    ) {
+
+        return;
+
+    }
+
+
+    const newWindow =
+        window.open(
+            item.article_url,
+            "_blank",
+            "noopener,noreferrer"
+        );
+
+
+    if (newWindow) {
+
+        try {
+
+            newWindow.opener = null;
+
+        } catch {}
+
+    }
+
+}
+
+
+// ============================================================
+// NEWS SOURCE
+// ============================================================
+
+function getNewsSource(item) {
+
+    if (!item) {
+        return "";
+    }
+
+
+    const source =
+        item.source_name ||
+        "BR";
+
+
+    return `
+
+        <span class="news-source">
+            ${escapeHTML(source)}
+        </span>
+
+    `;
+
+}
+
+
+// ============================================================
+// NEWS CATEGORY
+// ============================================================
+
+function getNewsCategory(item) {
+
+    const labels = {
+
+        news: "NOTÍCIAS",
+
+        transfer: "TRANSFERÊNCIAS",
+
+        team_news: "EQUIPA"
+
+    };
+
+
+    const category =
+        labels[item.category] ||
+        "NOTÍCIAS";
+
+
+    return `
+
+        <span class="news-category">
+            ${escapeHTML(category)}
+        </span>
+
+    `;
+
+}
+
+
+// ============================================================
+// NEWS DATE
+// ============================================================
+
+function getNewsDate(item) {
+
+    const date =
+        item.published_at ||
+        item.imported_at ||
+        item.created_at;
+
+
+    if (!date) {
+        return "";
+    }
+
+
+    return `
+
+        <span class="news-date">
+            ${escapeHTML(
+                formatRelativeDate(date)
+            )}
+        </span>
+
+    `;
+
+}
+
+
+// ============================================================
+// RELATIVE NEWS DATE
+// ============================================================
+
+function formatRelativeDate(date) {
+
+    try {
+
+        const published =
+            new Date(date);
+
+        const now =
+            new Date();
+
+        const diff =
+            now.getTime() -
+            published.getTime();
+
+
+        const minutes =
+            Math.floor(
+                diff / 60000
+            );
+
+
+        if (
+            minutes >= 0 &&
+            minutes < 60
+        ) {
+
+            return minutes <= 1
+                ? "AGORA"
+                : `HÁ ${minutes} MIN`;
+
+        }
+
+
+        const hours =
+            Math.floor(
+                minutes / 60
+            );
+
+
+        if (
+            hours >= 1 &&
+            hours < 24
+        ) {
+
+            return hours === 1
+                ? "HÁ 1 H"
+                : `HÁ ${hours} H`;
+
+        }
+
+
+        return new Intl.DateTimeFormat(
+            "pt-PT",
+            {
+                day: "2-digit",
+                month: "short"
+            }
+        ).format(
+            published
+        ).toUpperCase();
+
+    } catch {
+
+        return "";
+
+    }
+
+}
+
+
+// ============================================================
 // OPINION
 // ============================================================
 
@@ -1590,7 +1761,7 @@ async function loadOpinion(teamId) {
 
     const container =
         document.getElementById(
-            "opinion-grid"
+            "opinion-home-grid"
         );
 
 
@@ -1634,9 +1805,13 @@ async function loadOpinion(teamId) {
         );
 
         container.innerHTML = `
+
             <div class="br-empty">
+
                 Não foi possível carregar a opinião.
+
             </div>
+
         `;
 
         return;
@@ -1658,16 +1833,20 @@ async function loadOpinion(teamId) {
     opinionItems =
         valid.slice(
             0,
-            7
+            30
         );
 
 
     if (!opinionItems.length) {
 
         container.innerHTML = `
+
             <div class="br-empty">
+
                 Ainda não existem artigos de opinião publicados.
+
             </div>
+
         `;
 
         return;
@@ -1675,7 +1854,10 @@ async function loadOpinion(teamId) {
 
 
     renderOpinion(
-        opinionItems
+        opinionItems.slice(
+            0,
+            7
+        )
     );
 
 }
@@ -1689,16 +1871,30 @@ function renderOpinion(items) {
 
     const container =
         document.getElementById(
-            "opinion-grid"
+            "opinion-home-grid"
         );
+
+
+    if (!container) {
+        return;
+    }
 
 
     container.innerHTML = "";
 
 
+    if (!items.length) {
+        return;
+    }
+
+
     const main =
         items[0];
 
+
+    // --------------------------------------------------------
+    // MAIN OPINION
+    // --------------------------------------------------------
 
     const feature =
         document.createElement(
@@ -1707,49 +1903,73 @@ function renderOpinion(items) {
 
 
     feature.className =
-        "br-opinion-card";
+        "opinion-main-card";
 
 
     feature.innerHTML = `
 
-        <div class="br-opinion-feature-image">
+        <div class="opinion-main-image">
 
-            ${imageHTML(
-                main.image_url,
-                "Opinião"
-            )}
+            ${
+                main.image_url
+                    ? `
+                        <img
+                            src="${escapeAttribute(
+                                main.image_url
+                            )}"
+                            alt="${escapeAttribute(
+                                main.title ||
+                                "Opinião"
+                            )}"
+                            loading="lazy"
+                        >
+                    `
+                    : `
+                        <div class="opinion-main-placeholder">
+                            OPINIÃO
+                        </div>
+                    `
+            }
 
         </div>
 
-        <div class="br-opinion-feature-body">
+        <div class="opinion-main-body">
 
-            <div class="br-opinion-author">
-                ${getAuthor(main)}
+            <div class="opinion-author">
+                ${escapeHTML(
+                    getAuthor(main)
+                )}
             </div>
 
-            <h3 class="br-main-story-title">
+            <h3>
                 ${escapeHTML(
                     main.title ||
                     "Sem título"
                 )}
             </h3>
 
-            <p class="br-main-story-description">
-                ${escapeHTML(
-                    main.description ||
-                    ""
-                )}
-            </p>
+            ${
+                main.description
+                    ? `
+                        <p>
+                            ${escapeHTML(
+                                stripHTML(
+                                    main.description
+                                )
+                            )}
+                        </p>
+                    `
+                    : ""
+            }
 
         </div>
+
     `;
 
 
     feature.addEventListener(
         "click",
-        () => openContent(
-            main
-        )
+        () => openContent(main)
     );
 
 
@@ -1758,6 +1978,10 @@ function renderOpinion(items) {
     );
 
 
+    // --------------------------------------------------------
+    // SMALL OPINION LIST
+    // --------------------------------------------------------
+
     const list =
         document.createElement(
             "div"
@@ -1765,7 +1989,7 @@ function renderOpinion(items) {
 
 
     list.className =
-        "br-opinion-list";
+        "opinion-small-list";
 
 
     items
@@ -1783,49 +2007,75 @@ function renderOpinion(items) {
 
 
                 card.className =
-                    "br-opinion-small";
+                    "opinion-small-card";
 
 
                 card.innerHTML = `
 
-                    <div class="br-opinion-small-image">
+                    <div class="opinion-small-image">
 
-                        ${imageHTML(
-                            item.image_url,
-                            "Opinião"
-                        )}
+                        ${
+                            item.image_url
+                                ? `
+                                    <img
+                                        src="${escapeAttribute(
+                                            item.image_url
+                                        )}"
+                                        alt="${escapeAttribute(
+                                            item.title ||
+                                            "Opinião"
+                                        )}"
+                                        loading="lazy"
+                                    >
+                                `
+                                : `
+                                    <div class="opinion-small-placeholder">
+                                        OPINIÃO
+                                    </div>
+                                `
+                        }
 
                     </div>
 
-                    <div>
+                    <div class="opinion-small-body">
 
-                        <div class="br-opinion-author">
-                            ${getAuthor(item)}
+                        <div class="opinion-small-meta">
+
+                            ${escapeHTML(
+                                getAuthor(item)
+                            )}
+
                         </div>
 
-                        <h3 class="br-small-story-title">
+                        <h3>
                             ${escapeHTML(
                                 item.title ||
                                 "Sem título"
                             )}
                         </h3>
 
-                        <p class="br-small-story-description">
-                            ${escapeHTML(
-                                item.description ||
-                                ""
-                            )}
-                        </p>
+                        ${
+                            item.description
+                                ? `
+                                    <p>
+                                        ${escapeHTML(
+                                            stripHTML(
+                                                item.description
+                                            )
+                                        )}
+                                    </p>
+                                `
+                                : ""
+                        }
 
                     </div>
+
                 `;
 
 
                 card.addEventListener(
                     "click",
-                    () => openContent(
-                        item
-                    )
+                    () => openContent(item)
                 );
 
 
@@ -2109,7 +2359,7 @@ function setupTableTabs() {
 
     document
         .querySelectorAll(
-            ".br-tab"
+            ".table-tab"
         )
         .forEach(
             button => {
@@ -2120,7 +2370,7 @@ function setupTableTabs() {
 
                         document
                             .querySelectorAll(
-                                ".br-tab"
+                                ".table-tab"
                             )
                             .forEach(
                                 tab =>
@@ -2163,8 +2413,8 @@ async function renderLeagueTable(
 ) {
 
     const container =
-        document.getElementById(
-            "league-table-container"
+        document.querySelector(
+            ".league-table-wrapper"
         );
 
 
@@ -2514,7 +2764,7 @@ async function loadVideos(team) {
 
     const container =
         document.getElementById(
-            "videos-container"
+            "videos-home-grid"
         );
 
 
@@ -2582,8 +2832,13 @@ function renderVideos(items) {
 
     const container =
         document.getElementById(
-            "videos-container"
+            "videos-home-grid"
         );
+
+
+    if (!container) {
+        return;
+    }
 
 
     const main =
@@ -2593,11 +2848,11 @@ function renderVideos(items) {
     container.innerHTML = `
 
         <article
-            class="br-video-feature"
+            class="video-card video-feature"
             id="main-video"
         >
 
-            <div class="br-video-image">
+            <div class="video-image">
 
                 ${imageHTML(
                     main.image_url,
@@ -2606,7 +2861,7 @@ function renderVideos(items) {
 
                 <button
                     type="button"
-                    class="br-play-button"
+                    class="video-play"
                     aria-label="Reproduzir vídeo"
                 >
                     ▶
@@ -2614,17 +2869,21 @@ function renderVideos(items) {
 
             </div>
 
-            <div class="br-video-title">
-                ${escapeHTML(
-                    main.title ||
-                    "Vídeo"
-                )}
+            <div class="video-body">
+
+                <div class="video-title">
+                    ${escapeHTML(
+                        main.title ||
+                        "Vídeo"
+                    )}
+                </div>
+
             </div>
 
         </article>
 
         <div
-            class="br-video-list"
+            class="video-list"
             id="video-list"
         ></div>
 
@@ -2641,9 +2900,7 @@ function renderVideos(items) {
 
         mainVideo.addEventListener(
             "click",
-            () => openContent(
-                main
-            )
+            () => openContent(main)
         );
 
     }
@@ -2653,6 +2910,11 @@ function renderVideos(items) {
         document.getElementById(
             "video-list"
         );
+
+
+    if (!list) {
+        return;
+    }
 
 
     items
@@ -2670,25 +2932,33 @@ function renderVideos(items) {
 
 
                 card.className =
-                    "br-video-small";
+                    "video-card";
 
 
                 card.innerHTML = `
 
-                    <div class="br-video-small-image">
+                    <div class="video-image">
 
                         ${imageHTML(
                             item.image_url,
                             "Vídeo"
                         )}
 
+                        <div class="video-play">
+                            ▶
+                        </div>
+
                     </div>
 
-                    <div class="br-video-small-title">
-                        ${escapeHTML(
-                            item.title ||
-                            "Vídeo"
-                        )}
+                    <div class="video-body">
+
+                        <div class="video-title">
+                            ${escapeHTML(
+                                item.title ||
+                                "Vídeo"
+                            )}
+                        </div>
+
                     </div>
 
                 `;
@@ -2696,9 +2966,7 @@ function renderVideos(items) {
 
                 card.addEventListener(
                     "click",
-                    () => openContent(
-                        item
-                    )
+                    () => openContent(item)
                 );
 
 
@@ -2797,25 +3065,37 @@ function setupHomepageInteractions() {
 
     }
 
+
+    const libraryBackButton =
+        document.getElementById(
+            "library-back-button"
+        );
+
+
+    if (libraryBackButton) {
+
+        libraryBackButton.addEventListener(
+            "click",
+            closeLibraryView
+        );
+
+    }
+
 }
 
 
 // ============================================================
-// OPEN ARTICLE
+// OPEN CONTENT
 // ============================================================
 
 function openContent(item) {
 
     const view =
-        document.getElementById(
-            "content-view"
-        );
+        getContentView();
 
 
     const body =
-        document.getElementById(
-            "content-view-body"
-        );
+        getContentViewBody();
 
 
     if (!view || !body) {
@@ -2875,7 +3155,9 @@ function openContent(item) {
                 ? `
                     <div class="br-view-description">
                         ${escapeHTML(
-                            item.description
+                            stripHTML(
+                                item.description
+                            )
                         )}
                     </div>
                 `
@@ -2905,6 +3187,38 @@ function openContent(item) {
 
 
 // ============================================================
+// CONTENT VIEW ELEMENTS
+// ============================================================
+
+function getContentView() {
+
+    return (
+        document.getElementById(
+            "content-view"
+        ) ||
+        document.getElementById(
+            "focused-content-view"
+        )
+    );
+
+}
+
+
+function getContentViewBody() {
+
+    return (
+        document.getElementById(
+            "content-view-body"
+        ) ||
+        document.getElementById(
+            "focused-content"
+        )
+    );
+
+}
+
+
+// ============================================================
 // OPEN LIST VIEW
 // ============================================================
 
@@ -2914,24 +3228,27 @@ function openListView(
     type
 ) {
 
-    hideHomepage();
-
-
     const view =
-        document.getElementById(
-            "content-view"
-        );
+        getContentView();
 
 
     const body =
-        document.getElementById(
-            "content-view-body"
-        );
+        getContentViewBody();
 
 
     if (!view || !body) {
+
+        openLibraryView(
+            title,
+            items,
+            type
+        );
+
         return;
     }
+
+
+    hideHomepage();
 
 
     body.innerHTML = `
@@ -2995,21 +3312,33 @@ function openListView(
                 <div>
 
                     <div class="br-story-meta">
-                        ${getContentLabel(item)}
+
+                        ${
+                            type === "news"
+                                ? getNewsSource(item)
+                                : getAuthor(item)
+                        }
+
                     </div>
 
                     <div class="br-list-view-title">
+
                         ${escapeHTML(
                             item.title ||
                             ""
                         )}
+
                     </div>
 
                     <div class="br-list-view-description">
+
                         ${escapeHTML(
-                            item.description ||
-                            ""
+                            stripHTML(
+                                item.description ||
+                                ""
+                            )
                         )}
+
                     </div>
 
                 </div>
@@ -3019,9 +3348,22 @@ function openListView(
 
             card.addEventListener(
                 "click",
-                () => openContent(
-                    item
-                )
+                () => {
+
+                    if (
+                        type === "news" &&
+                        item.article_url
+                    ) {
+
+                        openNewsArticle(item);
+
+                    } else {
+
+                        openContent(item);
+
+                    }
+
+                }
             );
 
 
@@ -3047,6 +3389,245 @@ function openListView(
 
 
 // ============================================================
+// LIBRARY VIEW
+// ============================================================
+
+function openLibraryView(
+    title,
+    items,
+    type
+) {
+
+    const library =
+        document.getElementById(
+            "library-view"
+        );
+
+
+    const grid =
+        document.getElementById(
+            "library-grid"
+        );
+
+
+    const libraryTitle =
+        document.getElementById(
+            "library-title"
+        );
+
+
+    const libraryLabel =
+        document.getElementById(
+            "library-label"
+        );
+
+
+    if (
+        !library ||
+        !grid
+    ) {
+
+        return;
+
+    }
+
+
+    hideHomepage();
+
+
+    if (libraryTitle) {
+
+        libraryTitle.textContent =
+            title;
+
+    }
+
+
+    if (libraryLabel) {
+
+        libraryLabel.textContent =
+            type === "news"
+                ? "NOTÍCIAS"
+                : "OPINIÃO & ANÁLISE";
+
+    }
+
+
+    grid.innerHTML = "";
+
+
+    items.forEach(
+        item => {
+
+            const card =
+                document.createElement(
+                    "article"
+                );
+
+
+            card.className =
+                "br-list-view-card";
+
+
+            card.innerHTML = `
+
+                ${
+                    item.image_url
+                        ? `
+                            <img
+                                class="br-list-view-image"
+                                src="${escapeAttribute(
+                                    item.image_url
+                                )}"
+                                alt=""
+                                loading="lazy"
+                            >
+                        `
+                        : `
+                            <div class="br-list-view-image"></div>
+                        `
+                }
+
+                <div>
+
+                    <div class="br-story-meta">
+
+                        ${
+                            type === "news"
+                                ? getNewsSource(item)
+                                : escapeHTML(
+                                    getAuthor(item)
+                                )
+                        }
+
+                    </div>
+
+                    <div class="br-list-view-title">
+
+                        ${escapeHTML(
+                            item.title ||
+                            ""
+                        )}
+
+                    </div>
+
+                    <div class="br-list-view-description">
+
+                        ${escapeHTML(
+                            stripHTML(
+                                item.description ||
+                                ""
+                            )
+                        )}
+
+                    </div>
+
+                </div>
+
+            `;
+
+
+            card.addEventListener(
+                "click",
+                () => {
+
+                    if (
+                        type === "news" &&
+                        item.article_url
+                    ) {
+
+                        openNewsArticle(item);
+
+                    } else {
+
+                        openContent(item);
+
+                    }
+
+                }
+            );
+
+
+            grid.appendChild(
+                card
+            );
+
+        }
+    );
+
+
+    library.classList.add(
+        "active"
+    );
+
+
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+    });
+
+}
+
+
+// ============================================================
+// CLOSE LIBRARY
+// ============================================================
+
+function closeLibraryView() {
+
+    const library =
+        document.getElementById(
+            "library-view"
+        );
+
+
+    if (library) {
+
+        library.classList.remove(
+            "active"
+        );
+
+    }
+
+
+    const homepage =
+        document.getElementById(
+            "homepage-content"
+        );
+
+
+    const header =
+        document.querySelector(
+            ".team-header"
+        );
+
+
+    if (homepage) {
+
+        homepage.classList.remove(
+            "hidden-home"
+        );
+
+    }
+
+
+    if (header) {
+
+        header.style.display =
+            "";
+
+    }
+
+
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+    });
+
+}
+
+
+// ============================================================
 // OPEN PREDICTION
 // ============================================================
 
@@ -3058,15 +3639,11 @@ function openPrediction(
 
 
     const view =
-        document.getElementById(
-            "content-view"
-        );
+        getContentView();
 
 
     const body =
-        document.getElementById(
-            "content-view-body"
-        );
+        getContentViewBody();
 
 
     if (!view || !body) {
@@ -3150,6 +3727,7 @@ function openPrediction(
             </div>
 
         </div>
+
     `;
 
 
@@ -3178,15 +3756,11 @@ function openFixture(
 
 
     const view =
-        document.getElementById(
-            "content-view"
-        );
+        getContentView();
 
 
     const body =
-        document.getElementById(
-            "content-view-body"
-        );
+        getContentViewBody();
 
 
     if (!view || !body) {
@@ -3246,6 +3820,7 @@ function openFixture(
             </div>
 
         </div>
+
     `;
 
 
@@ -3272,15 +3847,11 @@ function openRatingsView() {
 
 
     const view =
-        document.getElementById(
-            "content-view"
-        );
+        getContentView();
 
 
     const body =
-        document.getElementById(
-            "content-view-body"
-        );
+        getContentViewBody();
 
 
     if (!view || !body) {
@@ -3347,8 +3918,12 @@ function hideHomepage() {
 
 
     const view =
+        getContentView();
+
+
+    const library =
         document.getElementById(
-            "content-view"
+            "library-view"
         );
 
 
@@ -3377,6 +3952,15 @@ function hideHomepage() {
 
     }
 
+
+    if (library) {
+
+        library.classList.remove(
+            "active"
+        );
+
+    }
+
 }
 
 
@@ -3387,9 +3971,7 @@ function hideHomepage() {
 function closeFocusedView() {
 
     const view =
-        document.getElementById(
-            "content-view"
-        );
+        getContentView();
 
 
     const homepage =
@@ -3405,9 +3987,7 @@ function closeFocusedView() {
 
 
     const body =
-        document.getElementById(
-            "content-view-body"
-        );
+        getContentViewBody();
 
 
     if (view) {
@@ -3654,7 +4234,7 @@ function getAuthor(
         item.author_name ||
         item.writer_name ||
         item.author ||
-        "Barça Real"
+        "BR"
     );
 
 }
@@ -3749,6 +4329,43 @@ function formatMatchDate(
         return "";
 
     }
+
+}
+
+
+// ============================================================
+// STRIP HTML
+// ============================================================
+
+function stripHTML(
+    value
+) {
+
+    if (!value) {
+        return "";
+    }
+
+
+    const temp =
+        document.createElement(
+            "div"
+        );
+
+
+    temp.innerHTML =
+        String(value);
+
+
+    return (
+        temp.textContent ||
+        temp.innerText ||
+        ""
+    )
+        .replace(
+            /\s+/g,
+            " "
+        )
+        .trim();
 
 }
 
