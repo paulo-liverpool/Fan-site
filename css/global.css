@@ -340,20 +340,45 @@ body {
    SLIDE BACKGROUND
    ============================================================ */
 
-.featured-slide-background {
+.featured-slide-image {
     position: absolute;
-
     inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
 
+.featured-slide-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
     background:
-        radial-gradient(
-            circle at 80% 30%,
-            rgba(255,255,255,0.18),
-            transparent 30%
+        linear-gradient(
+            to top,
+            rgba(0,0,0,0.88) 0%,
+            rgba(0,0,0,0.45) 45%,
+            rgba(0,0,0,0.08) 100%
         );
 }
 
+.featured-audio-button {
+    margin-top: 14px;
+    padding: 9px 15px;
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 999px;
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    transition: transform 0.2s ease, background 0.2s ease;
+}
 
+.featured-audio-button:hover {
+    transform: translateY(-1px);
+    background: rgba(0,0,0,0.7);
+}
 /* ============================================================
    SLIDE CONTENT
    ============================================================ */
