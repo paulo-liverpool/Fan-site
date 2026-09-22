@@ -392,17 +392,7 @@ function renderFeaturedSlides(items) {
                     "Sem título"
                 );
 
-        const description =
-            isNews
-                ? (
-                    item.translated_description ||
-                    item.description ||
-                    ""
-                )
-                : (
-                    item.description ||
-                    ""
-                );
+      
 
         const imageUrl =
             item.image_url ||
