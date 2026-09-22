@@ -278,7 +278,6 @@ async function loadFeaturedContent(teamId) {
             translated_description,
             image_url,
             article_url,
-            source_name,
             author,
             published_at,
             imported_at,
@@ -407,12 +406,14 @@ function renderFeaturedSlides(items) {
                     : item.title;
 
 
+            // ------------------------------------------------
+            // IMPORTANT:
+            // News Destaques DO NOT show description.
+            // ------------------------------------------------
+
             const description =
                 isNews
-                    ? (
-                        item.translated_description ||
-                        item.description
-                    )
+                    ? ""
                     : item.description;
 
 
@@ -452,11 +453,13 @@ function renderFeaturedSlides(items) {
                 <div class="featured-content">
 
                     <div class="featured-tag">
+
                         ${
                             isNews
                                 ? getNewsCategory(item)
                                 : getFeaturedLabel(item)
                         }
+
                     </div>
 
                     <h2>
@@ -1332,9 +1335,7 @@ async function loadNews(teamId) {
         container.innerHTML = `
 
             <div class="br-empty">
-
                 Não foi possível carregar as notícias.
-
             </div>
 
         `;
@@ -1362,9 +1363,7 @@ async function loadNews(teamId) {
         container.innerHTML = `
 
             <div class="br-empty">
-
                 Ainda não existem notícias publicadas.
-
             </div>
 
         `;
@@ -1433,31 +1432,33 @@ function renderNews(items) {
         "news-main-card";
 
 
+    // IMPORTANT:
+    // The image is DIRECTLY inside .news-main-card.
+    // This matches the responsive CSS sizing rules.
+
     mainStory.innerHTML = `
 
-        <div class="news-main-image">
-
-            ${
-                main.image_url
-                    ? `
-                        <img
-                            src="${escapeAttribute(
-                                main.image_url
-                            )}"
-                            alt="${escapeAttribute(
-                                mainTitle
-                            )}"
-                            loading="eager"
-                        >
-                    `
-                    : `
-                        <div class="news-main-placeholder">
-                            NOTÍCIA
-                        </div>
-                    `
-            }
-
-        </div>
+        ${
+            main.image_url
+                ? `
+                    <img
+                        src="${escapeAttribute(
+                            main.image_url
+                        )}"
+                        alt="${escapeAttribute(
+                            mainTitle
+                        )}"
+                        loading="eager"
+                        class="news-main-image"
+                        onerror="this.style.display='none';"
+                    >
+                `
+                : `
+                    <div class="news-main-placeholder">
+                        NOTÍCIA
+                    </div>
+                `
+        }
 
         <div class="news-main-body">
 
@@ -1496,7 +1497,19 @@ function renderNews(items) {
 
     mainStory.addEventListener(
         "click",
-        () => openNewsArticle(main)
+        event => {
+
+            if (
+                event.target.closest(
+                    "a, button"
+                )
+            ) {
+                return;
+            }
+
+            openNewsArticle(main);
+
+        }
     );
 
 
@@ -1608,7 +1621,19 @@ function renderNews(items) {
 
                 card.addEventListener(
                     "click",
-                    () => openNewsArticle(item)
+                    event => {
+
+                        if (
+                            event.target.closest(
+                                "a, button"
+                            )
+                        ) {
+                            return;
+                        }
+
+                        openNewsArticle(item);
+
+                    }
                 );
 
 
@@ -1628,7 +1653,7 @@ function renderNews(items) {
 
 
 // ============================================================
-// OPEN NEWS INSIDE BR
+// OPEN NEWS ARTICLE
 // ============================================================
 
 function openNewsArticle(item) {
@@ -1638,10 +1663,21 @@ function openNewsArticle(item) {
     }
 
 
-    openContent({
+    const newsItem = {
         ...item,
         __source: "news"
-    });
+    };
+
+
+    // Completely switch away from the homepage.
+    // The article remains inside the same HTML page.
+
+    hideHomepage();
+
+
+    openContent(
+        newsItem
+    );
 
 }
 
@@ -1651,9 +1687,6 @@ function openNewsArticle(item) {
 // ============================================================
 
 function getNewsSource(item) {
-
-    // Source is deliberately NOT displayed
-    // on News cards.
 
     return "";
 
@@ -1850,9 +1883,7 @@ async function loadOpinion(teamId) {
         container.innerHTML = `
 
             <div class="br-empty">
-
                 Não foi possível carregar a opinião.
-
             </div>
 
         `;
@@ -1885,9 +1916,7 @@ async function loadOpinion(teamId) {
         container.innerHTML = `
 
             <div class="br-empty">
-
                 Ainda não existem artigos de opinião publicados.
-
             </div>
 
         `;
@@ -1931,10 +1960,6 @@ function renderOpinion(items) {
     const main =
         items[0];
 
-
-    // --------------------------------------------------------
-    // MAIN OPINION
-    // --------------------------------------------------------
 
     const feature =
         document.createElement("article");
@@ -2015,10 +2040,6 @@ function renderOpinion(items) {
         feature
     );
 
-
-    // --------------------------------------------------------
-    // SMALL OPINION LIST
-    // --------------------------------------------------------
 
     const list =
         document.createElement("div");
@@ -3110,7 +3131,7 @@ function setupHomepageInteractions() {
 
 
 // ============================================================
-// OPEN CONTENT
+// OPEN CONTENT / ARTICLE VIEW
 // ============================================================
 
 function openContent(item) {
@@ -3124,7 +3145,13 @@ function openContent(item) {
 
 
     if (!view || !body) {
+
+        console.error(
+            "BR: focused content view não encontrado."
+        );
+
         return;
+
     }
 
 
@@ -3171,16 +3198,33 @@ function openContent(item) {
             : item.created_at;
 
 
+    // --------------------------------------------------------
+    // NEWS BODY
+    // --------------------------------------------------------
+
     const bodyText =
         isNews
             ? (
                 item.article_body ||
-                item.translated_description ||
-                item.description ||
                 ""
             )
             : getArticleBody(item);
 
+
+    // --------------------------------------------------------
+    // If there is no article_body yet, use the description
+    // as the BR article content rather than leaving it blank.
+    // --------------------------------------------------------
+
+    const displayBody =
+        bodyText ||
+        description ||
+        "Esta notícia ainda não possui conteúdo adicional.";
+
+
+    // --------------------------------------------------------
+    // BUILD ARTICLE VIEW
+    // --------------------------------------------------------
 
     body.innerHTML = `
 
@@ -3196,24 +3240,29 @@ function openContent(item) {
 
         </div>
 
+
         <h1 class="br-view-title">
-            ${escapeHTML(title)}
+
+            ${escapeHTML(
+                title
+            )}
+
         </h1>
+
 
         <div class="br-view-meta">
 
             ${
                 isNews
-                    ? `
-                        ${publicationDate
+                    ? (
+                        publicationDate
                             ? escapeHTML(
                                 formatDateTime(
                                     publicationDate
                                 )
                             )
                             : ""
-                        }
-                    `
+                    )
                     : `
                         ${escapeHTML(
                             getAuthor(item)
@@ -3234,6 +3283,7 @@ function openContent(item) {
 
         </div>
 
+
         ${
             item.image_url
                 ? `
@@ -3250,8 +3300,15 @@ function openContent(item) {
                 : ""
         }
 
+
         ${
-            description
+            description &&
+            stripHTML(
+                description
+            ) !==
+            stripHTML(
+                displayBody
+            )
                 ? `
                     <div class="br-view-description">
 
@@ -3266,19 +3323,21 @@ function openContent(item) {
                 : ""
         }
 
+
         <div class="br-view-body">
 
             ${
                 isNews
                     ? renderArticleText(
-                        bodyText
+                        displayBody
                     )
                     : escapeHTML(
-                        bodyText
+                        displayBody
                     )
             }
 
         </div>
+
 
         ${
             isNews
@@ -3315,6 +3374,7 @@ function openContent(item) {
 
                     </div>
 
+
                     <div class="br-fan-interaction">
 
                         <div class="br-view-type">
@@ -3341,10 +3401,33 @@ function openContent(item) {
     `;
 
 
+    // --------------------------------------------------------
+    // MAKE ARTICLE VIEW THE ONLY ACTIVE VIEW
+    // --------------------------------------------------------
+
+    const library =
+        document.getElementById(
+            "library-view"
+        );
+
+
+    if (library) {
+
+        library.classList.remove(
+            "active"
+        );
+
+    }
+
+
     view.classList.add(
         "active"
     );
 
+
+    // --------------------------------------------------------
+    // SCROLL TO TOP
+    // --------------------------------------------------------
 
     window.scrollTo({
         top: 0,
@@ -3394,9 +3477,11 @@ function renderArticleText(
     if (!paragraphs.length) {
 
         return `
+
             <p>
                 ${escapeHTML(clean)}
             </p>
+
         `;
 
     }
@@ -3405,11 +3490,13 @@ function renderArticleText(
     return paragraphs
         .map(
             paragraph => `
+
                 <p>
                     ${escapeHTML(
                         paragraph
                     )}
                 </p>
+
             `
         )
         .join("");
@@ -4059,10 +4146,12 @@ function openFixture(
     body.innerHTML = `
 
         <div class="br-view-type">
+
             ${escapeHTML(
                 fixture.competition ||
                 "JOGO"
             )}
+
         </div>
 
         <h1 class="br-view-title">
@@ -4080,9 +4169,11 @@ function openFixture(
         </h1>
 
         <div class="br-view-meta">
+
             ${formatMatchDate(
                 fixture.date
             )}
+
         </div>
 
         <div class="br-fixtures">
