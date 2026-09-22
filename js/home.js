@@ -1903,23 +1903,25 @@ function renderOpinion(items) {
 async function loadFixtures(teamId) {
     const client = getSupabase();
 
-    if (!client) return;
+    if (!client || !teamId) return;
 
     try {
         /*
-         * API-Football stores Barcelona and Real Madrid
-         * fixtures together in football_matches.
+         * IMPORTANT:
+         * The homepage must only show fixtures belonging
+         * to the currently selected team.
          *
-         * We identify the user's team using the local
-         * home_team_id / away_team_id where available,
-         * while also supporting provider IDs 529 / 541.
+         * Barcelona page  -> Barcelona fixtures
+         * Real Madrid page -> Real Madrid fixtures
+         *
+         * teamId is the local BR team UUID.
          */
 
         const { data, error } = await client
             .from("football_matches")
             .select("*")
             .or(
-                `home_team_id.eq.${teamId},away_team_id.eq.${teamId},home_provider_team_id.eq.529,away_provider_team_id.eq.529,home_provider_team_id.eq.541,away_provider_team_id.eq.541`
+                `home_team_id.eq.${teamId},away_team_id.eq.${teamId}`
             )
             .order("match_date", {
                 ascending: true
@@ -1937,32 +1939,41 @@ async function loadFixtures(teamId) {
         const now = Date.now();
 
         /*
-         * Keep upcoming matches and currently live matches.
-         * Finished matches in the past are not used for
-         * the homepage "Próximo Jogo" area.
+         * Keep only:
+         *
+         * 1. Upcoming matches
+         * 2. Currently live matches
+         *
+         * Finished matches in the past are excluded from
+         * the "Próximo Jogo" section.
          */
+
+        const liveStatuses = [
+            "1H",
+            "HT",
+            "2H",
+            "ET",
+            "BT",
+            "P",
+            "LIVE"
+        ];
+
         const upcoming = (data || [])
             .filter(match => {
-                if (!match.match_date) return false;
+
+                if (!match.match_date) {
+                    return false;
+                }
 
                 const status = String(
                     match.status_short || ""
                 ).toUpperCase();
 
-                const liveStatuses = [
-                    "1H",
-                    "HT",
-                    "2H",
-                    "ET",
-                    "BT",
-                    "P",
-                    "LIVE"
-                ];
+                const isLive =
+                    Boolean(match.is_live) ||
+                    liveStatuses.includes(status);
 
-                if (
-                    match.is_live ||
-                    liveStatuses.includes(status)
-                ) {
+                if (isLive) {
                     return true;
                 }
 
@@ -1982,14 +1993,13 @@ async function loadFixtures(teamId) {
         renderFixtures(upcoming);
 
     } catch (error) {
+
         console.warn(
             "BR: erro fixtures:",
             error
         );
     }
 }
-
-
 function renderFixtures(fixtures) {
     const mainCompetition =
         $("#main-fixture-competition");
