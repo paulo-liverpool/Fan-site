@@ -366,9 +366,7 @@ function renderFeaturedSlides(items) {
                         Sem destaques disponíveis
                     </h2>
 
-                    <p>
-                        Os próximos destaques aparecerão aqui.
-                    </p>
+                   
                 </div>
             </article>
         `;
