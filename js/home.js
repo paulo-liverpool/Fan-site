@@ -1,472 +1,461 @@
-// ============================================================
-// BR
-// HOME PAGE
-// ============================================================
-
-// ============================================================
-// GLOBAL STATE
-// ============================================================
+/* ============================================================
+   BARÇA REAL
+   HOME PAGE JAVASCRIPT
+   ============================================================ */
 
 let currentTeam = null;
 let currentUser = null;
 
 let newsItems = [];
 let opinionItems = [];
+let featuredItems = [];
 
 let currentTableType = "league";
+let currentFixture = null;
 
 
-// ============================================================
-// START HOME
-// ============================================================
+/* ============================================================
+   DOM READY
+   ============================================================ */
 
-document.addEventListener("DOMContentLoaded", () => {
-
-    loadHome();
+document.addEventListener("DOMContentLoaded", async () => {
     setupHomepageInteractions();
-
+    await loadHome();
 });
 
 
-// ============================================================
-// LOAD USER + TEAM
-// ============================================================
+/* ============================================================
+   SUPABASE HELPERS
+   ============================================================ */
+
+function getSupabase() {
+    if (typeof supabaseClient !== "undefined") {
+        return supabaseClient;
+    }
+
+    if (typeof window.supabaseClient !== "undefined") {
+        return window.supabaseClient;
+    }
+
+    if (typeof supabase !== "undefined" && supabase.auth) {
+        return supabase;
+    }
+
+    console.error("BR: Supabase client não encontrado.");
+    return null;
+}
+
+
+function $(selector) {
+    return document.querySelector(selector);
+}
+
+
+function $$(selector) {
+    return [...document.querySelectorAll(selector)];
+}
+
+
+/* ============================================================
+   HOME LOADING
+   ============================================================ */
 
 async function loadHome() {
+    const client = getSupabase();
 
-    const {
-        data: {
-            user
+    if (!client) return;
+
+    try {
+        const {
+            data: {
+                user
+            },
+            error: authError
+        } = await client.auth.getUser();
+
+        if (authError) {
+            console.error("BR: erro de autenticação:", authError);
+            return;
         }
-    } = await supabaseClient.auth.getUser();
 
-    if (!user) {
+        currentUser = user;
 
-        window.location.href = "login.html";
-        return;
+        if (!user) {
+            window.location.href = "login.html";
+            return;
+        }
 
+        const {
+            data: profile,
+            error: profileError
+        } = await client
+            .from("profiles")
+            .select("supported_team_id")
+            .eq("id", user.id)
+            .maybeSingle();
+
+        if (profileError) {
+            console.error("BR: erro ao carregar perfil:", profileError);
+            return;
+        }
+
+        if (!profile || !profile.supported_team_id) {
+            window.location.href = "choose-team.html";
+            return;
+        }
+
+        const {
+            data: team,
+            error: teamError
+        } = await client
+            .from("teams")
+            .select(`
+                id,
+                name,
+                slug,
+                short_name,
+                primary_color,
+                secondary_color,
+                loading_player
+            `)
+            .eq("id", profile.supported_team_id)
+            .maybeSingle();
+
+        if (teamError) {
+            console.error("BR: erro ao carregar equipa:", teamError);
+            return;
+        }
+
+        currentTeam = team;
+
+        applyTeamTheme(team);
+        updateTeamHeader(team);
+        updateProfileButton(user);
+
+        await Promise.all([
+            loadFeaturedContent(team.id),
+            loadNews(team.id),
+            loadOpinion(team.id),
+            loadFixtures(team.id),
+            loadLeagueTable(team.id),
+            loadPlayerRatings(team.id),
+            loadVideos(team.id)
+        ]);
+
+        setupFeaturedCarousel();
+
+    } catch (error) {
+        console.error("BR: erro geral no carregamento:", error);
     }
-
-    currentUser = user;
-
-
-    // ========================================================
-    // PROFILE
-    // ========================================================
-
-    const {
-        data: profile,
-        error: profileError
-    } = await supabaseClient
-        .from("profiles")
-        .select(`
-            supported_team_id
-        `)
-        .eq("id", user.id)
-        .single();
-
-    if (
-        profileError ||
-        !profile ||
-        !profile.supported_team_id
-    ) {
-
-        window.location.href = "choose-team.html";
-        return;
-
-    }
+}
 
 
-    // ========================================================
-    // TEAM
-    // ========================================================
+/* ============================================================
+   TEAM
+   ============================================================ */
 
-    const {
-        data: team,
-        error: teamError
-    } = await supabaseClient
-        .from("teams")
-        .select(`
-            id,
-            name,
-            slug,
-            short_name,
-            primary_color,
-            secondary_color,
-            loading_player
-        `)
-        .eq(
-            "id",
-            profile.supported_team_id
-        )
-        .single();
+function applyTeamTheme(team) {
+    const root = document.documentElement;
 
-    if (teamError || !team) {
-
-        window.location.href = "choose-team.html";
-        return;
-
-    }
-
-    currentTeam = team;
-
-
-    // ========================================================
-    // TEAM COLORS
-    // ========================================================
-
-    document.documentElement.style.setProperty(
+    root.style.setProperty(
         "--team-primary",
         team.primary_color || "#a50044"
     );
 
-    document.documentElement.style.setProperty(
+    root.style.setProperty(
         "--team-secondary",
         team.secondary_color || "#004d98"
     );
 
-    if (team.slug === "barcelona") {
+    const primary = team.primary_color || "#a50044";
 
-        document.documentElement.style.setProperty(
-            "--team-glow",
-            "rgba(165, 0, 68, 0.18)"
-        );
-
-    } else {
-
-        document.documentElement.style.setProperty(
-            "--team-glow",
-            "rgba(255, 190, 0, 0.18)"
-        );
-
-    }
-
-
-    // ========================================================
-    // HEADER
-    // ========================================================
-
-    const teamTitle =
-        document.getElementById("team-title");
-
-    const teamSubtitle =
-        document.getElementById("team-subtitle");
-
-    if (teamTitle) {
-
-        teamTitle.textContent =
-            team.slug === "barcelona"
-                ? "VISCA BARÇA"
-                : "HALA MADRID";
-
-    }
-
-    if (teamSubtitle) {
-
-        teamSubtitle.textContent =
-            "Bem-vindo à tua experiência de futebol personalizada.";
-
-    }
-
-
-    // ========================================================
-    // LOAD EVERYTHING
-    // ========================================================
-
-    await Promise.all([
-
-        loadFeaturedContent(team.id),
-
-        loadNews(team.id),
-
-        loadOpinion(team.id),
-
-        loadFixtures(team),
-
-        loadLeagueTable(team),
-
-        loadPlayerRatings(team),
-
-        loadVideos(team)
-
-    ]);
-
-
-    // ========================================================
-    // START FEATURED CAROUSEL
-    // ========================================================
-
-    setupFeaturedCarousel();
-
+    root.style.setProperty(
+        "--team-glow",
+        hexToRGBA(primary, 0.18)
+    );
 }
 
 
-// ============================================================
-// FEATURED / DESTAQUES
-// ============================================================
+function updateTeamHeader(team) {
+    const title = $("#team-title");
+    const subtitle = $("#team-subtitle");
+
+    const slug = normalize(team.slug || team.name);
+
+    const isBarcelona =
+        slug.includes("barca") ||
+        slug.includes("barcelona");
+
+    if (title) {
+        title.textContent = isBarcelona
+            ? "VISCA BARÇA"
+            : "HALA MADRID";
+    }
+
+    if (subtitle) {
+        subtitle.textContent = isBarcelona
+            ? "Tudo sobre o teu Barça."
+            : "Tudo sobre o teu Real Madrid.";
+    }
+}
+
+
+function updateProfileButton(user) {
+    const button = $("#profile-button");
+
+    if (!button || !user) return;
+
+    const email = user.email || "";
+    const firstLetter = email.trim().charAt(0).toUpperCase();
+
+    button.textContent = firstLetter || "U";
+}
+
+
+function hexToRGBA(hex, alpha) {
+    if (!hex) return `rgba(165,0,68,${alpha})`;
+
+    let value = hex.replace("#", "").trim();
+
+    if (value.length === 3) {
+        value = value
+            .split("")
+            .map(x => x + x)
+            .join("");
+    }
+
+    const number = parseInt(value, 16);
+
+    if (Number.isNaN(number)) {
+        return `rgba(165,0,68,${alpha})`;
+    }
+
+    const r = (number >> 16) & 255;
+    const g = (number >> 8) & 255;
+    const b = number & 255;
+
+    return `rgba(${r},${g},${b},${alpha})`;
+}
+
+
+/* ============================================================
+   DESTAQUE
+   ============================================================ */
 
 async function loadFeaturedContent(teamId) {
+    const client = getSupabase();
 
-    const track =
-        document.getElementById("featured-track");
+    if (!client) return;
 
-    if (!track) {
-        return;
-    }
+    try {
+        const [
+            contentResult,
+            newsResult
+        ] = await Promise.all([
 
+            client
+                .from("content")
+                .select("*")
+                .eq("status", "published")
+                .eq("area", "featured")
+                .or(`team_id.eq.${teamId},team_id.is.null`)
+                .order("sort_order", {
+                    ascending: true
+                })
+                .limit(10),
 
-    // --------------------------------------------------------
-    // MANUALLY CREATED DESTAQUES
-    // --------------------------------------------------------
+            client
+                .from("news")
+                .select(`
+                    id,
+                    team_id,
+                    title,
+                    translated_title,
+                    description,
+                    translated_description,
+                    article_body,
+                    image_url,
+                    article_url,
+                    source_name,
+                    source_url,
+                    author,
+                    published_at,
+                    imported_at,
+                    category,
+                    status,
+                    is_featured,
+                    sort_order,
+                    created_at
+                `)
+                .eq("status", "published")
+                .or(`team_id.eq.${teamId},team_id.is.null`)
+                .order("published_at", {
+                    ascending: false,
+                    nullsFirst: false
+                })
+                .order("created_at", {
+                    ascending: false
+                })
+                .limit(3)
+        ]);
 
-    const {
-        data: contentData,
-        error: contentError
-    } = await supabaseClient
-        .from("content")
-        .select("*")
-        .eq("area", "featured")
-        .eq("status", "published")
-        .or(
-            `team_id.eq.${teamId},team_id.is.null`
-        )
-        .order(
-            "sort_order",
-            {
-                ascending: true
-            }
-        )
-        .order(
-            "created_at",
-            {
-                ascending: false
-            }
-        );
+        if (contentResult.error) {
+            console.error(
+                "BR: erro nos destaques:",
+                contentResult.error
+            );
+        }
 
+        if (newsResult.error) {
+            console.error(
+                "BR: erro nas notícias de destaque:",
+                newsResult.error
+            );
+        }
 
-    if (contentError) {
+        const manualContent =
+            contentResult.data || [];
 
-        console.error(
-            "Erro ao carregar destaques:",
-            contentError
-        );
-
-    }
-
-
-    const manualFeatured =
-        filterActiveContent(
-            contentData || []
-        );
-
-
-    // --------------------------------------------------------
-    // LATEST 3 NEWS
-    // --------------------------------------------------------
-
-    const {
-        data: latestNews,
-        error: newsError
-    } = await supabaseClient
-        .from("news")
-        .select(`
-            id,
-            team_id,
-            title,
-            translated_title,
-            description,
-            translated_description,
-            image_url,
-            article_url,
-            author,
-            published_at,
-            imported_at,
-            category,
-            status,
-            created_at
-        `)
-        .eq(
-            "status",
-            "published"
-        )
-        .or(
-            `team_id.eq.${teamId},team_id.is.null`
-        )
-        .order(
-            "published_at",
-            {
-                ascending: false,
-                nullsFirst: false
-            }
-        )
-        .order(
-            "created_at",
-            {
-                ascending: false
-            }
-        )
-        .limit(3);
-
-
-    if (newsError) {
-
-        console.error(
-            "Erro ao carregar notícias para destaques:",
-            newsError
-        );
-
-    }
-
-
-    const featuredNews =
-        (latestNews || [])
-            .filter(
-                item =>
-                    item.article_url
-            )
-            .map(
-                item => ({
+        const latestNews =
+            (newsResult.data || [])
+                .filter(item => item && item.id)
+                .map(item => ({
                     ...item,
                     __source: "news"
-                })
-            );
+                }));
 
+        featuredItems = [
+            ...latestNews,
+            ...manualContent
+        ];
 
-    // --------------------------------------------------------
-    // NEWS FIRST + MANUAL DESTAQUES
-    // --------------------------------------------------------
+        renderFeaturedSlides(
+            featuredItems.slice(0, 8)
+        );
 
-    const combined = [
-        ...featuredNews,
-        ...manualFeatured
-    ];
-
-
-    if (!combined.length) {
-
-        renderEmptyFeatured();
-        return;
-
+    } catch (error) {
+        console.error(
+            "BR: erro ao carregar destaques:",
+            error
+        );
     }
-
-
-    renderFeaturedSlides(
-        combined
-    );
-
 }
 
 
-// ============================================================
-// RENDER FEATURED SLIDES
-// ============================================================
-
 function renderFeaturedSlides(items) {
+    const track = $("#featured-track");
+    const dots = $("#featured-dots");
 
-    const track =
-        document.getElementById("featured-track");
+    if (!track) return;
 
-    const dots =
-        document.getElementById("featured-dots");
-
-    if (!track) {
-        return;
-    }
-
-    track.innerHTML = "";
-
-    if (dots) {
-        dots.innerHTML = "";
-    }
-
-
-    items.forEach(
-        (item, index) => {
-
-            const slide =
-                document.createElement("article");
-
-            slide.className =
-                "featured-slide";
-
-            slide.dataset.index =
-                index;
-
-
-            const isNews =
-                item.__source === "news";
-
-
-            const title =
-                isNews
-                    ? (
-                        item.translated_title ||
-                        item.title
-                    )
-                    : item.title;
-
-
-            // ------------------------------------------------
-            // IMPORTANT:
-            // News Destaques DO NOT show description.
-            // ------------------------------------------------
-
-            const description =
-                isNews
-                    ? ""
-                    : item.description;
-
-
-            slide.innerHTML = `
-
-                <div class="featured-slide-image">
-
-                    ${
-                        item.image_url
-                            ? `
-                                <img
-                                    src="${escapeAttribute(
-                                        item.image_url
-                                    )}"
-                                    alt="${escapeAttribute(
-                                        title ||
-                                        "Destaque"
-                                    )}"
-                                    loading="${
-                                        index === 0
-                                            ? "eager"
-                                            : "lazy"
-                                    }"
-                                >
-                            `
-                            : `
-                                <div class="featured-placeholder">
-                                    ${isNews ? "NOTÍCIA" : "DESTAQUE"}
-                                </div>
-                            `
-                    }
-
+    if (!items.length) {
+        track.innerHTML = `
+            <article class="featured-slide">
+                <div class="featured-slide-placeholder">
+                    BR
                 </div>
 
                 <div class="featured-slide-overlay"></div>
 
                 <div class="featured-content">
-
-                    <div class="featured-tag">
-
-                        ${
-                            isNews
-                                ? getNewsCategory(item)
-                                : getFeaturedLabel(item)
-                        }
-
-                    </div>
+                    <span class="featured-tag">
+                        BARÇA REAL
+                    </span>
 
                     <h2>
-                        ${escapeHTML(
-                            title ||
-                            "Sem título"
-                        )}
+                        Sem destaques disponíveis
+                    </h2>
+
+                    <p>
+                        Os próximos destaques aparecerão aqui.
+                    </p>
+                </div>
+            </article>
+        `;
+
+        if (dots) dots.innerHTML = "";
+
+        return;
+    }
+
+    track.innerHTML = items.map((item, index) => {
+        const isNews =
+            item.__source === "news";
+
+        const title =
+            isNews
+                ? (
+                    item.translated_title ||
+                    item.title ||
+                    "Sem título"
+                )
+                : (
+                    item.title ||
+                    "Sem título"
+                );
+
+        const description =
+            isNews
+                ? (
+                    item.translated_description ||
+                    item.description ||
+                    ""
+                )
+                : (
+                    item.description ||
+                    ""
+                );
+
+        const imageUrl =
+            item.image_url ||
+            "";
+
+        const category =
+            isNews
+                ? (
+                    item.category ||
+                    "NOTÍCIA"
+                )
+                : (
+                    getContentLabel(item)
+                );
+
+        return `
+            <article
+                class="featured-slide"
+                data-featured-index="${index}"
+                tabindex="0"
+            >
+
+                ${
+                    imageUrl
+                        ? `
+                            <div class="featured-slide-image">
+                                <img
+                                    src="${escapeAttribute(imageUrl)}"
+                                    alt="${escapeAttribute(title)}"
+                                    loading="${index === 0 ? "eager" : "lazy"}"
+                                    onerror="this.parentElement.innerHTML='<div class=&quot;featured-slide-placeholder&quot;>BR</div>';"
+                                >
+                            </div>
+                        `
+                        : `
+                            <div class="featured-slide-placeholder">
+                                BR
+                            </div>
+                        `
+                }
+
+                <div class="featured-slide-overlay"></div>
+
+                <div class="featured-content">
+
+                    <span class="featured-tag">
+                        ${escapeHTML(category)}
+                    </span>
+
+                    <h2>
+                        ${escapeHTML(title)}
                     </h2>
 
                     ${
@@ -474,9 +463,7 @@ function renderFeaturedSlides(items) {
                             ? `
                                 <p>
                                     ${escapeHTML(
-                                        stripHTML(
-                                            description
-                                        )
+                                        stripHTML(description)
                                     )}
                                 </p>
                             `
@@ -485,1119 +472,385 @@ function renderFeaturedSlides(items) {
 
                 </div>
 
-                ${
-                    item.audio_url
-                        ? `
-                            <button
-                                type="button"
-                                class="featured-audio-button"
-                                aria-label="Ouvir destaque"
-                            >
-                                🔊
-                            </button>
-                        `
-                        : ""
-                }
-
-            `;
-
-
-            let slideMoved = false;
-
-
-            slide.addEventListener(
-                "mousedown",
-                () => {
-
-                    slideMoved = false;
-
-                }
-            );
-
-
-            slide.addEventListener(
-                "mousemove",
-                () => {
-
-                    slideMoved = true;
-
-                }
-            );
-
-
-            slide.addEventListener(
-                "click",
-                event => {
-
-                    if (slideMoved) {
-
-                        slideMoved = false;
-                        return;
-
-                    }
-
-
-                    if (
-                        event.target.closest(
-                            ".featured-audio-button"
-                        )
-                    ) {
-
-                        return;
-
-                    }
-
-
-                    if (isNews) {
-
-                        openNewsArticle(item);
-
-                    } else {
-
-                        openContent(item);
-
-                    }
-
-                }
-            );
-
-
-            const audioButton =
-                slide.querySelector(
-                    ".featured-audio-button"
-                );
-
-
-            if (audioButton) {
-
-                audioButton.addEventListener(
-                    "click",
-                    event => {
-
-                        event.stopPropagation();
-
-                        playFeaturedAudio(
-                            item.audio_url,
-                            audioButton
-                        );
-
-                    }
-                );
-
-            }
-
-
-            track.appendChild(
-                slide
-            );
-
-
-            if (dots) {
-
-                const dot =
-                    document.createElement("button");
-
-                dot.type =
-                    "button";
-
-                dot.className =
-                    "featured-dot";
-
-                if (index === 0) {
-
-                    dot.classList.add("active");
-
-                }
-
-                dot.dataset.index =
-                    index;
-
-                dot.setAttribute(
-                    "aria-label",
-                    `Destaque ${index + 1}`
-                );
-
-                dots.appendChild(
-                    dot
-                );
-
-            }
-
-        }
-    );
-
-}
-
-
-// ============================================================
-// FEATURED LABEL
-// ============================================================
-
-function getFeaturedLabel(item) {
-
-    if (
-        item.content_type ===
-        "community"
-    ) {
-
-        return "COMUNIDADE";
-
-    }
-
-    if (
-        item.content_type ===
-        "story"
-    ) {
-
-        return "HISTÓRIA";
-
-    }
-
-    if (
-        item.area ===
-        "opinion"
-    ) {
-
-        return "OPINIÃO";
-
-    }
-
-    if (
-        item.area ===
-        "analysis"
-    ) {
-
-        return "ANÁLISE";
-
-    }
-
-    return "DESTAQUE";
-
-}
-
-
-// ============================================================
-// EMPTY FEATURED
-// ============================================================
-
-function renderEmptyFeatured() {
-
-    const track =
-        document.getElementById("featured-track");
-
-    const dots =
-        document.getElementById("featured-dots");
-
-    if (track) {
-
-        track.innerHTML = `
-
-            <article class="featured-slide">
-
-                <div class="featured-slide-image">
-
-                    <div class="featured-placeholder">
-                        DESTAQUES
-                    </div>
-
-                </div>
-
-                <div class="featured-content">
-
-                    <div class="featured-tag">
-                        DESTAQUES
-                    </div>
-
-                    <h2>
-                        Ainda não existem destaques publicados.
-                    </h2>
-
-                </div>
-
             </article>
-
         `;
-
-    }
+    }).join("");
 
     if (dots) {
-
-        dots.innerHTML = "";
-
+        dots.innerHTML = items
+            .map((_, index) => `
+                <button
+                    class="featured-dot ${index === 0 ? "active" : ""}"
+                    type="button"
+                    data-dot-index="${index}"
+                    aria-label="Destaque ${index + 1}"
+                ></button>
+            `)
+            .join("");
     }
 
-}
+    $$("#featured-track .featured-slide")
+        .forEach(slide => {
 
-
-// ============================================================
-// FEATURED AUDIO
-// ============================================================
-
-let featuredAudio = null;
-
-
-function playFeaturedAudio(
-    url,
-    button
-) {
-
-    if (!url) {
-        return;
-    }
-
-
-    if (
-        featuredAudio &&
-        !featuredAudio.paused
-    ) {
-
-        featuredAudio.pause();
-
-        if (
-            featuredAudio.currentSrc ===
-            url
-        ) {
-
-            featuredAudio = null;
-
-            if (button) {
-                button.textContent = "🔊";
-            }
-
-            return;
-
-        }
-
-    }
-
-
-    featuredAudio =
-        new Audio(url);
-
-
-    featuredAudio.play()
-        .then(
-            () => {
-
-                if (button) {
-                    button.textContent = "⏸";
+            slide.addEventListener("click", event => {
+                if (
+                    event.target.closest(
+                        ".featured-audio-button"
+                    )
+                ) {
+                    return;
                 }
 
-            }
-        )
-        .catch(
-            error => {
+                const index =
+                    Number(slide.dataset.featuredIndex);
 
-                console.error(
-                    "Erro ao reproduzir áudio:",
-                    error
-                );
+                const item = items[index];
 
-            }
-        );
+                if (!item) return;
 
+                if (item.__source === "news") {
+                    openNewsArticle(item);
+                } else {
+                    openContent(item);
+                }
+            });
 
-    featuredAudio.addEventListener(
-        "ended",
-        () => {
+            slide.addEventListener("keydown", event => {
+                if (
+                    event.key !== "Enter" &&
+                    event.key !== " "
+                ) {
+                    return;
+                }
 
-            if (button) {
-                button.textContent = "🔊";
-            }
-
-            featuredAudio = null;
-
-        }
-    );
-
+                event.preventDefault();
+                slide.click();
+            });
+        });
 }
 
 
-// ============================================================
-// FEATURED CAROUSEL
-// ============================================================
+/* ============================================================
+   FEATURED CAROUSEL
+   ============================================================ */
 
 function setupFeaturedCarousel() {
+    const track = $("#featured-track");
 
-    const track =
-        document.getElementById("featured-track");
+    if (!track) return;
 
-    const dots =
-        document.getElementById("featured-dots");
+    const dots = $$(".featured-dot");
 
-    if (!track) {
-        return;
-    }
+    let autoplayTimer = null;
 
+    function updateDots() {
+        const width =
+            track.clientWidth || 1;
 
-    const getSlides =
-        () =>
-            track.querySelectorAll(
-                ".featured-slide"
+        const index =
+            Math.round(
+                track.scrollLeft / width
             );
 
-
-    const getDots =
-        () =>
-            dots
-                ? dots.querySelectorAll(
-                    ".featured-dot"
-                )
-                : [];
-
-
-    let currentIndex = 0;
-    let autoPlay = null;
-    let isDragging = false;
-    let startX = 0;
-    let startScrollLeft = 0;
-    let moved = false;
-
-
-    function updateDots(index) {
-
-        getDots()
-            .forEach(
-                (dot, dotIndex) => {
-
-                    dot.classList.toggle(
-                        "active",
-                        dotIndex === index
-                    );
-
-                }
+        dots.forEach((dot, i) => {
+            dot.classList.toggle(
+                "active",
+                i === index
             );
-
-    }
-
-
-    function goToSlide(
-        index,
-        smooth = true
-    ) {
-
-        const slides =
-            getSlides();
-
-        if (!slides.length) {
-            return;
-        }
-
-        if (index < 0) {
-            index = slides.length - 1;
-        }
-
-        if (
-            index >=
-            slides.length
-        ) {
-
-            index = 0;
-
-        }
-
-        currentIndex =
-            index;
-
-        const slide =
-            slides[index];
-
-        track.scrollTo({
-            left: slide.offsetLeft,
-            behavior:
-                smooth
-                    ? "smooth"
-                    : "auto"
         });
-
-        updateDots(
-            currentIndex
-        );
-
     }
-
-
-    function detectCurrentSlide() {
-
-        const slides =
-            getSlides();
-
-        if (!slides.length) {
-            return;
-        }
-
-        const scrollPosition =
-            track.scrollLeft;
-
-        let closestIndex = 0;
-
-        let closestDistance =
-            Infinity;
-
-
-        slides.forEach(
-            (slide, index) => {
-
-                const distance =
-                    Math.abs(
-                        slide.offsetLeft -
-                        scrollPosition
-                    );
-
-                if (
-                    distance <
-                    closestDistance
-                ) {
-
-                    closestDistance =
-                        distance;
-
-                    closestIndex =
-                        index;
-
-                }
-
-            }
-        );
-
-
-        currentIndex =
-            closestIndex;
-
-        updateDots(
-            currentIndex
-        );
-
-    }
-
-
-    function stopAutoPlay() {
-
-        if (autoPlay) {
-
-            clearInterval(
-                autoPlay
-            );
-
-            autoPlay = null;
-
-        }
-
-    }
-
-
-    function startAutoPlay() {
-
-        stopAutoPlay();
-
-        if (
-            getSlides().length <=
-            1
-        ) {
-
-            return;
-
-        }
-
-        autoPlay =
-            setInterval(
-                () => {
-
-                    goToSlide(
-                        currentIndex + 1
-                    );
-
-                },
-                5000
-            );
-
-    }
-
-
-    getDots()
-        .forEach(
-            dot => {
-
-                dot.addEventListener(
-                    "click",
-                    event => {
-
-                        event.stopPropagation();
-
-                        const index =
-                            Number(
-                                dot.dataset.index
-                            );
-
-                        if (
-                            Number.isNaN(
-                                index
-                            )
-                        ) {
-
-                            return;
-
-                        }
-
-                        goToSlide(index);
-
-                        startAutoPlay();
-
-                    }
-                );
-
-            }
-        );
-
 
     track.addEventListener(
         "scroll",
-        () => {
-
-            detectCurrentSlide();
-
-        },
-        {
-            passive: true
-        }
+        debounce(updateDots, 80)
     );
 
+    dots.forEach(dot => {
+        dot.addEventListener("click", event => {
 
-    track.addEventListener(
-        "mousedown",
-        event => {
+            event.stopPropagation();
 
-            isDragging = true;
-            moved = false;
-            startX = event.pageX;
-            startScrollLeft = track.scrollLeft;
+            const index =
+                Number(dot.dataset.dotIndex);
 
-            stopAutoPlay();
+            track.scrollTo({
+                left:
+                    index *
+                    track.clientWidth,
+                behavior: "smooth"
+            });
+        });
+    });
 
-            track.classList.add(
-                "dragging"
-            );
+    function startAutoplay() {
+        stopAutoplay();
 
-        }
-    );
+        if (dots.length < 2) return;
 
+        autoplayTimer = setInterval(() => {
 
-    track.addEventListener(
-        "mousemove",
-        event => {
-
-            if (!isDragging) {
+            if (
+                document.hidden ||
+                isAnyFocusedViewOpen()
+            ) {
                 return;
             }
 
-            const distance =
-                event.pageX -
-                startX;
+            const width =
+                track.clientWidth || 1;
 
-            if (
-                Math.abs(distance) >
-                5
-            ) {
+            const current =
+                Math.round(
+                    track.scrollLeft / width
+                );
 
-                moved = true;
+            const next =
+                current + 1 >= dots.length
+                    ? 0
+                    : current + 1;
 
-            }
+            track.scrollTo({
+                left:
+                    next * width,
+                behavior: "smooth"
+            });
 
-            track.scrollLeft =
-                startScrollLeft -
-                distance;
-
-        }
-    );
-
-
-    function stopDragging() {
-
-        if (!isDragging) {
-            return;
-        }
-
-        isDragging = false;
-
-        track.classList.remove(
-            "dragging"
-        );
-
-        if (moved) {
-            detectCurrentSlide();
-        }
-
-        startAutoPlay();
-
+        }, 6000);
     }
 
-
-    track.addEventListener(
-        "mouseup",
-        stopDragging
-    );
-
-    track.addEventListener(
-        "mouseleave",
-        stopDragging
-    );
-
-
-    track.addEventListener(
-        "touchstart",
-        event => {
-
-            if (
-                !event.touches ||
-                !event.touches.length
-            ) {
-
-                return;
-
-            }
-
-            startX =
-                event.touches[0].pageX;
-
-            startScrollLeft =
-                track.scrollLeft;
-
-            stopAutoPlay();
-
-        },
-        {
-            passive: true
+    function stopAutoplay() {
+        if (autoplayTimer) {
+            clearInterval(autoplayTimer);
+            autoplayTimer = null;
         }
-    );
-
-
-    track.addEventListener(
-        "touchend",
-        event => {
-
-            if (
-                !event.changedTouches ||
-                !event.changedTouches.length
-            ) {
-
-                startAutoPlay();
-                return;
-
-            }
-
-            const endX =
-                event.changedTouches[0].pageX;
-
-            const distance =
-                endX -
-                startX;
-
-            if (
-                Math.abs(distance) >
-                50
-            ) {
-
-                if (distance < 0) {
-
-                    goToSlide(
-                        currentIndex + 1
-                    );
-
-                } else {
-
-                    goToSlide(
-                        currentIndex - 1
-                    );
-
-                }
-
-            } else {
-
-                detectCurrentSlide();
-
-            }
-
-            startAutoPlay();
-
-        },
-        {
-            passive: true
-        }
-    );
-
+    }
 
     track.addEventListener(
         "mouseenter",
-        () => {
-
-            stopAutoPlay();
-
-        }
+        stopAutoplay
     );
-
 
     track.addEventListener(
         "mouseleave",
-        () => {
+        startAutoplay
+    );
 
-            if (!isDragging) {
-                startAutoPlay();
-            }
-
+    track.addEventListener(
+        "touchstart",
+        stopAutoplay,
+        {
+            passive: true
         }
     );
 
-
-    goToSlide(
-        0,
-        false
+    track.addEventListener(
+        "touchend",
+        startAutoplay,
+        {
+            passive: true
+        }
     );
 
-    startAutoPlay();
-
+    startAutoplay();
 }
 
 
-// ============================================================
-// NEWS
-// ============================================================
+/* ============================================================
+   NEWS
+   ============================================================ */
 
 async function loadNews(teamId) {
+    const client = getSupabase();
 
-    const container =
-        document.getElementById(
-            "news-home-grid"
-        );
+    if (!client) return;
 
-    if (!container) {
-        return;
-    }
+    const grid = $("#news-home-grid");
 
+    try {
 
-    const {
-        data,
-        error
-    } = await supabaseClient
-        .from("news")
-        .select(`
-            id,
-            team_id,
-            title,
-            translated_title,
-            description,
-            translated_description,
-            article_body,
-            image_url,
-            article_url,
-            source_name,
-            source_url,
-            author,
-            published_at,
-            imported_at,
-            category,
-            status,
-            is_featured,
-            sort_order,
-            created_at
-        `)
-        .eq(
-            "status",
-            "published"
-        )
-        .or(
-            `team_id.eq.${teamId},team_id.is.null`
-        )
-        .order(
-            "published_at",
-            {
+        const {
+            data,
+            error
+        } = await client
+            .from("news")
+            .select(`
+                id,
+                team_id,
+                title,
+                translated_title,
+                description,
+                translated_description,
+                article_body,
+                image_url,
+                article_url,
+                source_name,
+                source_url,
+                author,
+                published_at,
+                imported_at,
+                category,
+                status,
+                is_featured,
+                sort_order,
+                created_at
+            `)
+            .eq("status", "published")
+            .or(`team_id.eq.${teamId},team_id.is.null`)
+            .order("published_at", {
                 ascending: false,
                 nullsFirst: false
-            }
-        )
-        .order(
-            "created_at",
-            {
+            })
+            .order("created_at", {
                 ascending: false
-            }
-        )
-        .limit(30);
+            })
+            .limit(30);
 
-
-    if (error) {
-
-        console.error(
-            "Erro ao carregar notícias:",
-            error
-        );
-
-        newsItems = [];
-
-        container.innerHTML = `
-
-            <div class="br-empty">
-                Não foi possível carregar as notícias.
-            </div>
-
-        `;
-
-        return;
-    }
-
-
-    newsItems =
-        (data || [])
-            .filter(
-                item =>
-                    item.article_url
-            )
-            .map(
-                item => ({
-                    ...item,
-                    __source: "news"
-                })
+        if (error) {
+            console.error(
+                "BR: erro ao carregar notícias:",
+                error
             );
 
+            if (grid) {
+                grid.innerHTML = `
+                    <div class="homepage-empty">
+                        Não foi possível carregar as notícias.
+                    </div>
+                `;
+            }
 
-    if (!newsItems.length) {
+            return;
+        }
 
-        container.innerHTML = `
+        newsItems = (data || [])
+            .filter(item => item && item.id);
 
-            <div class="br-empty">
-                Ainda não existem notícias publicadas.
-            </div>
+        renderNews(
+            newsItems.slice(0, 7)
+        );
 
-        `;
-
-        return;
+    } catch (error) {
+        console.error(
+            "BR: erro nas notícias:",
+            error
+        );
     }
-
-
-    renderNews(
-        newsItems.slice(
-            0,
-            7
-        )
-    );
-
 }
 
 
-// ============================================================
-// RENDER NEWS
-// ============================================================
-
 function renderNews(items) {
+    const grid = $("#news-home-grid");
 
-    const container =
-        document.getElementById(
-            "news-home-grid"
-        );
-
-    if (!container) {
-        return;
-    }
-
-    container.innerHTML = "";
+    if (!grid) return;
 
     if (!items.length) {
+        grid.innerHTML = `
+            <div class="homepage-empty">
+                Ainda não existem notícias publicadas.
+            </div>
+        `;
+
         return;
     }
-
-
-    // --------------------------------------------------------
-    // MAIN NEWS
-    // --------------------------------------------------------
 
     const main =
         items[0];
 
+    const small =
+        items.slice(1, 7);
 
     const mainTitle =
         main.translated_title ||
         main.title ||
         "Sem título";
 
-
     const mainDescription =
         main.translated_description ||
         main.description ||
         "";
 
+    const mainImage =
+        main.image_url ||
+        "";
 
-    const mainStory =
-        document.createElement("article");
+    const mainImageHTML =
+        mainImage
+            ? `
+                <img
+                    class="news-main-image"
+                    src="${escapeAttribute(mainImage)}"
+                    alt="${escapeAttribute(mainTitle)}"
+                    loading="eager"
+                    onerror="this.outerHTML='<div class=&quot;news-main-placeholder&quot;>BR</div>';"
+                >
+            `
+            : `
+                <div class="news-main-placeholder">
+                    BR
+                </div>
+            `;
 
+    const mainDate =
+        formatShortDate(
+            main.published_at ||
+            main.imported_at ||
+            main.created_at
+        );
 
-    mainStory.className =
-        "news-main-card";
+    const smallHTML =
+        small.map((item, index) => {
 
+            const title =
+                item.translated_title ||
+                item.title ||
+                "Sem título";
 
-    // IMPORTANT:
-    // The image is DIRECTLY inside .news-main-card.
-    // This matches the responsive CSS sizing rules.
+            const description =
+                item.translated_description ||
+                item.description ||
+                "";
 
-    mainStory.innerHTML = `
+            const image =
+                item.image_url ||
+                "";
 
-        ${
-            main.image_url
-                ? `
-                    <img
-                        src="${escapeAttribute(
-                            main.image_url
-                        )}"
-                        alt="${escapeAttribute(
-                            mainTitle
-                        )}"
-                        loading="eager"
-                        class="news-main-image"
-                        onerror="this.style.display='none';"
-                    >
-                `
-                : `
-                    <div class="news-main-placeholder">
-                        NOTÍCIA
-                    </div>
-                `
-        }
+            const category =
+                item.category ||
+                "NOTÍCIA";
 
-        <div class="news-main-body">
-
-            <div class="news-main-meta">
-
-                ${getNewsCategory(main)}
-
-                ${getNewsDate(main)}
-
-            </div>
-
-            <h3>
-                ${escapeHTML(
-                    mainTitle
-                )}
-            </h3>
-
-            ${
-                mainDescription
+            const imageHTML =
+                image
                     ? `
-                        <p>
-                            ${escapeHTML(
-                                stripHTML(
-                                    mainDescription
-                                )
-                            )}
-                        </p>
+                        <img
+                            src="${escapeAttribute(image)}"
+                            alt="${escapeAttribute(title)}"
+                            loading="lazy"
+                            onerror="this.outerHTML='<div class=&quot;news-small-placeholder&quot;>BR</div>';"
+                        >
                     `
-                    : ""
-            }
+                    : `
+                        <div class="news-small-placeholder">
+                            BR
+                        </div>
+                    `;
 
-        </div>
+            return `
+                <article
+                    class="news-small-card"
+                    data-news-index="${index + 1}"
+                    tabindex="0"
+                >
 
-    `;
-
-
-    mainStory.addEventListener(
-        "click",
-        event => {
-
-            if (
-                event.target.closest(
-                    "a, button"
-                )
-            ) {
-                return;
-            }
-
-            openNewsArticle(main);
-
-        }
-    );
-
-
-    container.appendChild(
-        mainStory
-    );
-
-
-    // --------------------------------------------------------
-    // SMALL NEWS LIST
-    // --------------------------------------------------------
-
-    const smallWrapper =
-        document.createElement("div");
-
-
-    smallWrapper.className =
-        "news-small-list";
-
-
-    items
-        .slice(
-            1,
-            7
-        )
-        .forEach(
-            item => {
-
-                const title =
-                    item.translated_title ||
-                    item.title ||
-                    "Sem título";
-
-
-                const description =
-                    item.translated_description ||
-                    item.description ||
-                    "";
-
-
-                const card =
-                    document.createElement("article");
-
-
-                card.className =
-                    "news-small-card";
-
-
-                card.innerHTML = `
-
-                    <div class="news-small-image">
-
-                        ${
-                            item.image_url
-                                ? `
-                                    <img
-                                        src="${escapeAttribute(
-                                            item.image_url
-                                        )}"
-                                        alt="${escapeAttribute(
-                                            title
-                                        )}"
-                                        loading="lazy"
-                                    >
-                                `
-                                : `
-                                    <div class="news-small-placeholder">
-                                        NOTÍCIA
-                                    </div>
-                                `
-                        }
-
-                    </div>
+                    ${imageHTML}
 
                     <div class="news-small-body">
 
                         <div class="news-small-meta">
-
-                            ${getNewsCategory(item)}
-
-                            ${getNewsDate(item)}
-
+                            ${escapeHTML(category)}
                         </div>
 
                         <h3>
-                            ${escapeHTML(
-                                title
-                            )}
+                            ${escapeHTML(title)}
                         </h3>
 
                         ${
@@ -1605,8 +858,9 @@ function renderNews(items) {
                                 ? `
                                     <p>
                                         ${escapeHTML(
-                                            stripHTML(
-                                                description
+                                            truncateText(
+                                                stripHTML(description),
+                                                105
                                             )
                                         )}
                                     </p>
@@ -1616,3244 +870,2239 @@ function renderNews(items) {
 
                     </div>
 
-                `;
+                </article>
+            `;
+        }).join("");
 
+    grid.innerHTML = `
+        <article
+            class="news-main-card"
+            id="main-news-card"
+            tabindex="0"
+        >
 
-                card.addEventListener(
-                    "click",
-                    event => {
+            ${mainImageHTML}
 
-                        if (
-                            event.target.closest(
-                                "a, button"
-                            )
-                        ) {
-                            return;
-                        }
+            <div class="news-main-body">
 
-                        openNewsArticle(item);
-
+                <div class="news-main-meta">
+                    ${escapeHTML(
+                        main.category ||
+                        "NOTÍCIA"
+                    )}
+                    ${
+                        mainDate
+                            ? ` · ${escapeHTML(mainDate)}`
+                            : ""
                     }
-                );
+                </div>
 
+                <h3>
+                    ${escapeHTML(mainTitle)}
+                </h3>
 
-                smallWrapper.appendChild(
-                    card
-                );
+                ${
+                    mainDescription
+                        ? `
+                            <p>
+                                ${escapeHTML(
+                                    stripHTML(
+                                        mainDescription
+                                    )
+                                )}
+                            </p>
+                        `
+                        : ""
+                }
+
+            </div>
+
+        </article>
+
+        <div class="news-small-list">
+            ${smallHTML}
+        </div>
+    `;
+
+    const mainCard =
+        $("#main-news-card");
+
+    if (mainCard) {
+
+        mainCard.addEventListener(
+            "click",
+            () => openNewsArticle(main)
+        );
+
+        mainCard.addEventListener(
+            "keydown",
+            event => {
+
+                if (
+                    event.key === "Enter" ||
+                    event.key === " "
+                ) {
+                    event.preventDefault();
+                    openNewsArticle(main);
+                }
 
             }
         );
+    }
 
+    $$(".news-small-card")
+        .forEach(card => {
 
-    container.appendChild(
-        smallWrapper
-    );
+            const index =
+                Number(card.dataset.newsIndex);
 
+            const item =
+                items[index];
+
+            if (!item) return;
+
+            card.addEventListener(
+                "click",
+                () => openNewsArticle(item)
+            );
+
+            card.addEventListener(
+                "keydown",
+                event => {
+
+                    if (
+                        event.key === "Enter" ||
+                        event.key === " "
+                    ) {
+                        event.preventDefault();
+                        openNewsArticle(item);
+                    }
+
+                }
+            );
+        });
 }
 
 
-// ============================================================
-// OPEN NEWS ARTICLE
-// ============================================================
+/* ============================================================
+   OPEN NEWS ARTICLE
+   ============================================================ */
 
 function openNewsArticle(item) {
+    if (!item) return;
 
-    if (!item) {
+    const focused =
+        $("#focused-content-view");
+
+    const article =
+        $("#focused-content");
+
+    if (!focused || !article) {
+        console.error(
+            "BR: focused article view não encontrado."
+        );
         return;
     }
 
+    const title =
+        item.translated_title ||
+        item.title ||
+        "Sem título";
 
-    const newsItem = {
-        ...item,
-        __source: "news"
-    };
+    const description =
+        item.translated_description ||
+        item.description ||
+        "";
 
-
-    // Completely switch away from the homepage.
-    // The article remains inside the same HTML page.
-
-    hideHomepage();
-
-
-    openContent(
-        newsItem
-    );
-
-}
-
-
-// ============================================================
-// NEWS SOURCE
-// ============================================================
-
-function getNewsSource(item) {
-
-    return "";
-
-}
-
-
-// ============================================================
-// NEWS CATEGORY
-// ============================================================
-
-function getNewsCategory(item) {
-
-    const labels = {
-
-        news: "NOTÍCIAS",
-
-        transfer: "TRANSFERÊNCIAS",
-
-        team_news: "EQUIPA"
-
-    };
-
+    const imageUrl =
+        item.image_url ||
+        "";
 
     const category =
-        labels[item?.category] ||
-        "NOTÍCIAS";
+        item.category ||
+        "NOTÍCIA";
 
-
-    return `
-
-        <span class="news-category">
-            ${escapeHTML(category)}
-        </span>
-
-    `;
-
-}
-
-
-// ============================================================
-// NEWS DATE
-// ============================================================
-
-function getNewsDate(item) {
+    const sourceName =
+        item.source_name ||
+        "Fonte original";
 
     const date =
-        item?.published_at ||
-        item?.imported_at ||
-        item?.created_at;
+        item.published_at ||
+        item.imported_at ||
+        item.created_at;
 
+    const body =
+        item.article_body ||
+        "";
 
-    if (!date) {
-        return "";
-    }
+    const imageHTML =
+        imageUrl
+            ? `
+                <div class="focused-content-image">
+                    <img
+                        src="${escapeAttribute(imageUrl)}"
+                        alt="${escapeAttribute(title)}"
+                        loading="eager"
+                        onerror="this.outerHTML='<div class=&quot;focused-image-placeholder&quot;>BR</div>';"
+                    >
+                </div>
+            `
+            : `
+                <div class="focused-content-image">
+                    <div class="focused-image-placeholder">
+                        BR
+                    </div>
+                </div>
+            `;
 
+    const bodyHTML =
+        body
+            ? `
+                <div class="focused-article-body">
+                    ${formatArticleBody(body)}
+                </div>
+            `
+            : "";
 
-    return `
+    const sourceHTML =
+        item.article_url
+            ? `
+                <div class="focused-source">
 
-        <span class="news-date">
-            ${escapeHTML(
-                formatRelativeDate(date)
-            )}
-        </span>
+                    <div class="focused-source-label">
+                        ARTIGO ORIGINAL
+                    </div>
 
+                    <div class="focused-source-name">
+                        ${escapeHTML(sourceName)}
+                    </div>
+
+                    <a
+                        class="focused-source-button"
+                        href="${escapeAttribute(item.article_url)}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        Ler artigo original
+                    </a>
+
+                </div>
+            `
+            : "";
+
+    article.innerHTML = `
+        ${imageHTML}
+
+        <div class="focused-content-meta">
+            ${escapeHTML(category)}
+        </div>
+
+        <h1>
+            ${escapeHTML(title)}
+        </h1>
+
+        ${
+            date
+                ? `
+                    <div class="focused-content-date">
+                        ${escapeHTML(
+                            formatArticleDate(date)
+                        )}
+                    </div>
+                `
+                : ""
+        }
+
+        ${
+            item.author
+                ? `
+                    <div class="focused-content-author">
+                        Por ${escapeHTML(item.author)}
+                    </div>
+                `
+                : ""
+        }
+
+        ${
+            description
+                ? `
+                    <p id="focused-content-description">
+                        ${escapeHTML(
+                            stripHTML(description)
+                        )}
+                    </p>
+                `
+                : ""
+        }
+
+        ${bodyHTML}
+
+        ${sourceHTML}
+
+        <div class="focused-community">
+            A discussão da comunidade Barça Real será disponibilizada aqui.
+        </div>
     `;
 
+    showFocusedView();
 }
 
 
-// ============================================================
-// RELATIVE NEWS DATE
-// ============================================================
+/* ============================================================
+   GENERIC CONTENT
+   ============================================================ */
 
-function formatRelativeDate(date) {
+function openContent(item) {
+    if (!item) return;
+
+    if (item.__source === "news") {
+        openNewsArticle(item);
+        return;
+    }
+
+    const focused =
+        $("#focused-content-view");
+
+    const article =
+        $("#focused-content");
+
+    if (!focused || !article) return;
+
+    const title =
+        item.title ||
+        "Sem título";
+
+    const description =
+        item.description ||
+        "";
+
+    const imageUrl =
+        item.image_url ||
+        "";
+
+    const category =
+        getContentLabel(item);
+
+    const body =
+        getArticleBody(item);
+
+    const imageHTML =
+        imageUrl
+            ? `
+                <div class="focused-content-image">
+                    <img
+                        src="${escapeAttribute(imageUrl)}"
+                        alt="${escapeAttribute(title)}"
+                        loading="eager"
+                    >
+                </div>
+            `
+            : `
+                <div class="focused-content-image">
+                    <div class="focused-image-placeholder">
+                        BR
+                    </div>
+                </div>
+            `;
+
+    article.innerHTML = `
+        ${imageHTML}
+
+        <div class="focused-content-meta">
+            ${escapeHTML(category)}
+        </div>
+
+        <h1>
+            ${escapeHTML(title)}
+        </h1>
+
+        ${
+            item.author
+                ? `
+                    <div class="focused-content-author">
+                        Por ${escapeHTML(item.author)}
+                    </div>
+                `
+                : ""
+        }
+
+        ${
+            description
+                ? `
+                    <p id="focused-content-description">
+                        ${escapeHTML(
+                            stripHTML(description)
+                        )}
+                    </p>
+                `
+                : ""
+        }
+
+        ${
+            body
+                ? `
+                    <div class="focused-article-body">
+                        ${formatArticleBody(body)}
+                    </div>
+                `
+                : ""
+        }
+
+        ${
+            item.audio_url
+                ? `
+                    <div class="focused-content-media">
+                        <audio
+                            controls
+                            src="${escapeAttribute(item.audio_url)}"
+                        ></audio>
+                    </div>
+                `
+                : ""
+        }
+
+        ${
+            item.video_url
+                ? `
+                    <div class="focused-content-media">
+                        <video
+                            controls
+                            src="${escapeAttribute(item.video_url)}"
+                        ></video>
+                    </div>
+                `
+                : ""
+        }
+    `;
+
+    showFocusedView();
+}
+
+
+/* ============================================================
+   VIEW STATE
+   IMPORTANT:
+   focused/library/prediction are INSIDE #home-content.
+   Therefore we hide homepage children individually rather
+   than hiding #home-content itself.
+   ============================================================ */
+
+function showFocusedView() {
+    hideOtherViews();
+
+    const homeContent =
+        $("#home-content");
+
+    const focused =
+        $("#focused-content-view");
+
+    const header =
+        document.querySelector(".team-header");
+
+    const footer =
+        document.querySelector(".site-footer");
+
+    const nav =
+        document.querySelector(".bottom-nav");
+
+    if (homeContent) {
+        [...homeContent.children]
+            .forEach(child => {
+
+                if (
+                    child.id !==
+                        "focused-content-view" &&
+                    child.id !==
+                        "library-view" &&
+                    child.id !==
+                        "prediction-view"
+                ) {
+                    child.hidden = true;
+                }
+
+            });
+    }
+
+    if (header) {
+        header.hidden = true;
+    }
+
+    if (footer) {
+        footer.hidden = true;
+    }
+
+    if (focused) {
+        focused.hidden = false;
+        focused.classList.add("active");
+    }
+
+    if (nav) {
+        nav.hidden = false;
+    }
+
+    window.scrollTo({
+        top: 0,
+        behavior: "instant"
+    });
+}
+
+
+function hideOtherViews() {
+    const focused =
+        $("#focused-content-view");
+
+    const library =
+        $("#library-view");
+
+    const prediction =
+        $("#prediction-view");
+
+    if (focused) {
+        focused.classList.remove("active");
+
+        if (
+            focused.id !==
+            "focused-content-view"
+        ) {
+            focused.hidden = true;
+        }
+    }
+
+    if (library) {
+        library.classList.remove("active");
+        library.hidden = true;
+    }
+
+    if (prediction) {
+        prediction.classList.remove("active");
+        prediction.hidden = true;
+    }
+}
+
+
+function closeFocusedView() {
+    const homeContent =
+        $("#home-content");
+
+    const focused =
+        $("#focused-content-view");
+
+    const header =
+        document.querySelector(".team-header");
+
+    const footer =
+        document.querySelector(".site-footer");
+
+    const nav =
+        document.querySelector(".bottom-nav");
+
+    if (focused) {
+        focused.hidden = true;
+        focused.classList.remove("active");
+    }
+
+    if (homeContent) {
+        [...homeContent.children]
+            .forEach(child => {
+                child.hidden = false;
+            });
+    }
+
+    if (header) {
+        header.hidden = false;
+    }
+
+    if (footer) {
+        footer.hidden = false;
+    }
+
+    if (nav) {
+        nav.hidden = false;
+    }
+
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+    });
+}
+
+
+function isAnyFocusedViewOpen() {
+    const focused =
+        $("#focused-content-view");
+
+    const library =
+        $("#library-view");
+
+    const prediction =
+        $("#prediction-view");
+
+    return (
+        (focused && !focused.hidden) ||
+        (library && !library.hidden) ||
+        (prediction && !prediction.hidden)
+    );
+}
+
+
+/* ============================================================
+   LIBRARY / MORE
+   ============================================================ */
+
+function openListView(items, title, label) {
+    const library =
+        $("#library-view");
+
+    const grid =
+        $("#library-grid");
+
+    const titleElement =
+        $("#library-title");
+
+    const labelElement =
+        $("#library-label");
+
+    if (!library || !grid) return;
+
+    hideOtherViews();
+
+    const homeContent =
+        $("#home-content");
+
+    const header =
+        document.querySelector(".team-header");
+
+    const footer =
+        document.querySelector(".site-footer");
+
+    if (homeContent) {
+        [...homeContent.children]
+            .forEach(child => {
+
+                if (
+                    child.id !==
+                        "focused-content-view" &&
+                    child.id !==
+                        "library-view" &&
+                    child.id !==
+                        "prediction-view"
+                ) {
+                    child.hidden = true;
+                }
+
+            });
+    }
+
+    if (header) header.hidden = true;
+    if (footer) footer.hidden = true;
+
+    if (titleElement) {
+        titleElement.textContent =
+            title || "Biblioteca";
+    }
+
+    if (labelElement) {
+        labelElement.textContent =
+            label || "BARÇA REAL";
+    }
+
+    renderLibrary(items || []);
+
+    library.hidden = false;
+    library.classList.add("active");
+
+    const nav =
+        document.querySelector(".bottom-nav");
+
+    if (nav) nav.hidden = false;
+
+    window.scrollTo({
+        top: 0,
+        behavior: "instant"
+    });
+}
+
+
+function openLibraryView() {
+    openListView(
+        newsItems,
+        "Todas as notícias",
+        "NOTÍCIAS"
+    );
+}
+
+
+function renderLibrary(items) {
+    const grid =
+        $("#library-grid");
+
+    if (!grid) return;
+
+    if (!items.length) {
+        grid.innerHTML = `
+            <div class="homepage-empty">
+                Não existem conteúdos disponíveis.
+            </div>
+        `;
+
+        return;
+    }
+
+    grid.innerHTML =
+        items.map((item, index) => {
+
+            const isNews =
+                item.__source === "news";
+
+            const title =
+                isNews
+                    ? (
+                        item.translated_title ||
+                        item.title ||
+                        "Sem título"
+                    )
+                    : (
+                        item.title ||
+                        "Sem título"
+                    );
+
+            const image =
+                item.image_url ||
+                "";
+
+            const imageHTML =
+                image
+                    ? `
+                        <img
+                            src="${escapeAttribute(image)}"
+                            alt="${escapeAttribute(title)}"
+                            loading="lazy"
+                            onerror="this.outerHTML='<div class=&quot;library-placeholder&quot;>BR</div>';"
+                        >
+                    `
+                    : `
+                        <div class="library-placeholder">
+                            BR
+                        </div>
+                    `;
+
+            return `
+                <article
+                    class="library-card"
+                    data-library-index="${index}"
+                >
+
+                    ${imageHTML}
+
+                    <div class="library-card-body">
+
+                        <h3>
+                            ${escapeHTML(title)}
+                        </h3>
+
+                    </div>
+
+                </article>
+            `;
+
+        }).join("");
+
+    $$(".library-card")
+        .forEach(card => {
+
+            const index =
+                Number(
+                    card.dataset.libraryIndex
+                );
+
+            const item =
+                items[index];
+
+            if (!item) return;
+
+            card.addEventListener(
+                "click",
+                () => {
+
+                    if (
+                        item.__source ===
+                        "news"
+                    ) {
+                        openNewsArticle(item);
+                    } else {
+                        openContent(item);
+                    }
+
+                }
+            );
+        });
+}
+
+
+function closeLibraryView() {
+    closeFocusedView();
+}
+
+
+/* ============================================================
+   OPINION & ANALYSIS
+   ============================================================ */
+
+async function loadOpinion(teamId) {
+    const client = getSupabase();
+
+    if (!client) return;
+
+    const grid =
+        $("#opinion-home-grid");
 
     try {
 
-        const published =
-            new Date(date);
-
-        const now =
-            new Date();
-
-        const diff =
-            now.getTime() -
-            published.getTime();
-
-
-        const minutes =
-            Math.floor(
-                diff / 60000
-            );
-
-
-        if (
-            minutes >= 0 &&
-            minutes < 60
-        ) {
-
-            return minutes <= 1
-                ? "AGORA"
-                : `HÁ ${minutes} MIN`;
-
-        }
-
-
-        const hours =
-            Math.floor(
-                minutes / 60
-            );
-
-
-        if (
-            hours >= 1 &&
-            hours < 24
-        ) {
-
-            return hours === 1
-                ? "HÁ 1 H"
-                : `HÁ ${hours} H`;
-
-        }
-
-
-        return new Intl.DateTimeFormat(
-            "pt-PT",
-            {
-                day: "2-digit",
-                month: "short"
-            }
-        )
-            .format(published)
-            .toUpperCase();
-
-    } catch {
-
-        return "";
-
-    }
-
-}
-
-
-// ============================================================
-// OPINION
-// ============================================================
-
-async function loadOpinion(teamId) {
-
-    const container =
-        document.getElementById(
-            "opinion-home-grid"
-        );
-
-    if (!container) {
-        return;
-    }
-
-
-    const {
-        data,
-        error
-    } = await supabaseClient
-        .from("content")
-        .select("*")
-        .eq(
-            "status",
-            "published"
-        )
-        .or(
-            `team_id.eq.${teamId},team_id.is.null`
-        )
-        .order(
-            "sort_order",
-            {
+        const {
+            data,
+            error
+        } = await client
+            .from("content")
+            .select("*")
+            .eq("status", "published")
+            .or(`team_id.eq.${teamId},team_id.is.null`)
+            .in(
+                "area",
+                [
+                    "opinion",
+                    "analysis",
+                    "opinion_analysis"
+                ]
+            )
+            .order("sort_order", {
                 ascending: true
-            }
-        )
-        .order(
-            "created_at",
-            {
+            })
+            .order("created_at", {
                 ascending: false
+            })
+            .limit(20);
+
+        if (error) {
+            console.error(
+                "BR: erro nas opiniões:",
+                error
+            );
+
+            if (grid) {
+                grid.innerHTML = `
+                    <div class="homepage-empty">
+                        Não foi possível carregar as opiniões.
+                    </div>
+                `;
             }
+
+            return;
+        }
+
+        opinionItems =
+            data || [];
+
+        renderOpinion(
+            opinionItems.slice(0, 7)
         );
 
-
-    if (error) {
-
+    } catch (error) {
         console.error(
-            "Erro ao carregar opinião:",
+            "BR: erro ao carregar opinião:",
             error
         );
-
-        container.innerHTML = `
-
-            <div class="br-empty">
-                Não foi possível carregar a opinião.
-            </div>
-
-        `;
-
-        return;
     }
-
-
-    const valid =
-        filterActiveContent(
-            data || []
-        )
-        .filter(
-            item =>
-                item.area === "opinion" ||
-                item.area === "analysis" ||
-                item.content_type === "community"
-        );
-
-
-    opinionItems =
-        valid.slice(
-            0,
-            30
-        );
-
-
-    if (!opinionItems.length) {
-
-        container.innerHTML = `
-
-            <div class="br-empty">
-                Ainda não existem artigos de opinião publicados.
-            </div>
-
-        `;
-
-        return;
-    }
-
-
-    renderOpinion(
-        opinionItems.slice(
-            0,
-            7
-        )
-    );
-
 }
 
 
-// ============================================================
-// RENDER OPINION
-// ============================================================
-
 function renderOpinion(items) {
+    const grid =
+        $("#opinion-home-grid");
 
-    const container =
-        document.getElementById(
-            "opinion-home-grid"
-        );
-
-    if (!container) {
-        return;
-    }
-
-    container.innerHTML = "";
+    if (!grid) return;
 
     if (!items.length) {
+        grid.innerHTML = `
+            <div class="homepage-empty">
+                Ainda não existem opiniões publicadas.
+            </div>
+        `;
+
         return;
     }
-
 
     const main =
         items[0];
 
+    const small =
+        items.slice(1, 7);
 
-    const feature =
-        document.createElement("article");
+    const mainTitle =
+        main.title ||
+        "Sem título";
 
+    const mainDescription =
+        main.description ||
+        "";
 
-    feature.className =
-        "opinion-main-card";
+    const mainImage =
+        main.image_url ||
+        "";
 
+    const mainImageHTML =
+        mainImage
+            ? `
+                <img
+                    src="${escapeAttribute(mainImage)}"
+                    alt="${escapeAttribute(mainTitle)}"
+                    loading="lazy"
+                >
+            `
+            : `
+                <div class="opinion-main-placeholder">
+                    BR
+                </div>
+            `;
 
-    feature.innerHTML = `
+    const smallHTML =
+        small.map((item, index) => {
 
-        <div class="opinion-main-image">
+            const title =
+                item.title ||
+                "Sem título";
 
-            ${
-                main.image_url
+            const image =
+                item.image_url ||
+                "";
+
+            const imageHTML =
+                image
                     ? `
                         <img
-                            src="${escapeAttribute(
-                                main.image_url
-                            )}"
-                            alt="${escapeAttribute(
-                                main.title ||
-                                "Opinião"
-                            )}"
+                            src="${escapeAttribute(image)}"
+                            alt="${escapeAttribute(title)}"
                             loading="lazy"
                         >
                     `
                     : `
-                        <div class="opinion-main-placeholder">
-                            OPINIÃO
+                        <div class="opinion-small-placeholder">
+                            BR
                         </div>
-                    `
-            }
+                    `;
 
-        </div>
+            return `
+                <article
+                    class="opinion-small-card"
+                    data-opinion-index="${index + 1}"
+                >
 
-        <div class="opinion-main-body">
-
-            <div class="opinion-author">
-                ${escapeHTML(
-                    getAuthor(main)
-                )}
-            </div>
-
-            <h3>
-                ${escapeHTML(
-                    main.title ||
-                    "Sem título"
-                )}
-            </h3>
-
-            ${
-                main.description
-                    ? `
-                        <p>
-                            ${escapeHTML(
-                                stripHTML(
-                                    main.description
-                                )
-                            )}
-                        </p>
-                    `
-                    : ""
-            }
-
-        </div>
-
-    `;
-
-
-    feature.addEventListener(
-        "click",
-        () => openContent(main)
-    );
-
-
-    container.appendChild(
-        feature
-    );
-
-
-    const list =
-        document.createElement("div");
-
-
-    list.className =
-        "opinion-small-list";
-
-
-    items
-        .slice(
-            1,
-            7
-        )
-        .forEach(
-            item => {
-
-                const card =
-                    document.createElement("article");
-
-
-                card.className =
-                    "opinion-small-card";
-
-
-                card.innerHTML = `
-
-                    <div class="opinion-small-image">
-
-                        ${
-                            item.image_url
-                                ? `
-                                    <img
-                                        src="${escapeAttribute(
-                                            item.image_url
-                                        )}"
-                                        alt="${escapeAttribute(
-                                            item.title ||
-                                            "Opinião"
-                                        )}"
-                                        loading="lazy"
-                                    >
-                                `
-                                : `
-                                    <div class="opinion-small-placeholder">
-                                        OPINIÃO
-                                    </div>
-                                `
-                        }
-
-                    </div>
+                    ${imageHTML}
 
                     <div class="opinion-small-body">
 
                         <div class="opinion-small-meta">
-
                             ${escapeHTML(
-                                getAuthor(item)
+                                getContentLabel(item)
                             )}
-
                         </div>
 
                         <h3>
-                            ${escapeHTML(
-                                item.title ||
-                                "Sem título"
-                            )}
+                            ${escapeHTML(title)}
                         </h3>
 
-                        ${
-                            item.description
-                                ? `
-                                    <p>
-                                        ${escapeHTML(
-                                            stripHTML(
-                                                item.description
-                                            )
-                                        )}
-                                    </p>
-                                `
-                                : ""
-                        }
-
                     </div>
 
-                `;
+                </article>
+            `;
+        }).join("");
 
+    grid.innerHTML = `
+        <article
+            class="opinion-main-card"
+            id="main-opinion-card"
+        >
 
-                card.addEventListener(
-                    "click",
-                    () => openContent(item)
-                );
+            ${mainImageHTML}
 
+            <div class="opinion-main-body">
 
-                list.appendChild(
-                    card
-                );
+                <h3>
+                    ${escapeHTML(mainTitle)}
+                </h3>
 
-            }
-        );
+                ${
+                    mainDescription
+                        ? `
+                            <p>
+                                ${escapeHTML(
+                                    stripHTML(
+                                        mainDescription
+                                    )
+                                )}
+                            </p>
+                        `
+                        : ""
+                }
 
-
-    container.appendChild(
-        list
-    );
-
-}
-
-
-// ============================================================
-// FIXTURES
-// ============================================================
-
-async function loadFixtures(team) {
-
-    const container =
-        document.getElementById(
-            "fixtures-container"
-        );
-
-    if (!container) {
-        return;
-    }
-
-
-    const fixtures =
-        await getExternalFixtures(
-            team
-        );
-
-
-    if (!fixtures.length) {
-
-        container.innerHTML = `
-
-            <div class="br-empty">
-
-                Os próximos jogos serão carregados
-                automaticamente quando a fonte de jogos
-                estiver ligada.
+                ${
+                    main.author
+                        ? `
+                            <div class="opinion-author">
+                                ${escapeHTML(
+                                    main.author
+                                )}
+                            </div>
+                        `
+                        : ""
+                }
 
             </div>
 
-        `;
+        </article>
 
-        return;
-    }
-
-
-    renderFixtures(
-        fixtures
-    );
-
-}
-
-
-// ============================================================
-// EXTERNAL FIXTURE ADAPTER
-// ============================================================
-
-async function getExternalFixtures(team) {
-
-    if (
-        Array.isArray(
-            window.BARCA_REAL_FIXTURES
-        )
-    ) {
-
-        return window.BARCA_REAL_FIXTURES;
-
-    }
-
-
-    return [];
-
-}
-
-
-// ============================================================
-// RENDER FIXTURES
-// ============================================================
-
-function renderFixtures(fixtures) {
-
-    const container =
-        document.getElementById(
-            "fixtures-container"
-        );
-
-
-    const next =
-        fixtures[0];
-
-
-    const upcoming =
-        fixtures.slice(
-            1,
-            3
-        );
-
-
-    container.innerHTML = `
-
-        <div class="br-next-match">
-
-            <div class="br-competition">
-                ${escapeHTML(
-                    next.competition ||
-                    ""
-                )}
-            </div>
-
-            <div class="br-match-date">
-                ${formatMatchDate(
-                    next.date
-                )}
-            </div>
-
-            <div class="br-match-teams">
-
-                ${teamHTML(
-                    next.home
-                )}
-
-                <div class="br-vs">
-                    VS
-                </div>
-
-                ${teamHTML(
-                    next.away
-                )}
-
-            </div>
-
-            <div class="br-prediction">
-
-                <button
-                    type="button"
-                    class="br-action-button"
-                    id="prediction-button"
-                >
-                    SUBMIT PREDICTION
-                </button>
-
-            </div>
-
+        <div class="opinion-small-list">
+            ${smallHTML}
         </div>
-
-        <div
-            class="br-upcoming-fixtures"
-            id="upcoming-fixtures"
-        ></div>
-
     `;
 
+    const mainCard =
+        $("#main-opinion-card");
 
-    const predictionButton =
-        document.getElementById(
-            "prediction-button"
-        );
-
-
-    if (predictionButton) {
-
-        predictionButton.addEventListener(
+    if (mainCard) {
+        mainCard.addEventListener(
             "click",
-            () => {
-
-                openPrediction(
-                    next
-                );
-
-            }
+            () => openContent(main)
         );
-
     }
 
+    $$(".opinion-small-card")
+        .forEach(card => {
 
-    const upcomingContainer =
-        document.getElementById(
-            "upcoming-fixtures"
-        );
+            const index =
+                Number(
+                    card.dataset.opinionIndex
+                );
 
+            const item =
+                items[index];
 
-    upcoming.forEach(
-        fixture => {
-
-            const card =
-                document.createElement("div");
-
-
-            card.className =
-                "br-upcoming-card";
-
-
-            card.innerHTML = `
-
-                <div class="br-competition">
-                    ${escapeHTML(
-                        fixture.competition ||
-                        ""
-                    )}
-                </div>
-
-                <div class="br-match-date">
-                    ${formatMatchDate(
-                        fixture.date
-                    )}
-                </div>
-
-                <div class="br-match-teams">
-
-                    ${teamHTML(
-                        fixture.home
-                    )}
-
-                    <div class="br-vs">
-                        VS
-                    </div>
-
-                    ${teamHTML(
-                        fixture.away
-                    )}
-
-                </div>
-
-            `;
-
+            if (!item) return;
 
             card.addEventListener(
                 "click",
-                () => openFixture(
-                    fixture
-                )
+                () => openContent(item)
             );
+        });
+}
 
 
-            upcomingContainer.appendChild(
-                card
+/* ============================================================
+   FIXTURES
+   ============================================================ */
+
+async function loadFixtures(teamId) {
+    const client = getSupabase();
+
+    if (!client) return;
+
+    try {
+
+        const {
+            data,
+            error
+        } = await client
+            .from("fixtures")
+            .select("*")
+            .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
+            .order("match_date", {
+                ascending: true
+            })
+            .limit(10);
+
+        if (error) {
+            console.warn(
+                "BR: fixtures não carregadas:",
+                error
             );
-
+            return;
         }
-    );
 
-}
-
-
-// ============================================================
-// LEAGUE TABLE
-// ============================================================
-
-async function loadLeagueTable(team) {
-
-    setupTableTabs();
-
-    await renderLeagueTable(
-        team,
-        "league"
-    );
-
-}
-
-
-// ============================================================
-// TABLE TABS
-// ============================================================
-
-function setupTableTabs() {
-
-    document
-        .querySelectorAll(
-            ".table-tab"
-        )
-        .forEach(
-            button => {
-
-                button.addEventListener(
-                    "click",
-                    async () => {
-
-                        document
-                            .querySelectorAll(
-                                ".table-tab"
-                            )
-                            .forEach(
-                                tab =>
-                                    tab.classList.remove(
-                                        "active"
-                                    )
-                            );
-
-
-                        button.classList.add(
-                            "active"
-                        );
-
-
-                        currentTableType =
-                            button.dataset.table;
-
-
-                        await renderLeagueTable(
-                            currentTeam,
-                            currentTableType
-                        );
-
-                    }
-                );
-
-            }
+        renderFixtures(
+            data || []
         );
 
+    } catch (error) {
+        console.warn(
+            "BR: erro fixtures:",
+            error
+        );
+    }
 }
 
 
-// ============================================================
-// RENDER TABLE
-// ============================================================
-
-async function renderLeagueTable(
-    team,
-    type
-) {
-
-    const container =
-        document.querySelector(
-            ".league-table-wrapper"
-        );
-
-
-    if (!container) {
+function renderFixtures(fixtures) {
+    if (!fixtures.length) {
         return;
     }
 
+    currentFixture =
+        fixtures[0];
 
-    const table =
-        await getExternalLeagueTable(
-            team,
-            type
+    const fixture =
+        currentFixture;
+
+    const competition =
+        fixture.competition ||
+        fixture.competition_name ||
+        "Jogo";
+
+    const date =
+        fixture.match_date ||
+        fixture.date ||
+        fixture.kickoff;
+
+    setText(
+        "#main-fixture-competition",
+        competition
+    );
+
+    setText(
+        "#main-fixture-date",
+        date
+            ? formatArticleDate(date)
+            : "Data por confirmar"
+    );
+
+    setText(
+        "#main-home-name",
+        fixture.home_team_name ||
+        fixture.home_name ||
+        "Casa"
+    );
+
+    setText(
+        "#main-away-name",
+        fixture.away_team_name ||
+        fixture.away_name ||
+        "Fora"
+    );
+
+    const next =
+        fixtures.slice(1, 3);
+
+    const container =
+        $("#next-fixtures");
+
+    if (!container) return;
+
+    container.innerHTML =
+        next.length
+            ? next.map(item => `
+                <div class="fixture-small-card">
+
+                    <div class="fixture-small-date">
+                        ${
+                            item.match_date ||
+                            item.date
+                                ? formatShortDate(
+                                    item.match_date ||
+                                    item.date
+                                )
+                                : "—"
+                        }
+                    </div>
+
+                    <div class="fixture-small-teams">
+                        <strong>
+                            ${
+                                item.home_team_name ||
+                                item.home_name ||
+                                "—"
+                            }
+                        </strong>
+
+                        <span>vs</span>
+
+                        <strong>
+                            ${
+                                item.away_team_name ||
+                                item.away_name ||
+                                "—"
+                            }
+                        </strong>
+                    </div>
+
+                    <div class="fixture-small-competition">
+                        ${
+                            item.competition ||
+                            item.competition_name ||
+                            "—"
+                        }
+                    </div>
+
+                </div>
+            `).join("")
+            : `
+                <div class="fixture-small-card">
+                    <div class="fixture-small-date">
+                        Não há outros jogos.
+                    </div>
+                </div>
+            `;
+}
+
+
+/* ============================================================
+   LEAGUE TABLE
+   ============================================================ */
+
+async function loadLeagueTable(teamId) {
+    const client = getSupabase();
+
+    if (!client) return;
+
+    try {
+
+        let query =
+            client
+                .from("league_table")
+                .select("*")
+                .order("position", {
+                    ascending: true
+                })
+                .limit(20);
+
+        if (currentTableType) {
+            query =
+                query.eq(
+                    "competition",
+                    currentTableType
+                );
+        }
+
+        const {
+            data,
+            error
+        } = await query;
+
+        if (error) {
+            console.warn(
+                "BR: tabela não carregada:",
+                error
+            );
+            return;
+        }
+
+        renderLeagueTable(
+            data || []
         );
 
+    } catch (error) {
+        console.warn(
+            "BR: erro tabela:",
+            error
+        );
+    }
+}
 
-    if (!table.length) {
 
-        container.innerHTML = `
+function renderLeagueTable(rows) {
+    const body =
+        $("#league-table-body");
 
-            <div class="br-empty">
+    if (!body) return;
 
-                A classificação será carregada
-                automaticamente a partir da fonte
-                oficial de dados.
-
+    if (!rows.length) {
+        body.innerHTML = `
+            <div class="table-empty">
+                Classificação ainda não disponível.
             </div>
-
         `;
 
         return;
     }
 
+    body.innerHTML =
+        rows.map((row, index) => {
 
-    container.innerHTML = `
+            const position =
+                row.position ||
+                row.rank ||
+                index + 1;
 
-        <table class="br-league-table">
+            const name =
+                row.team_name ||
+                row.name ||
+                "Equipa";
 
-            <thead>
+            const logo =
+                row.team_logo ||
+                row.logo_url ||
+                "";
 
-                <tr>
-                    <th>#</th>
-                    <th>Equipa</th>
-                    <th>J</th>
-                    <th>V</th>
-                    <th>E</th>
-                    <th>D</th>
-                    <th>PTS</th>
-                </tr>
+            return `
+                <div class="league-table-row">
 
-            </thead>
+                    <span>
+                        ${escapeHTML(
+                            String(position)
+                        )}
+                    </span>
 
-            <tbody id="league-table-body"></tbody>
-
-        </table>
-
-    `;
-
-
-    const body =
-        document.getElementById(
-            "league-table-body"
-        );
-
-
-    table.forEach(
-        (row, index) => {
-
-            const tr =
-                document.createElement("tr");
-
-
-            if (
-                currentTeam &&
-                (
-                    row.team_id ===
-                    currentTeam.id ||
-                    normalize(
-                        row.name
-                    ) ===
-                    normalize(
-                        currentTeam.name
-                    )
-                )
-            ) {
-
-                tr.classList.add(
-                    "br-highlight"
-                );
-
-            }
-
-
-            tr.innerHTML = `
-
-                <td>
-                    ${row.position || index + 1}
-                </td>
-
-                <td>
-
-                    <div class="br-team-cell">
+                    <span class="table-team">
 
                         ${
-                            row.logo
+                            logo
                                 ? `
                                     <img
-                                        src="${escapeAttribute(
-                                            row.logo
-                                        )}"
-                                        class="br-mini-logo"
+                                        src="${escapeAttribute(logo)}"
                                         alt=""
                                     >
                                 `
                                 : ""
                         }
 
-                        <span>
-                            ${escapeHTML(
-                                row.name ||
-                                ""
-                            )}
-                        </span>
+                        ${escapeHTML(name)}
 
-                    </div>
+                    </span>
 
-                </td>
+                    <span>
+                        ${row.played ?? row.games ?? "—"}
+                    </span>
 
-                <td>
-                    ${row.played ?? "-"}
-                </td>
+                    <span>
+                        ${
+                            row.goal_difference ??
+                            row.gd ??
+                            "—"
+                        }
+                    </span>
 
-                <td>
-                    ${row.won ?? "-"}
-                </td>
+                    <strong>
+                        ${row.points ?? "—"}
+                    </strong>
 
-                <td>
-                    ${row.drawn ?? "-"}
-                </td>
-
-                <td>
-                    ${row.lost ?? "-"}
-                </td>
-
-                <td>
-                    ${row.points ?? "-"}
-                </td>
-
+                </div>
             `;
 
-
-            body.appendChild(
-                tr
-            );
-
-        }
-    );
-
+        }).join("");
 }
 
 
-// ============================================================
-// EXTERNAL TABLE ADAPTER
-// ============================================================
+/* ============================================================
+   PLAYER RATINGS
+   ============================================================ */
 
-async function getExternalLeagueTable(
-    team,
-    type
-) {
+async function loadPlayerRatings(teamId) {
+    const client = getSupabase();
 
-    if (
-        typeof window.BARCA_REAL_TABLE ===
-        "function"
-    ) {
+    if (!client) return;
 
-        try {
+    try {
 
-            const result =
-                await window.BARCA_REAL_TABLE(
-                    team,
-                    type
-                );
+        const {
+            data,
+            error
+        } = await client
+            .from("player_ratings")
+            .select("*")
+            .eq("team_id", teamId)
+            .order("rating", {
+                ascending: false
+            })
+            .limit(10);
 
-
-            return Array.isArray(result)
-                ? result
-                : [];
-
-        } catch (error) {
-
-            console.error(
-                "Erro na fonte da classificação:",
+        if (error) {
+            console.warn(
+                "BR: ratings não carregadas:",
                 error
             );
-
-            return [];
-
+            return;
         }
 
+        renderPlayerRatings(
+            data || []
+        );
+
+    } catch (error) {
+        console.warn(
+            "BR: erro ratings:",
+            error
+        );
     }
-
-
-    return [];
-
 }
 
 
-// ============================================================
-// PLAYER RATINGS
-// ============================================================
+function renderPlayerRatings(rows) {
+    const list =
+        $("#ratings-list");
 
-async function loadPlayerRatings(team) {
+    if (!list) return;
 
-    const container =
-        document.getElementById(
-            "ratings-list"
-        );
-
-
-    if (!container) {
-        return;
-    }
-
-
-    const {
-        data,
-        error
-    } = await supabaseClient
-        .from("player_ratings")
-        .select("*")
-        .eq(
-            "team_id",
-            team.id
-        )
-        .order(
-            "rating",
-            {
-                ascending: false
-            }
-        )
-        .limit(8);
-
-
-    if (
-        error ||
-        !data ||
-        !data.length
-    ) {
-
-        container.innerHTML = `
-
-            <div class="br-empty">
-
-                As avaliações dos adeptos aparecerão aqui
-                depois dos jogos.
-
+    if (!rows.length) {
+        list.innerHTML = `
+            <div class="table-empty">
+                As avaliações aparecerão aqui depois dos jogos.
             </div>
-
         `;
 
+        setText(
+            "#ratings-average",
+            "—"
+        );
+
         return;
     }
 
+    const values =
+        rows
+            .map(row =>
+                Number(
+                    row.rating ??
+                    row.score
+                )
+            )
+            .filter(value =>
+                Number.isFinite(value)
+            );
 
-    container.innerHTML = "";
+    const average =
+        values.length
+            ? (
+                values.reduce(
+                    (sum, value) =>
+                        sum + value,
+                    0
+                ) / values.length
+            ).toFixed(1)
+            : "—";
 
+    setText(
+        "#ratings-average",
+        average
+    );
 
-    data.forEach(
-        (player, index) => {
+    list.innerHTML =
+        rows.map(row => {
 
-            const row =
-                document.createElement("div");
+            const player =
+                row.player_name ||
+                row.name ||
+                "Jogador";
 
+            const rating =
+                row.rating ??
+                row.score ??
+                "—";
 
-            row.className =
-                "br-rating-row";
+            return `
+                <div class="rating-row">
 
+                    <span class="rating-player">
+                        ${escapeHTML(player)}
+                    </span>
 
-            row.innerHTML = `
-
-                <div class="br-rating-rank">
-                    ${index + 1}
-                </div>
-
-                ${
-                    player.image_url
-                        ? `
-                            <img
-                                class="br-player-image"
-                                src="${escapeAttribute(
-                                    player.image_url
-                                )}"
-                                alt=""
-                            >
-                        `
-                        : `
-                            <div class="br-player-image"></div>
-                        `
-                }
-
-                <div>
-
-                    <div class="br-player-name">
+                    <span class="rating-value">
                         ${escapeHTML(
-                            player.player_name ||
-                            player.name ||
-                            "Jogador"
+                            String(rating)
                         )}
-                    </div>
-
-                    <span class="br-player-votes">
-                        ${
-                            player.votes ||
-                            0
-                        } avaliações
                     </span>
 
                 </div>
-
-                <div class="br-rating-score">
-                    ${Number(
-                        player.rating || 0
-                    ).toFixed(2)}
-                </div>
-
             `;
 
-
-            container.appendChild(
-                row
-            );
-
-        }
-    );
-
+        }).join("");
 }
 
 
-// ============================================================
-// VIDEOS
-// ============================================================
+/* ============================================================
+   VIDEOS
+   ============================================================ */
 
-async function loadVideos(team) {
+async function loadVideos(teamId) {
+    const client = getSupabase();
 
-    const container =
-        document.getElementById(
-            "videos-home-grid"
+    if (!client) return;
+
+    const grid =
+        $("#videos-home-grid");
+
+    try {
+
+        const {
+            data,
+            error
+        } = await client
+            .from("content")
+            .select("*")
+            .eq("status", "published")
+            .or(`team_id.eq.${teamId},team_id.is.null`)
+            .in(
+                "area",
+                [
+                    "video",
+                    "videos",
+                    "tv"
+                ]
+            )
+            .order("created_at", {
+                ascending: false
+            })
+            .limit(10);
+
+        if (error) {
+            console.warn(
+                "BR: vídeos não carregados:",
+                error
+            );
+
+            if (grid) {
+                grid.innerHTML = `
+                    <div class="homepage-empty">
+                        Não foi possível carregar os vídeos.
+                    </div>
+                `;
+            }
+
+            return;
+        }
+
+        renderVideos(
+            data || []
         );
 
-
-    if (!container) {
-        return;
+    } catch (error) {
+        console.warn(
+            "BR: erro vídeos:",
+            error
+        );
     }
+}
 
 
-    const {
-        data,
-        error
-    } = await supabaseClient
-        .from("content")
-        .select("*")
-        .eq(
-            "content_type",
-            "video"
-        )
-        .eq(
-            "status",
-            "published"
-        )
-        .or(
-            `team_id.eq.${team.id},team_id.is.null`
-        )
-        .order(
-            "created_at",
-            {
-                ascending: false
-            }
-        )
-        .limit(7);
+function renderVideos(items) {
+    const grid =
+        $("#videos-home-grid");
 
+    if (!grid) return;
 
-    if (
-        error ||
-        !data ||
-        !data.length
-    ) {
-
-        container.innerHTML = `
-
-            <div class="br-empty">
+    if (!items.length) {
+        grid.innerHTML = `
+            <div class="homepage-empty">
                 Ainda não existem vídeos publicados.
             </div>
-
         `;
 
         return;
     }
 
+    grid.innerHTML =
+        items.slice(0, 4)
+            .map((item, index) => {
 
-    renderVideos(
-        data
-    );
+                const title =
+                    item.title ||
+                    "Vídeo Barça Real";
 
-}
+                const image =
+                    item.image_url ||
+                    "";
 
+                return `
+                    <article
+                        class="video-card"
+                        data-video-index="${index}"
+                    >
 
-// ============================================================
-// RENDER VIDEOS
-// ============================================================
+                        <div class="video-image">
 
-function renderVideos(items) {
+                            ${
+                                image
+                                    ? `
+                                        <img
+                                            src="${escapeAttribute(image)}"
+                                            alt="${escapeAttribute(title)}"
+                                            loading="lazy"
+                                        >
+                                    `
+                                    : ""
+                            }
 
-    const container =
-        document.getElementById(
-            "videos-home-grid"
-        );
+                            <div class="video-play">
+                                ▶
+                            </div>
 
-
-    if (!container) {
-        return;
-    }
-
-
-    const main =
-        items[0];
-
-
-    container.innerHTML = `
-
-        <article
-            class="video-card video-feature"
-            id="main-video"
-        >
-
-            <div class="video-image">
-
-                ${imageHTML(
-                    main.image_url,
-                    "Vídeo"
-                )}
-
-                <button
-                    type="button"
-                    class="video-play"
-                    aria-label="Reproduzir vídeo"
-                >
-                    ▶
-                </button>
-
-            </div>
-
-            <div class="video-body">
-
-                <div class="video-title">
-                    ${escapeHTML(
-                        main.title ||
-                        "Vídeo"
-                    )}
-                </div>
-
-            </div>
-
-        </article>
-
-        <div
-            class="video-list"
-            id="video-list"
-        ></div>
-
-    `;
-
-
-    const mainVideo =
-        document.getElementById(
-            "main-video"
-        );
-
-
-    if (mainVideo) {
-
-        mainVideo.addEventListener(
-            "click",
-            () => openContent(main)
-        );
-
-    }
-
-
-    const list =
-        document.getElementById(
-            "video-list"
-        );
-
-
-    if (!list) {
-        return;
-    }
-
-
-    items
-        .slice(
-            1,
-            7
-        )
-        .forEach(
-            item => {
-
-                const card =
-                    document.createElement("article");
-
-
-                card.className =
-                    "video-card";
-
-
-                card.innerHTML = `
-
-                    <div class="video-image">
-
-                        ${imageHTML(
-                            item.image_url,
-                            "Vídeo"
-                        )}
-
-                        <div class="video-play">
-                            ▶
                         </div>
 
-                    </div>
-
-                    <div class="video-body">
-
-                        <div class="video-title">
-                            ${escapeHTML(
-                                item.title ||
-                                "Vídeo"
-                            )}
+                        <div class="video-body">
+                            <h3>
+                                ${escapeHTML(title)}
+                            </h3>
                         </div>
 
-                    </div>
-
+                    </article>
                 `;
 
+            }).join("");
 
-                card.addEventListener(
-                    "click",
-                    () => openContent(item)
+    $$(".video-card")
+        .forEach(card => {
+
+            const index =
+                Number(
+                    card.dataset.videoIndex
                 );
 
+            const item =
+                items[index];
 
-                list.appendChild(
-                    card
-                );
+            if (!item) return;
 
-            }
-        );
-
+            card.addEventListener(
+                "click",
+                () => openContent(item)
+            );
+        });
 }
 
 
-// ============================================================
-// HOMEPAGE INTERACTIONS
-// ============================================================
+/* ============================================================
+   PREDICTION
+   ============================================================ */
+
+function openPrediction() {
+    if (!currentFixture) {
+        return;
+    }
+
+    const view =
+        $("#prediction-view");
+
+    if (!view) return;
+
+    const homeName =
+        currentFixture.home_team_name ||
+        currentFixture.home_name ||
+        "Casa";
+
+    const awayName =
+        currentFixture.away_team_name ||
+        currentFixture.away_name ||
+        "Fora";
+
+    setText(
+        "#prediction-match-title",
+        `${homeName} vs ${awayName}`
+    );
+
+    setText(
+        "#prediction-home-name",
+        homeName
+    );
+
+    setText(
+        "#prediction-away-name",
+        awayName
+    );
+
+    const homeInput =
+        $("#prediction-home-score");
+
+    const awayInput =
+        $("#prediction-away-score");
+
+    const message =
+        $("#prediction-message");
+
+    if (homeInput) homeInput.value = "";
+    if (awayInput) awayInput.value = "";
+    if (message) message.textContent = "";
+
+    hideOtherViews();
+
+    const homeContent =
+        $("#home-content");
+
+    if (homeContent) {
+        [...homeContent.children]
+            .forEach(child => {
+
+                if (
+                    child.id !==
+                        "focused-content-view" &&
+                    child.id !==
+                        "library-view" &&
+                    child.id !==
+                        "prediction-view"
+                ) {
+                    child.hidden = true;
+                }
+
+            });
+    }
+
+    const header =
+        document.querySelector(".team-header");
+
+    const footer =
+        document.querySelector(".site-footer");
+
+    if (header) header.hidden = true;
+    if (footer) footer.hidden = true;
+
+    view.hidden = false;
+    view.classList.add("active");
+
+    const nav =
+        document.querySelector(".bottom-nav");
+
+    if (nav) nav.hidden = false;
+
+    window.scrollTo({
+        top: 0,
+        behavior: "instant"
+    });
+}
+
+
+async function submitPrediction() {
+    if (!currentFixture || !currentUser) {
+        return;
+    }
+
+    const homeInput =
+        $("#prediction-home-score");
+
+    const awayInput =
+        $("#prediction-away-score");
+
+    const message =
+        $("#prediction-message");
+
+    const homeScore =
+        Number(homeInput?.value);
+
+    const awayScore =
+        Number(awayInput?.value);
+
+    if (
+        !Number.isInteger(homeScore) ||
+        !Number.isInteger(awayScore) ||
+        homeScore < 0 ||
+        awayScore < 0
+    ) {
+        if (message) {
+            message.textContent =
+                "Introduz um resultado válido.";
+        }
+
+        return;
+    }
+
+    const client =
+        getSupabase();
+
+    if (!client) return;
+
+    try {
+
+        const {
+            error
+        } = await client
+            .from("predictions")
+            .insert({
+                user_id: currentUser.id,
+                fixture_id: currentFixture.id,
+                home_score: homeScore,
+                away_score: awayScore
+            });
+
+        if (error) {
+            console.error(
+                "BR: erro previsão:",
+                error
+            );
+
+            if (message) {
+                message.textContent =
+                    "Não foi possível guardar a previsão.";
+            }
+
+            return;
+        }
+
+        if (message) {
+            message.textContent =
+                "Previsão registada.";
+        }
+
+    } catch (error) {
+        console.error(
+            "BR: erro previsão:",
+            error
+        );
+
+        if (message) {
+            message.textContent =
+                "Ocorreu um erro.";
+        }
+    }
+}
+
+
+/* ============================================================
+   NAVIGATION / INTERACTIONS
+   ============================================================ */
 
 function setupHomepageInteractions() {
 
-    const moreNewsButton =
-        document.getElementById(
-            "more-news-button"
-        );
-
-
-    if (moreNewsButton) {
-
-        moreNewsButton.addEventListener(
-            "click",
-            () => {
-
-                openListView(
-                    "Últimas Notícias",
-                    newsItems,
-                    "news"
-                );
-
-            }
-        );
-
-    }
-
-
-    const moreOpinionButton =
-        document.getElementById(
-            "more-opinion-button"
-        );
-
-
-    if (moreOpinionButton) {
-
-        moreOpinionButton.addEventListener(
-            "click",
-            () => {
-
-                openListView(
-                    "Opinião & Análise",
-                    opinionItems,
-                    "opinion"
-                );
-
-            }
-        );
-
-    }
-
-
-    const ratingsButton =
-        document.getElementById(
-            "submit-ratings-button"
-        );
-
-
-    if (ratingsButton) {
-
-        ratingsButton.addEventListener(
-            "click",
-            openRatingsView
-        );
-
-    }
-
-
     const backButton =
-        document.getElementById(
-            "content-back-button"
-        );
-
+        $("#focused-back-button");
 
     if (backButton) {
-
         backButton.addEventListener(
             "click",
             closeFocusedView
         );
-
     }
 
+    const libraryBack =
+        $("#library-back-button");
 
-    const libraryBackButton =
-        document.getElementById(
-            "library-back-button"
-        );
-
-
-    if (libraryBackButton) {
-
-        libraryBackButton.addEventListener(
+    if (libraryBack) {
+        libraryBack.addEventListener(
             "click",
             closeLibraryView
         );
-
     }
 
-}
+    const predictionBack =
+        $("#prediction-back-button");
 
-
-// ============================================================
-// OPEN CONTENT / ARTICLE VIEW
-// ============================================================
-
-function openContent(item) {
-
-    const view =
-        getContentView();
-
-
-    const body =
-        getContentViewBody();
-
-
-    if (!view || !body) {
-
-        console.error(
-            "BR: focused content view não encontrado."
+    if (predictionBack) {
+        predictionBack.addEventListener(
+            "click",
+            closeFocusedView
         );
-
-        return;
-
     }
 
+    const moreNews =
+        $("#more-news-button");
 
-    hideHomepage();
-
-
-    const isNews =
-        item?.__source === "news";
-
-
-    const title =
-        isNews
-            ? (
-                item.translated_title ||
-                item.title ||
-                "Sem título"
+    if (moreNews) {
+        moreNews.addEventListener(
+            "click",
+            () => openListView(
+                newsItems,
+                "Todas as notícias",
+                "NOTÍCIAS"
             )
-            : (
-                item.title ||
-                "Sem título"
-            );
-
-
-    const description =
-        isNews
-            ? (
-                item.translated_description ||
-                item.description ||
-                ""
-            )
-            : (
-                item.description ||
-                ""
-            );
-
-
-    const publicationDate =
-        isNews
-            ? (
-                item.published_at ||
-                item.imported_at ||
-                item.created_at
-            )
-            : item.created_at;
-
-
-    // --------------------------------------------------------
-    // NEWS BODY
-    // --------------------------------------------------------
-
-    const bodyText =
-        isNews
-            ? (
-                item.article_body ||
-                ""
-            )
-            : getArticleBody(item);
-
-
-    // --------------------------------------------------------
-    // If there is no article_body yet, use the description
-    // as the BR article content rather than leaving it blank.
-    // --------------------------------------------------------
-
-    const displayBody =
-        bodyText ||
-        description ||
-        "Esta notícia ainda não possui conteúdo adicional.";
-
-
-    // --------------------------------------------------------
-    // BUILD ARTICLE VIEW
-    // --------------------------------------------------------
-
-    body.innerHTML = `
-
-        <div class="br-view-type">
-
-            ${
-                isNews
-                    ? getNewsCategory(item)
-                    : escapeHTML(
-                        getContentLabel(item)
-                    )
-            }
-
-        </div>
-
-
-        <h1 class="br-view-title">
-
-            ${escapeHTML(
-                title
-            )}
-
-        </h1>
-
-
-        <div class="br-view-meta">
-
-            ${
-                isNews
-                    ? (
-                        publicationDate
-                            ? escapeHTML(
-                                formatDateTime(
-                                    publicationDate
-                                )
-                            )
-                            : ""
-                    )
-                    : `
-                        ${escapeHTML(
-                            getAuthor(item)
-                        )}
-
-                        ${
-                            publicationDate
-                                ? " • " +
-                                  escapeHTML(
-                                      formatDate(
-                                          publicationDate
-                                      )
-                                  )
-                                : ""
-                        }
-                    `
-            }
-
-        </div>
-
-
-        ${
-            item.image_url
-                ? `
-                    <img
-                        class="br-view-image"
-                        src="${escapeAttribute(
-                            item.image_url
-                        )}"
-                        alt="${escapeAttribute(
-                            title
-                        )}"
-                    >
-                `
-                : ""
-        }
-
-
-        ${
-            description &&
-            stripHTML(
-                description
-            ) !==
-            stripHTML(
-                displayBody
-            )
-                ? `
-                    <div class="br-view-description">
-
-                        ${escapeHTML(
-                            stripHTML(
-                                description
-                            )
-                        )}
-
-                    </div>
-                `
-                : ""
-        }
-
-
-        <div class="br-view-body">
-
-            ${
-                isNews
-                    ? renderArticleText(
-                        displayBody
-                    )
-                    : escapeHTML(
-                        displayBody
-                    )
-            }
-
-        </div>
-
-
-        ${
-            isNews
-                ? `
-
-                    <div class="br-news-source-section">
-
-                        <div class="br-news-source-label">
-                            FONTE ORIGINAL
-                        </div>
-
-                        <p>
-                            Consulta a publicação original
-                            para ver a notícia completa na
-                            fonte que a publicou.
-                        </p>
-
-                        ${
-                            item.article_url
-                                ? `
-                                    <a
-                                        class="br-action-button"
-                                        href="${escapeAttribute(
-                                            item.article_url
-                                        )}"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                    >
-                                        LER ARTIGO ORIGINAL
-                                    </a>
-                                `
-                                : ""
-                        }
-
-                    </div>
-
-
-                    <div class="br-fan-interaction">
-
-                        <div class="br-view-type">
-                            COMUNIDADE BR
-                        </div>
-
-                        <h2>
-                            CONVERSA DOS ADEPTOS
-                        </h2>
-
-                        <p>
-                            Em breve poderás comentar esta notícia,
-                            trocar opiniões com outros adeptos e
-                            acompanhar os comentários de membros
-                            importantes da nossa comunidade.
-                        </p>
-
-                    </div>
-
-                `
-                : ""
-        }
-
-    `;
-
-
-    // --------------------------------------------------------
-    // MAKE ARTICLE VIEW THE ONLY ACTIVE VIEW
-    // --------------------------------------------------------
-
-    const library =
-        document.getElementById(
-            "library-view"
         );
-
-
-    if (library) {
-
-        library.classList.remove(
-            "active"
-        );
-
     }
 
+    const moreOpinion =
+        $("#more-opinion-button");
 
-    view.classList.add(
-        "active"
-    );
-
-
-    // --------------------------------------------------------
-    // SCROLL TO TOP
-    // --------------------------------------------------------
-
-    window.scrollTo({
-        top: 0,
-        behavior: "smooth"
-    });
-
-}
-
-
-// ============================================================
-// RENDER ARTICLE TEXT
-// ============================================================
-
-function renderArticleText(
-    text
-) {
-
-    if (!text) {
-        return "";
-    }
-
-
-    const clean =
-        stripHTML(text)
-            .replace(
-                /\r\n/g,
-                "\n"
+    if (moreOpinion) {
+        moreOpinion.addEventListener(
+            "click",
+            () => openListView(
+                opinionItems,
+                "Opinião & Análise",
+                "VOZES"
             )
-            .replace(
-                /\r/g,
-                "\n"
-            );
-
-
-    const paragraphs =
-        clean
-            .split(
-                /\n\s*\n/
-            )
-            .map(
-                paragraph =>
-                    paragraph.trim()
-            )
-            .filter(Boolean);
-
-
-    if (!paragraphs.length) {
-
-        return `
-
-            <p>
-                ${escapeHTML(clean)}
-            </p>
-
-        `;
-
+        );
     }
 
+    const moreVideos =
+        $("#more-videos-button");
 
-    return paragraphs
-        .map(
-            paragraph => `
+    if (moreVideos) {
+        moreVideos.addEventListener(
+            "click",
+            () => {
 
-                <p>
-                    ${escapeHTML(
-                        paragraph
-                    )}
-                </p>
+                const client =
+                    getSupabase();
 
-            `
-        )
-        .join("");
-
-}
-
-
-// ============================================================
-// CONTENT VIEW ELEMENTS
-// ============================================================
-
-function getContentView() {
-
-    return (
-        document.getElementById(
-            "focused-content-view"
-        ) ||
-        document.getElementById(
-            "content-view"
-        )
-    );
-
-}
-
-
-function getContentViewBody() {
-
-    return (
-        document.getElementById(
-            "focused-content"
-        ) ||
-        document.getElementById(
-            "content-view-body"
-        )
-    );
-
-}
-
-
-// ============================================================
-// OPEN LIST VIEW
-// ============================================================
-
-function openListView(
-    title,
-    items,
-    type
-) {
-
-    const view =
-        getContentView();
-
-
-    const body =
-        getContentViewBody();
-
-
-    if (!view || !body) {
-
-        openLibraryView(
-            title,
-            items,
-            type
-        );
-
-        return;
-    }
-
-
-    hideHomepage();
-
-
-    body.innerHTML = `
-
-        <div class="br-view-type">
-
-            ${
-                type === "news"
-                    ? "NOTÍCIAS"
-                    : "OPINIÃO & ANÁLISE"
-            }
-
-        </div>
-
-        <h1 class="br-view-title">
-            ${escapeHTML(title)}
-        </h1>
-
-        <div class="br-list-view"></div>
-
-    `;
-
-
-    const list =
-        body.querySelector(
-            ".br-list-view"
-        );
-
-
-    items.forEach(
-        item => {
-
-            const isNews =
-                type === "news";
-
-
-            const itemTitle =
-                isNews
-                    ? (
-                        item.translated_title ||
-                        item.title ||
-                        ""
-                    )
-                    : (
-                        item.title ||
-                        ""
-                    );
-
-
-            const itemDescription =
-                isNews
-                    ? (
-                        item.translated_description ||
-                        item.description ||
-                        ""
-                    )
-                    : (
-                        item.description ||
-                        ""
-                    );
-
-
-            const card =
-                document.createElement("article");
-
-
-            card.className =
-                "br-list-view-card";
-
-
-            card.innerHTML = `
-
-                ${
-                    item.image_url
-                        ? `
-                            <img
-                                class="br-list-view-image"
-                                src="${escapeAttribute(
-                                    item.image_url
-                                )}"
-                                alt=""
-                                loading="lazy"
-                            >
-                        `
-                        : `
-                            <div class="br-list-view-image"></div>
-                        `
+                if (!client || !currentTeam) {
+                    return;
                 }
 
-                <div>
+                openListView(
+                    [],
+                    "Vídeos",
+                    "BARÇA REAL TV"
+                );
+            }
+        );
+    }
 
-                    <div class="br-story-meta">
+    const predictionButton =
+        $("#prediction-button");
 
-                        ${
-                            isNews
-                                ? `
-                                    ${getNewsCategory(item)}
+    if (predictionButton) {
+        predictionButton.addEventListener(
+            "click",
+            openPrediction
+        );
+    }
 
-                                    ${getNewsDate(item)}
-                                `
-                                : escapeHTML(
-                                    getAuthor(item)
-                                )
-                        }
+    const predictionSubmit =
+        $("#prediction-submit");
 
-                    </div>
+    if (predictionSubmit) {
+        predictionSubmit.addEventListener(
+            "click",
+            submitPrediction
+        );
+    }
 
-                    <div class="br-list-view-title">
+    setupTableTabs();
 
-                        ${escapeHTML(
-                            itemTitle
-                        )}
-
-                    </div>
-
-                    <div class="br-list-view-description">
-
-                        ${escapeHTML(
-                            stripHTML(
-                                itemDescription
-                            )
-                        )}
-
-                    </div>
-
-                </div>
-
-            `;
+    setupBottomNavigation();
+}
 
 
-            card.addEventListener(
+/* ============================================================
+   TABLE TABS
+   FIX: HTML uses data-competition
+   ============================================================ */
+
+function setupTableTabs() {
+
+    $$(".table-tab")
+        .forEach(button => {
+
+            button.addEventListener(
                 "click",
-                () => {
+                async () => {
 
-                    if (isNews) {
+                    $$(".table-tab")
+                        .forEach(tab =>
+                            tab.classList.remove(
+                                "active"
+                            )
+                        );
 
-                        openNewsArticle(item);
+                    button.classList.add(
+                        "active"
+                    );
 
-                    } else {
+                    currentTableType =
+                        button.dataset.competition ||
+                        "league";
 
-                        openContent(item);
-
+                    if (currentTeam) {
+                        await loadLeagueTable(
+                            currentTeam.id
+                        );
                     }
 
                 }
             );
 
-
-            list.appendChild(
-                card
-            );
-
-        }
-    );
-
-
-    view.classList.add(
-        "active"
-    );
-
-
-    window.scrollTo({
-        top: 0,
-        behavior: "smooth"
-    });
-
+        });
 }
 
 
-// ============================================================
-// LIBRARY VIEW
-// ============================================================
+/* ============================================================
+   BOTTOM NAVIGATION
+   ============================================================ */
 
-function openLibraryView(
-    title,
-    items,
-    type
-) {
+function setupBottomNavigation() {
 
-    const library =
-        document.getElementById(
-            "library-view"
+    const community =
+        $("#community-nav");
+
+    const games =
+        $("#games-nav");
+
+    if (community) {
+        community.addEventListener(
+            "click",
+            () => {
+                window.location.href =
+                    "community.html";
+            }
         );
-
-
-    const grid =
-        document.getElementById(
-            "library-grid"
-        );
-
-
-    const libraryTitle =
-        document.getElementById(
-            "library-title"
-        );
-
-
-    const libraryLabel =
-        document.getElementById(
-            "library-label"
-        );
-
-
-    if (
-        !library ||
-        !grid
-    ) {
-
-        return;
-
     }
 
+    if (games) {
+        games.addEventListener(
+            "click",
+            () => {
 
-    hideHomepage();
+                const fixtures =
+                    $("#fixtures-section");
 
+                if (
+                    fixtures &&
+                    !isAnyFocusedViewOpen()
+                ) {
+                    fixtures.scrollIntoView({
+                        behavior: "smooth",
+                        block: "start"
+                    });
+                } else {
+                    closeFocusedView();
 
-    if (libraryTitle) {
+                    setTimeout(() => {
 
-        libraryTitle.textContent =
-            title;
+                        const section =
+                            $("#fixtures-section");
 
-    }
-
-
-    if (libraryLabel) {
-
-        libraryLabel.textContent =
-            type === "news"
-                ? "NOTÍCIAS"
-                : "OPINIÃO & ANÁLISE";
-
-    }
-
-
-    grid.innerHTML = "";
-
-
-    items.forEach(
-        item => {
-
-            const isNews =
-                type === "news";
-
-
-            const itemTitle =
-                isNews
-                    ? (
-                        item.translated_title ||
-                        item.title ||
-                        ""
-                    )
-                    : (
-                        item.title ||
-                        ""
-                    );
-
-
-            const itemDescription =
-                isNews
-                    ? (
-                        item.translated_description ||
-                        item.description ||
-                        ""
-                    )
-                    : (
-                        item.description ||
-                        ""
-                    );
-
-
-            const card =
-                document.createElement("article");
-
-
-            card.className =
-                "br-list-view-card";
-
-
-            card.innerHTML = `
-
-                ${
-                    item.image_url
-                        ? `
-                            <img
-                                class="br-list-view-image"
-                                src="${escapeAttribute(
-                                    item.image_url
-                                )}"
-                                alt=""
-                                loading="lazy"
-                            >
-                        `
-                        : `
-                            <div class="br-list-view-image"></div>
-                        `
-                }
-
-                <div>
-
-                    <div class="br-story-meta">
-
-                        ${
-                            isNews
-                                ? `
-                                    ${getNewsCategory(item)}
-
-                                    ${getNewsDate(item)}
-                                `
-                                : escapeHTML(
-                                    getAuthor(item)
-                                )
+                        if (section) {
+                            section.scrollIntoView({
+                                behavior: "smooth",
+                                block: "start"
+                            });
                         }
 
-                    </div>
-
-                    <div class="br-list-view-title">
-
-                        ${escapeHTML(
-                            itemTitle
-                        )}
-
-                    </div>
-
-                    <div class="br-list-view-description">
-
-                        ${escapeHTML(
-                            stripHTML(
-                                itemDescription
-                            )
-                        )}
-
-                    </div>
-
-                </div>
-
-            `;
-
-
-            card.addEventListener(
-                "click",
-                () => {
-
-                    if (isNews) {
-
-                        openNewsArticle(item);
-
-                    } else {
-
-                        openContent(item);
-
-                    }
+                    }, 100);
 
                 }
-            );
-
-
-            grid.appendChild(
-                card
-            );
-
-        }
-    );
-
-
-    library.classList.add(
-        "active"
-    );
-
-
-    window.scrollTo({
-        top: 0,
-        behavior: "smooth"
-    });
-
-}
-
-
-// ============================================================
-// CLOSE LIBRARY
-// ============================================================
-
-function closeLibraryView() {
-
-    const library =
-        document.getElementById(
-            "library-view"
-        );
-
-
-    if (library) {
-
-        library.classList.remove(
-            "active"
-        );
-
-    }
-
-
-    const homepage =
-        document.getElementById(
-            "home-content"
-        );
-
-
-    const header =
-        document.querySelector(
-            ".team-header"
-        );
-
-
-    if (homepage) {
-
-        homepage.classList.remove(
-            "hidden-home"
-        );
-
-    }
-
-
-    if (header) {
-
-        header.style.display =
-            "";
-
-    }
-
-
-    window.scrollTo({
-        top: 0,
-        behavior: "smooth"
-    });
-
-}
-
-
-// ============================================================
-// OPEN PREDICTION
-// ============================================================
-
-function openPrediction(
-    fixture
-) {
-
-    hideHomepage();
-
-
-    const view =
-        getContentView();
-
-
-    const body =
-        getContentViewBody();
-
-
-    if (!view || !body) {
-        return;
-    }
-
-
-    body.innerHTML = `
-
-        <div class="br-view-type">
-            PREDIÇÃO
-        </div>
-
-        <h1 class="br-view-title">
-            Quem vai vencer?
-        </h1>
-
-        <div class="br-view-meta">
-            ${formatMatchDate(
-                fixture.date
-            )}
-        </div>
-
-        <div class="br-fixtures">
-
-            <div class="br-next-match">
-
-                <div class="br-match-teams">
-
-                    ${teamHTML(
-                        fixture.home
-                    )}
-
-                    <div class="br-vs">
-                        VS
-                    </div>
-
-                    ${teamHTML(
-                        fixture.away
-                    )}
-
-                </div>
-
-                <div
-                    style="
-                        margin-top:25px;
-                        display:flex;
-                        gap:10px;
-                        justify-content:center;
-                        flex-wrap:wrap;
-                    "
-                >
-
-                    <button
-                        class="br-action-button"
-                        type="button"
-                    >
-                        ${escapeHTML(
-                            fixture.home.name
-                        )}
-                    </button>
-
-                    <button
-                        class="br-action-button"
-                        type="button"
-                    >
-                        EMPATE
-                    </button>
-
-                    <button
-                        class="br-action-button"
-                        type="button"
-                    >
-                        ${escapeHTML(
-                            fixture.away.name
-                        )}
-                    </button>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    `;
-
-
-    view.classList.add(
-        "active"
-    );
-
-
-    window.scrollTo({
-        top: 0,
-        behavior: "smooth"
-    });
-
-}
-
-
-// ============================================================
-// OPEN FIXTURE
-// ============================================================
-
-function openFixture(
-    fixture
-) {
-
-    hideHomepage();
-
-
-    const view =
-        getContentView();
-
-
-    const body =
-        getContentViewBody();
-
-
-    if (!view || !body) {
-        return;
-    }
-
-
-    body.innerHTML = `
-
-        <div class="br-view-type">
-
-            ${escapeHTML(
-                fixture.competition ||
-                "JOGO"
-            )}
-
-        </div>
-
-        <h1 class="br-view-title">
-
-            ${escapeHTML(
-                fixture.home.name
-            )}
-
-            vs
-
-            ${escapeHTML(
-                fixture.away.name
-            )}
-
-        </h1>
-
-        <div class="br-view-meta">
-
-            ${formatMatchDate(
-                fixture.date
-            )}
-
-        </div>
-
-        <div class="br-fixtures">
-
-            <div class="br-next-match">
-
-                <div class="br-match-teams">
-
-                    ${teamHTML(
-                        fixture.home
-                    )}
-
-                    <div class="br-vs">
-                        VS
-                    </div>
-
-                    ${teamHTML(
-                        fixture.away
-                    )}
-
-                </div>
-
-            </div>
-
-        </div>
-
-    `;
-
-
-    view.classList.add(
-        "active"
-    );
-
-
-    window.scrollTo({
-        top: 0,
-        behavior: "smooth"
-    });
-
-}
-
-
-// ============================================================
-// PLAYER RATINGS VIEW
-// ============================================================
-
-function openRatingsView() {
-
-    hideHomepage();
-
-
-    const view =
-        getContentView();
-
-
-    const body =
-        getContentViewBody();
-
-
-    if (!view || !body) {
-        return;
-    }
-
-
-    body.innerHTML = `
-
-        <div class="br-view-type">
-            FAN PLAYER RATINGS
-        </div>
-
-        <h1 class="br-view-title">
-            Avalia os jogadores
-        </h1>
-
-        <div class="br-view-description">
-
-            Depois de cada jogo poderás dar a tua nota
-            aos jogadores do teu clube.
-
-        </div>
-
-        <div class="br-empty">
-
-            O sistema completo de avaliação será aberto
-            quando houver um jogo disponível para avaliação.
-
-        </div>
-
-    `;
-
-
-    view.classList.add(
-        "active"
-    );
-
-
-    window.scrollTo({
-        top: 0,
-        behavior: "smooth"
-    });
-
-}
-
-
-// ============================================================
-// HIDE HOMEPAGE
-// ============================================================
-
-function hideHomepage() {
-
-    const homepage =
-        document.getElementById(
-            "home-content"
-        );
-
-
-    const header =
-        document.querySelector(
-            ".team-header"
-        );
-
-
-    const view =
-        getContentView();
-
-
-    const library =
-        document.getElementById(
-            "library-view"
-        );
-
-
-    if (homepage) {
-
-        homepage.classList.add(
-            "hidden-home"
-        );
-
-    }
-
-
-    if (header) {
-
-        header.style.display =
-            "none";
-
-    }
-
-
-    if (view) {
-
-        view.classList.add(
-            "active"
-        );
-
-    }
-
-
-    if (library) {
-
-        library.classList.remove(
-            "active"
-        );
-
-    }
-
-}
-
-
-// ============================================================
-// CLOSE FOCUSED VIEW
-// ============================================================
-
-function closeFocusedView() {
-
-    const view =
-        getContentView();
-
-
-    const homepage =
-        document.getElementById(
-            "home-content"
-        );
-
-
-    const header =
-        document.querySelector(
-            ".team-header"
-        );
-
-
-    const body =
-        getContentViewBody();
-
-
-    if (view) {
-
-        view.classList.remove(
-            "active"
-        );
-
-    }
-
-
-    if (homepage) {
-
-        homepage.classList.remove(
-            "hidden-home"
-        );
-
-    }
-
-
-    if (header) {
-
-        header.style.display =
-            "";
-
-    }
-
-
-    if (body) {
-
-        body.innerHTML =
-            "";
-
-    }
-
-
-    window.scrollTo({
-        top: 0,
-        behavior: "smooth"
-    });
-
-}
-
-
-// ============================================================
-// FILTER ACTIVE CONTENT
-// ============================================================
-
-function filterActiveContent(
-    items
-) {
-
-    const now =
-        new Date();
-
-
-    return items.filter(
-        item => {
-
-            if (
-                item.start_date &&
-                new Date(
-                    item.start_date
-                ) > now
-            ) {
-
-                return false;
 
             }
+        );
+    }
 
+    const nav =
+        document.querySelector(".bottom-nav");
 
-            if (
-                item.end_date &&
-                new Date(
-                    item.end_date
-                ) < now
-            ) {
-
-                return false;
-
-            }
-
-
-            return true;
-
-        }
-    );
-
+    if (nav) {
+        nav.hidden = false;
+    }
 }
 
 
-// ============================================================
-// IMAGE HTML
-// ============================================================
+/* ============================================================
+   CONTENT HELPERS
+   ============================================================ */
 
-function imageHTML(
-    url,
-    label
-) {
-
-    if (!url) {
-
-        return `
-
-            <div class="br-story-placeholder">
-                ${escapeHTML(label)}
-            </div>
-
-        `;
-
-    }
-
-
-    return `
-
-        <img
-            src="${escapeAttribute(url)}"
-            alt="${escapeAttribute(label)}"
-            loading="lazy"
-        >
-
-    `;
-
-}
-
-
-// ============================================================
-// TEAM HTML
-// ============================================================
-
-function teamHTML(
-    team
-) {
-
-    if (!team) {
-        return "";
-    }
-
-
-    return `
-
-        <div class="br-match-team">
-
-            ${
-                team.logo
-                    ? `
-                        <img
-                            class="br-team-logo"
-                            src="${escapeAttribute(
-                                team.logo
-                            )}"
-                            alt=""
-                        >
-                    `
-                    : `
-                        <div
-                            class="br-team-logo"
-                            style="
-                                background:#eee;
-                                border-radius:50%;
-                            "
-                        ></div>
-                    `
-            }
-
-            <div class="br-team-name">
-
-                ${escapeHTML(
-                    team.name ||
-                    ""
-                )}
-
-            </div>
-
-        </div>
-
-    `;
-
-}
-
-
-// ============================================================
-// CONTENT LABEL
-// ============================================================
-
-function getContentLabel(
-    item
-) {
-
-    if (
-        item.content_type ===
-        "community"
-    ) {
-
-        return "COMUNIDADE";
-
-    }
-
-
-    if (
-        item.content_type ===
-        "story"
-    ) {
-
-        return "HISTÓRIA";
-
-    }
-
-
-    if (
-        item.area ===
-        "opinion"
-    ) {
-
-        return "OPINIÃO";
-
-    }
-
-
-    if (
-        item.area ===
-        "analysis"
-    ) {
-
-        return "ANÁLISE";
-
-    }
-
-
-    return "NOTÍCIAS";
-
-}
-
-
-// ============================================================
-// AUTHOR
-// ============================================================
-
-function getAuthor(
-    item
-) {
+function getContentLabel(item) {
+    if (!item) return "BARÇA REAL";
 
     return (
-        item.author_name ||
-        item.writer_name ||
-        item.author ||
-        "BR"
-    );
-
+        item.category ||
+        item.area ||
+        item.content_type ||
+        "BARÇA REAL"
+    )
+        .replace(/_/g, " ")
+        .toUpperCase();
 }
 
 
-// ============================================================
-// ARTICLE BODY
-// ============================================================
-
-function getArticleBody(
-    item
-) {
+function getArticleBody(item) {
+    if (!item) return "";
 
     return (
         item.article_body ||
         item.body ||
         item.content_body ||
-        item.article_text ||
         item.text ||
-        item.description ||
         ""
     );
-
 }
 
 
-// ============================================================
-// FORMAT DATE
-// ============================================================
-
-function formatDate(
-    date
-) {
-
-    if (!date) {
-        return "";
-    }
-
-
-    try {
-
-        return new Intl.DateTimeFormat(
-            "pt-PT",
-            {
-                day: "2-digit",
-                month: "long",
-                year: "numeric"
-            }
-        ).format(
-            new Date(date)
-        );
-
-    } catch {
-
-        return "";
-
-    }
-
-}
-
-
-// ============================================================
-// FORMAT DATE + TIME
-// ============================================================
-
-function formatDateTime(
-    date
-) {
-
-    if (!date) {
-        return "";
-    }
-
-
-    try {
-
-        return new Intl.DateTimeFormat(
-            "pt-PT",
-            {
-                day: "2-digit",
-                month: "long",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit"
-            }
-        ).format(
-            new Date(date)
-        );
-
-    } catch {
-
-        return "";
-
-    }
-
-}
-
-
-// ============================================================
-// FORMAT MATCH DATE
-// ============================================================
-
-function formatMatchDate(
-    date
-) {
-
-    if (!date) {
-        return "";
-    }
-
-
-    try {
-
-        return new Intl.DateTimeFormat(
-            "pt-PT",
-            {
-                weekday: "long",
-                day: "2-digit",
-                month: "long",
-                hour: "2-digit",
-                minute: "2-digit"
-            }
-        ).format(
-            new Date(date)
-        );
-
-    } catch {
-
-        return "";
-
-    }
-
-}
-
-
-// ============================================================
-// STRIP HTML
-// ============================================================
-
-function stripHTML(
-    value
-) {
-
-    if (!value) {
-        return "";
-    }
-
-
-    const temp =
-        document.createElement(
-            "div"
-        );
-
-
-    temp.innerHTML =
-        String(value);
-
+function getAuthor(item) {
+    if (!item) return "";
 
     return (
-        temp.textContent ||
-        temp.innerText ||
+        item.author ||
+        item.author_name ||
+        item.created_by_name ||
         ""
-    )
-        .replace(
-            /\s+/g,
-            " "
-        )
-        .trim();
-
+    );
 }
 
 
-// ============================================================
-// NORMALIZE
-// ============================================================
+/* ============================================================
+   DATE / TEXT
+   ============================================================ */
 
-function normalize(
-    value
-) {
+function formatArticleDate(value) {
+    const date =
+        new Date(value);
 
-    return String(
-        value || ""
-    )
-        .toLowerCase()
-        .normalize(
-            "NFD"
+    if (
+        Number.isNaN(
+            date.getTime()
         )
+    ) {
+        return "";
+    }
+
+    return new Intl.DateTimeFormat(
+        "pt-PT",
+        {
+            day: "2-digit",
+            month: "long",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit"
+        }
+    ).format(date);
+}
+
+
+function formatShortDate(value) {
+    if (!value) return "";
+
+    const date =
+        new Date(value);
+
+    if (
+        Number.isNaN(
+            date.getTime()
+        )
+    ) {
+        return "";
+    }
+
+    return new Intl.DateTimeFormat(
+        "pt-PT",
+        {
+            day: "2-digit",
+            month: "short",
+            year: "numeric"
+        }
+    ).format(date);
+}
+
+
+function formatArticleBody(text) {
+    if (!text) return "";
+
+    const clean =
+        String(text).trim();
+
+    if (!clean) return "";
+
+    if (
+        /<[a-z][\s\S]*>/i.test(clean)
+    ) {
+        return clean;
+    }
+
+    return clean
+        .split(/\n\s*\n/)
+        .map(paragraph => {
+
+            const p =
+                paragraph.trim();
+
+            if (!p) return "";
+
+            return `
+                <p>
+                    ${escapeHTML(p)
+                        .replace(
+                            /\n/g,
+                            "<br>"
+                        )}
+                </p>
+            `;
+
+        })
+        .join("");
+}
+
+
+function stripHTML(value) {
+    if (!value) return "";
+
+    const element =
+        document.createElement("div");
+
+    element.innerHTML =
+        String(value);
+
+    return (
+        element.textContent ||
+        element.innerText ||
+        ""
+    ).trim();
+}
+
+
+function truncateText(text, length) {
+    if (!text) return "";
+
+    const value =
+        String(text);
+
+    if (value.length <= length) {
+        return value;
+    }
+
+    return (
+        value
+            .slice(0, length)
+            .trimEnd() +
+        "…"
+    );
+}
+
+
+function normalize(value) {
+    return String(value || "")
+        .toLowerCase()
+        .normalize("NFD")
         .replace(
             /[\u0300-\u036f]/g,
             ""
         );
-
 }
 
 
-// ============================================================
-// ESCAPE HTML
-// ============================================================
+/* ============================================================
+   SECURITY
+   ============================================================ */
 
-function escapeHTML(
-    value
-) {
+function escapeHTML(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
 
-    return String(
-        value || ""
-    )
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-        .replace(
-            /</g,
-            "&lt;"
-        )
-        .replace(
-            />/g,
-            "&gt;"
-        )
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-        .replace(
-            /'/g,
-            "&#039;"
+
+function escapeAttribute(value) {
+    return escapeHTML(value)
+        .replace(/`/g, "&#096;");
+}
+
+
+/* ============================================================
+   UTILITY
+   ============================================================ */
+
+function setText(selector, value) {
+    const element =
+        $(selector);
+
+    if (element) {
+        element.textContent =
+            value ?? "";
+    }
+}
+
+
+function debounce(fn, delay) {
+    let timer = null;
+
+    return (...args) => {
+
+        clearTimeout(timer);
+
+        timer = setTimeout(
+            () => fn(...args),
+            delay
         );
-
-}
-
-
-// ============================================================
-// ESCAPE ATTRIBUTE
-// ============================================================
-
-function escapeAttribute(
-    value
-) {
-
-    return escapeHTML(
-        value
-    );
-
+    };
 }
