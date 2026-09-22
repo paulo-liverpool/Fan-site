@@ -422,10 +422,11 @@ button {
     border-color: rgba(255,255,255,0.15);
 }
 
+/* RESPONSIVE MAIN NEWS FRAME */
 .news-main-card > img,
 .news-main-placeholder {
     width: 100%;
-    height: 340px;
+    height: clamp(220px, 28vw, 310px);
     display: block;
     object-fit: cover;
 }
@@ -1386,6 +1387,34 @@ button {
         border-bottom: 0;
         border-radius: 18px 18px 0 0;
     }
+
+    /* DESKTOP NEWS FRAME */
+    .news-main-card > img,
+    .news-main-placeholder {
+        height: 300px;
+    }
+}
+
+
+/* ============================================================
+   TABLET / SMALL DESKTOP
+   ============================================================ */
+
+@media (min-width: 651px) and (max-width: 799px) {
+
+    .news-main-card > img,
+    .news-main-placeholder {
+        height: 260px;
+    }
+
+    .news-small-card {
+        grid-template-columns: 100px minmax(0, 1fr);
+    }
+
+    .news-small-card img,
+    .news-small-placeholder {
+        width: 100px;
+    }
 }
 
 
@@ -1402,6 +1431,7 @@ button {
     .section {
         margin-bottom: 34px;
     }
+
 
     /* -------------------------
        NEWS
@@ -1423,9 +1453,10 @@ button {
         grid-column: 1;
     }
 
+    /* MOBILE NEWS FRAME */
     .news-main-card > img,
     .news-main-placeholder {
-        height: 210px;
+        height: 190px;
     }
 
     .news-main-body,
@@ -1597,6 +1628,12 @@ button {
 
     .content {
         width: calc(100% - 20px);
+    }
+
+    /* EXTRA SMALL NEWS FRAME */
+    .news-main-card > img,
+    .news-main-placeholder {
+        height: 175px;
     }
 
     .news-small-card,
