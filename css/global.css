@@ -1844,3 +1844,46 @@ button {
     text-align: center;
     font-size: 13px;
 }
+
+
+ /* ============================================================
+   NEWS IMAGE FALLBACKS
+   ============================================================ */
+
+.news-main-image-wrapper,
+.news-small-image-wrapper,
+.featured-slide-image {
+    position: relative;
+    overflow: hidden;
+}
+
+.news-main-image-wrapper {
+    width: 100%;
+}
+
+.news-small-image-wrapper {
+    width: 100%;
+    height: 100%;
+}
+
+.news-main-placeholder,
+.news-small-placeholder,
+.featured-slide-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+
+.news-main-image-wrapper:not(.image-error) .news-main-placeholder,
+.news-small-image-wrapper:not(.image-error) .news-small-placeholder,
+.featured-slide-image:not(.image-error) .featured-slide-placeholder {
+    display: none;
+}
+
+.news-main-image-wrapper.image-error .news-main-placeholder,
+.news-small-image-wrapper.image-error .news-small-placeholder,
+.featured-slide-image.image-error .featured-slide-placeholder {
+    display: flex;
+}
