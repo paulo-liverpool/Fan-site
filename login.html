@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt">
+
 <head>
+
     <meta charset="UTF-8">
 
     <meta
@@ -10,15 +12,20 @@
 
     <title>Entrar | Barça Real</title>
 
-    <link rel="stylesheet" href="css/global.css">
+    <link
+        rel="stylesheet"
+        href="css/global.css"
+    >
 
     <style>
+
         /* ========================================================
            LOGIN
            ======================================================== */
 
         body {
             min-height: 100vh;
+
             background:
                 radial-gradient(
                     circle at top,
@@ -27,18 +34,23 @@
                 );
         }
 
+
         .auth-page {
             min-height: 100vh;
 
             display: flex;
+
             align-items: center;
+
             justify-content: center;
 
             padding: 24px;
         }
 
+
         .auth-container {
             width: 100%;
+
             max-width: 430px;
         }
 
@@ -53,6 +65,7 @@
             margin-bottom: 38px;
         }
 
+
         .auth-logo {
             width: 64px;
             height: 64px;
@@ -60,31 +73,39 @@
             margin: 0 auto 18px;
 
             border: 2px solid white;
+
             border-radius: 50%;
 
             display: flex;
+
             align-items: center;
+
             justify-content: center;
 
             font-size: 19px;
+
             font-weight: 900;
 
             letter-spacing: -2px;
         }
 
+
         .auth-brand h1 {
             font-size: 25px;
+
             font-weight: 900;
 
             letter-spacing: 3px;
         }
+
 
         .auth-brand p {
             margin-top: 9px;
 
             font-size: 13px;
 
-            color: rgba(255,255,255,0.45);
+            color:
+                rgba(255,255,255,0.45);
         }
 
 
@@ -97,12 +118,16 @@
 
             border-radius: 20px;
 
-            background: rgba(255,255,255,0.035);
+            background:
+                rgba(255,255,255,0.035);
 
-            border: 1px solid rgba(255,255,255,0.08);
+            border:
+                1px solid
+                rgba(255,255,255,0.08);
 
             box-shadow:
-                0 25px 80px rgba(0,0,0,0.35);
+                0 25px 80px
+                rgba(0,0,0,0.35);
         }
 
 
@@ -113,7 +138,8 @@
         .auth-tabs {
             display: grid;
 
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns:
+                1fr 1fr;
 
             padding: 4px;
 
@@ -121,8 +147,10 @@
 
             border-radius: 10px;
 
-            background: rgba(255,255,255,0.05);
+            background:
+                rgba(255,255,255,0.05);
         }
+
 
         .auth-tab {
             border: 0;
@@ -133,14 +161,19 @@
 
             background: transparent;
 
-            color: rgba(255,255,255,0.45);
+            color:
+                rgba(255,255,255,0.45);
 
             font-size: 12px;
+
             font-weight: 800;
         }
 
+
         .auth-tab.active {
-            background: rgba(255,255,255,0.1);
+            background:
+                rgba(255,255,255,0.1);
+
             color: white;
         }
 
@@ -153,6 +186,7 @@
             margin-bottom: 17px;
         }
 
+
         .form-group label {
             display: block;
 
@@ -162,29 +196,36 @@
 
             font-weight: 700;
 
-            color: rgba(255,255,255,0.55);
+            color:
+                rgba(255,255,255,0.55);
         }
+
 
         .form-group input {
             width: 100%;
 
             padding: 14px 15px;
 
-            border: 1px solid rgba(255,255,255,0.1);
+            border:
+                1px solid
+                rgba(255,255,255,0.1);
 
             border-radius: 10px;
 
             outline: none;
 
-            background: rgba(255,255,255,0.045);
+            background:
+                rgba(255,255,255,0.045);
 
             color: white;
 
             font-size: 14px;
         }
 
+
         .form-group input:focus {
-            border-color: rgba(255,255,255,0.3);
+            border-color:
+                rgba(255,255,255,0.3);
         }
 
 
@@ -212,8 +253,10 @@
             margin-top: 5px;
         }
 
+
         .auth-submit:disabled {
             opacity: 0.5;
+
             cursor: not-allowed;
         }
 
@@ -229,7 +272,8 @@
 
             text-align: center;
 
-            color: rgba(255,255,255,0.45);
+            color:
+                rgba(255,255,255,0.45);
 
             font-size: 11px;
 
@@ -250,12 +294,14 @@
 
             border-radius: 8px;
 
-            background: rgba(255,255,255,0.06);
+            background:
+                rgba(255,255,255,0.06);
 
             font-size: 11px;
 
             line-height: 1.4;
         }
+
 
         .auth-message.show {
             display: block;
@@ -272,16 +318,22 @@
                 padding: 16px;
             }
 
+
             .auth-card {
                 padding: 22px;
             }
+
         }
+
     </style>
+
 </head>
+
 
 <body>
 
 <div class="auth-page">
+
 
     <div class="auth-container">
 
@@ -296,15 +348,18 @@
                 BR
             </div>
 
+
             <h1>
                 BARÇA REAL
             </h1>
+
 
             <p>
                 O teu futebol. O teu lado. A tua comunidade.
             </p>
 
         </div>
+
 
 
         <!-- ====================================================
@@ -314,7 +369,9 @@
         <div class="auth-card">
 
 
-            <!-- TABS -->
+            <!-- ==================================================
+                 TABS
+                 ================================================== -->
 
             <div class="auth-tabs">
 
@@ -325,6 +382,7 @@
                 >
                     Entrar
                 </button>
+
 
                 <button
                     class="auth-tab"
@@ -337,7 +395,10 @@
             </div>
 
 
-            <!-- MESSAGE -->
+
+            <!-- ==================================================
+                 MESSAGE
+                 ================================================== -->
 
             <div
                 class="auth-message"
@@ -345,7 +406,10 @@
             ></div>
 
 
-            <!-- FORM -->
+
+            <!-- ==================================================
+                 FORM
+                 ================================================== -->
 
             <form id="auth-form">
 
@@ -362,6 +426,7 @@
                         Nome
                     </label>
 
+
                     <input
                         type="text"
                         id="display-name"
@@ -372,6 +437,7 @@
                 </div>
 
 
+
                 <!-- EMAIL -->
 
                 <div class="form-group">
@@ -379,6 +445,7 @@
                     <label for="email">
                         Email
                     </label>
+
 
                     <input
                         type="email"
@@ -391,6 +458,7 @@
                 </div>
 
 
+
                 <!-- PASSWORD -->
 
                 <div class="form-group">
@@ -398,6 +466,7 @@
                     <label for="password">
                         Palavra-passe
                     </label>
+
 
                     <input
                         type="password"
@@ -408,6 +477,7 @@
                     >
 
                 </div>
+
 
 
                 <button
@@ -422,6 +492,11 @@
             </form>
 
 
+
+            <!-- ==================================================
+                 RESET PASSWORD
+                 ================================================== -->
+
             <span
                 class="forgot-password"
                 id="forgot-password"
@@ -430,6 +505,7 @@
                 Esqueceste-te da palavra-passe?
             </span>
 
+
         </div>
 
     </div>
@@ -437,154 +513,345 @@
 </div>
 
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- ============================================================
+     SUPABASE
+     ============================================================ -->
+
+<script
+    src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
+></script>
+
+
 <script src="js/supabase.js"></script>
+
 
 
 <script>
 
-    // ============================================================
-    // STATE
-    // ============================================================
 
-    let authMode = "login";
+// ============================================================
+// STATE
+// ============================================================
 
-
-    // ============================================================
-    // ELEMENTS
-    // ============================================================
-
-    const authForm =
-        document.getElementById("auth-form");
-
-    const nameGroup =
-        document.getElementById("name-group");
-
-    const displayName =
-        document.getElementById("display-name");
-
-    const email =
-        document.getElementById("email");
-
-    const password =
-        document.getElementById("password");
-
-    const submitButton =
-        document.getElementById("submit-button");
-
-    const message =
-        document.getElementById("auth-message");
-
-    const loginTab =
-        document.getElementById("login-tab");
-
-    const signupTab =
-        document.getElementById("signup-tab");
-
-    const forgotPassword =
-        document.getElementById("forgot-password");
+let authMode = "login";
 
 
-    // ============================================================
-    // SHOW LOGIN
-    // ============================================================
 
-    function showLogin() {
+// ============================================================
+// ELEMENTS
+// ============================================================
 
-        authMode = "login";
+const authForm =
+    document.getElementById(
+        "auth-form"
+    );
 
-        nameGroup.style.display = "none";
 
-        displayName.required = false;
+const nameGroup =
+    document.getElementById(
+        "name-group"
+    );
 
-        loginTab.classList.add("active");
-        signupTab.classList.remove("active");
 
-        submitButton.textContent = "Entrar";
+const displayName =
+    document.getElementById(
+        "display-name"
+    );
 
-        forgotPassword.style.display = "block";
 
-        clearMessage();
+const email =
+    document.getElementById(
+        "email"
+    );
+
+
+const password =
+    document.getElementById(
+        "password"
+    );
+
+
+const submitButton =
+    document.getElementById(
+        "submit-button"
+    );
+
+
+const message =
+    document.getElementById(
+        "auth-message"
+    );
+
+
+const loginTab =
+    document.getElementById(
+        "login-tab"
+    );
+
+
+const signupTab =
+    document.getElementById(
+        "signup-tab"
+    );
+
+
+const forgotPassword =
+    document.getElementById(
+        "forgot-password"
+    );
+
+
+
+// ============================================================
+// SHOW LOGIN
+// ============================================================
+
+function showLogin() {
+
+    authMode = "login";
+
+
+    nameGroup.style.display =
+        "none";
+
+
+    displayName.required =
+        false;
+
+
+    loginTab.classList.add(
+        "active"
+    );
+
+
+    signupTab.classList.remove(
+        "active"
+    );
+
+
+    submitButton.textContent =
+        "Entrar";
+
+
+    forgotPassword.style.display =
+        "block";
+
+
+    clearMessage();
+}
+
+
+
+// ============================================================
+// SHOW SIGNUP
+// ============================================================
+
+function showSignup() {
+
+    authMode = "signup";
+
+
+    nameGroup.style.display =
+        "block";
+
+
+    displayName.required =
+        true;
+
+
+    signupTab.classList.add(
+        "active"
+    );
+
+
+    loginTab.classList.remove(
+        "active"
+    );
+
+
+    submitButton.textContent =
+        "Criar conta";
+
+
+    forgotPassword.style.display =
+        "none";
+
+
+    clearMessage();
+}
+
+
+
+// ============================================================
+// MESSAGE
+// ============================================================
+
+function showMessage(text) {
+
+    message.textContent =
+        text;
+
+
+    message.classList.add(
+        "show"
+    );
+}
+
+
+function clearMessage() {
+
+    message.textContent =
+        "";
+
+
+    message.classList.remove(
+        "show"
+    );
+}
+
+
+
+// ============================================================
+// ROUTE USER
+// ============================================================
+
+async function routeUser(user) {
+
+    // --------------------------------------------------------
+    // GET PROFILE + ROLE
+    // --------------------------------------------------------
+
+    const {
+        data: profile,
+        error: profileError
+    } = await supabaseClient
+        .from("profiles")
+        .select(`
+            supported_team_id,
+            role_id
+        `)
+        .eq("id", user.id)
+        .single();
+
+
+    if (profileError || !profile) {
+
+        showMessage(
+            "Não foi possível carregar o teu perfil."
+        );
+
+        return;
     }
 
 
-    // ============================================================
-    // SHOW SIGNUP
-    // ============================================================
+    // --------------------------------------------------------
+    // ADMINISTRATOR
+    // --------------------------------------------------------
 
-    function showSignup() {
+    const {
+        data: role,
+        error: roleError
+    } = await supabaseClient
+        .from("roles")
+        .select("name")
+        .eq("id", profile.role_id)
+        .single();
 
-        authMode = "signup";
 
-        nameGroup.style.display = "block";
+    if (roleError || !role) {
 
-        displayName.required = true;
+        showMessage(
+            "Não foi possível verificar o teu tipo de conta."
+        );
 
-        signupTab.classList.add("active");
-        loginTab.classList.remove("active");
-
-        submitButton.textContent = "Criar conta";
-
-        forgotPassword.style.display = "none";
-
-        clearMessage();
+        return;
     }
 
 
-    // ============================================================
-    // MESSAGE
-    // ============================================================
+    if (role.name === "administrator") {
 
-    function showMessage(text) {
+        window.location.href =
+            "admin.html";
 
-        message.textContent = text;
-
-        message.classList.add("show");
+        return;
     }
 
 
-    function clearMessage() {
+    // --------------------------------------------------------
+    // OTHER ROLES
+    // --------------------------------------------------------
 
-        message.textContent = "";
+    if (!profile.supported_team_id) {
 
-        message.classList.remove("show");
+        window.location.href =
+            "choose-team.html";
+
+        return;
     }
 
 
-    // ============================================================
-    // AUTH
-    // ============================================================
+    // --------------------------------------------------------
+    // MEMBER / CONTRIBUTOR / EDITOR
+    // --------------------------------------------------------
 
-    authForm.addEventListener("submit", async function(event) {
+    window.location.href =
+        "home.html";
+}
+
+
+
+// ============================================================
+// AUTH
+// ============================================================
+
+authForm.addEventListener(
+    "submit",
+    async function(event) {
 
         event.preventDefault();
 
+
         clearMessage();
 
-        submitButton.disabled = true;
+
+        submitButton.disabled =
+            true;
 
 
         try {
+
+            // ==================================================
+            // SIGN UP
+            // ==================================================
 
             if (authMode === "signup") {
 
                 const {
                     data,
                     error
-                } = await supabaseClient.auth.signUp({
+                } =
+                    await supabaseClient.auth
+                        .signUp({
 
-                    email: email.value.trim(),
+                            email:
+                                email.value.trim(),
 
-                    password: password.value,
+                            password:
+                                password.value,
 
-                    options: {
-                        data: {
-                            display_name:
-                                displayName.value.trim()
-                        }
-                    }
+                            options: {
 
-                });
+                                data: {
+
+                                    display_name:
+                                        displayName.value.trim()
+
+                                }
+
+                            }
+
+                        });
 
 
                 if (error) {
@@ -592,35 +859,50 @@
                 }
 
 
+                // ------------------------------------------------
+                // SESSION CREATED
+                // ------------------------------------------------
+
                 if (data.session) {
 
-                    window.location.href =
-                        "choose-team.html";
+                    await routeUser(
+                        data.user
+                    );
 
                     return;
-
                 }
 
+
+                // ------------------------------------------------
+                // EMAIL CONFIRMATION
+                // ------------------------------------------------
 
                 showMessage(
                     "Conta criada. Verifica o teu email para confirmar a conta."
                 );
 
+
             } else {
+
+
+                // ==================================================
+                // LOGIN
+                // ==================================================
 
                 const {
                     data,
                     error
-                } = await supabaseClient.auth
-                    .signInWithPassword({
+                } =
+                    await supabaseClient.auth
+                        .signInWithPassword({
 
-                        email:
-                            email.value.trim(),
+                            email:
+                                email.value.trim(),
 
-                        password:
-                            password.value
+                            password:
+                                password.value
 
-                    });
+                        });
 
 
                 if (error) {
@@ -628,35 +910,12 @@
                 }
 
 
-                const user =
-                    data.user;
-
-
-                const {
-                    data: profile
-                } = await supabaseClient
-                    .from("profiles")
-                    .select("supported_team_id")
-                    .eq("id", user.id)
-                    .single();
-
-
-                if (
-                    !profile ||
-                    !profile.supported_team_id
-                ) {
-
-                    window.location.href =
-                        "choose-team.html";
-
-                } else {
-
-                    window.location.href =
-                        "home.html";
-
-                }
+                await routeUser(
+                    data.user
+                );
 
             }
+
 
         } catch (error) {
 
@@ -665,66 +924,81 @@
                 "Ocorreu um erro. Tenta novamente."
             );
 
+
         } finally {
 
-            submitButton.disabled = false;
+            submitButton.disabled =
+                false;
 
         }
 
-    });
+    }
+);
 
 
-    // ============================================================
-    // RESET PASSWORD
-    // ============================================================
 
-    async function resetPassword() {
+// ============================================================
+// RESET PASSWORD
+// ============================================================
 
-        const userEmail =
-            email.value.trim();
+async function resetPassword() {
 
-
-        if (!userEmail) {
-
-            showMessage(
-                "Introduz primeiro o teu email."
-            );
-
-            email.focus();
-
-            return;
-        }
+    const userEmail =
+        email.value.trim();
 
 
-        const {
-            error
-        } = await supabaseClient.auth
+    if (!userEmail) {
+
+        showMessage(
+            "Introduz primeiro o teu email."
+        );
+
+
+        email.focus();
+
+
+        return;
+    }
+
+
+    const {
+        error
+    } =
+        await supabaseClient.auth
             .resetPasswordForEmail(
+
                 userEmail,
+
                 {
+
                     redirectTo:
                         window.location.origin +
                         "/reset-password.html"
+
                 }
+
             );
 
 
-        if (error) {
-
-            showMessage(
-                error.message
-            );
-
-            return;
-        }
-
+    if (error) {
 
         showMessage(
-            "Enviámos um link para redefinir a tua palavra-passe."
+            error.message
         );
+
+        return;
     }
+
+
+    showMessage(
+        "Enviámos um link para redefinir a tua palavra-passe."
+    );
+}
+
 
 </script>
 
 </body>
+
 </html>
+
