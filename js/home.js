@@ -123,9 +123,11 @@ async function loadHome() {
     // ========================================================
 
     document.getElementById(
-        "team-title"
-    ).textContent =
-        team.short_name;
+    "team-title"
+).textContent =
+    team.slug === "barcelona"
+        ? "VISCA BARÇA"
+        : "HALA MADRID";
 
 
     document.getElementById(
