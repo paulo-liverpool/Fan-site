@@ -1,4 +1,3 @@
-```javascript
 // ============================================================
 // BARÇA REAL
 // HOME PAGE
@@ -394,4 +393,3 @@ function setupFeaturedCarousel() {
 setupFeaturedCarousel();
 
 loadHome();
-```
