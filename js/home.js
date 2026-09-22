@@ -2270,99 +2270,519 @@ function renderFixtures(fixtures) {
     }
 
     /*
-     * Next two matches.
-     */
-    const next =
-        fixtures.slice(1, 3);
+ * Next two matches.
+ */
+const next =
+    fixtures.slice(1, 3);
 
-    if (!nextContainer) return;
+if (!nextContainer) return;
 
-    nextContainer.innerHTML =
-        next.length
-            ? next.map(item => {
+nextContainer.innerHTML =
+    next.length
+        ? next.map(item => {
 
-                const itemDate =
-                    item.match_date;
+            const itemDate =
+                item.match_date;
 
-                const itemStatus =
-                    String(
-                        item.status_short || ""
-                    ).toUpperCase();
+            const itemStatus =
+                String(
+                    item.status_short || ""
+                ).toUpperCase();
 
-                const itemIsLive =
-                    Boolean(item.is_live) ||
-                    [
-                        "1H",
-                        "HT",
-                        "2H",
-                        "ET",
-                        "BT",
-                        "P",
-                        "LIVE"
-                    ].includes(itemStatus);
+            const itemIsLive =
+                Boolean(item.is_live) ||
+                [
+                    "1H",
+                    "HT",
+                    "2H",
+                    "ET",
+                    "BT",
+                    "P",
+                    "LIVE"
+                ].includes(itemStatus);
 
-                const itemHome =
-                    item.home_team_name ||
-                    "—";
+            const itemHome =
+                item.home_team_name ||
+                "—";
 
-                const itemAway =
-                    item.away_team_name ||
-                    "—";
+            const itemAway =
+                item.away_team_name ||
+                "—";
 
-                const itemCompetition =
-                    item.competition_name ||
-                    "—";
+            const itemHomeLogo =
+                item.home_team_logo ||
+                "";
 
-                return `
-                    <div class="fixture-small-card">
+            const itemAwayLogo =
+                item.away_team_logo ||
+                "";
 
-                        <div class="fixture-small-date">
-                            ${
-                                itemIsLive
-                                    ? "AO VIVO"
-                                    : itemDate
-                                        ? escapeHTML(
-                                            formatShortDate(
-                                                itemDate
-                                            )
+            const itemCompetition =
+                item.competition_name ||
+                "—";
+
+            return `
+                <div class="fixture-small-card">
+
+                    <div class="fixture-small-date">
+                        ${
+                            itemIsLive
+                                ? "AO VIVO"
+                                : itemDate
+                                    ? escapeHTML(
+                                        formatShortDate(
+                                            itemDate
                                         )
-                                        : "—"
-                            }
-                        </div>
+                                    )
+                                    : "—"
+                        }
+                    </div>
 
-                        <div class="fixture-small-teams">
+                    <div class="fixture-small-teams">
+
+                        <div class="fixture-small-team">
+
+                            ${
+                                itemHomeLogo
+                                    ? `
+                                        <img
+                                            src="${escapeAttribute(itemHomeLogo)}"
+                                            alt="${escapeAttribute(itemHome)}"
+                                            class="fixture-small-badge"
+                                            loading="lazy"
+                                        >
+                                    `
+                                    : ""
+                            }
 
                             <strong>
                                 ${escapeHTML(itemHome)}
                             </strong>
 
-                            <span>
-                                vs
-                            </span>
+                        </div>
+
+                        <span class="fixture-small-vs">
+                            vs
+                        </span>
+
+                        <div class="fixture-small-team">
 
                             <strong>
                                 ${escapeHTML(itemAway)}
                             </strong>
 
-                        </div>
+                            ${
+                                itemAwayLogo
+                                    ? `
+                                        <img
+                                            src="${escapeAttribute(itemAwayLogo)}"
+                                            alt="${escapeAttribute(itemAway)}"
+                                            class="fixture-small-badge"
+                                            loading="lazy"
+                                        >
+                                    `
+                                    : ""
+                            }
 
-                        <div class="fixture-small-competition">
-                            ${escapeHTML(itemCompetition)}
                         </div>
 
                     </div>
-                `;
 
-            }).join("")
-            : `
-                <div class="fixture-small-card">
-                    <div class="fixture-small-date">
-                        Não há outros jogos.
+                    <div class="fixture-small-competition">
+                        ${escapeHTML(itemCompetition)}
                     </div>
+
                 </div>
             `;
+
+        }).join("")
+        : `
+            <div class="fixture-small-card">
+                <div class="fixture-small-date">
+                    Não há outros jogos.
+                </div>
+            </div>
+        `;
+
+
+/*
+ * MAIS JOGOS button.
+ *
+ * Create it dynamically so no HTML change is required.
+ */
+ensureMoreFixturesButton();
+
+   /* ============================================================
+   ALL FIXTURES
+   ============================================================ */
+
+function ensureMoreFixturesButton() {
+
+    const nextContainer =
+        $("#next-fixtures");
+
+    if (!nextContainer) return;
+
+    let button =
+        $("#more-fixtures-button");
+
+    if (!button) {
+
+        button =
+            document.createElement("button");
+
+        button.id =
+            "more-fixtures-button";
+
+        button.type =
+            "button";
+
+        button.className =
+            "section-more-button";
+
+        button.textContent =
+            "MAIS JOGOS";
+
+        nextContainer.insertAdjacentElement(
+            "afterend",
+            button
+        );
+    }
+
+    button.onclick =
+        openAllFixtures;
 }
 
+
+/*
+ * Load the complete fixture list for the
+ * currently selected team.
+ */
+async function openAllFixtures() {
+
+    if (!currentTeam) return;
+
+    const client =
+        getSupabase();
+
+    if (!client) return;
+
+    try {
+
+        const teamId =
+            currentTeam.id;
+
+        const teamName =
+            normalize(
+                currentTeam.name ||
+                currentTeam.short_name ||
+                currentTeam.slug ||
+                ""
+            );
+
+        let providerTeamId =
+            null;
+
+        if (
+            teamName.includes("barcelona") ||
+            teamName.includes("barca")
+        ) {
+            providerTeamId = 81;
+        }
+
+        if (
+            teamName.includes("real madrid")
+        ) {
+            providerTeamId = 86;
+        }
+
+        if (!providerTeamId) {
+            console.warn(
+                "BR: provider ID não identificado."
+            );
+            return;
+        }
+
+        const {
+            data,
+            error
+        } = await client
+            .from("football_matches")
+            .select("*")
+            .or(
+                `home_team_id.eq.${teamId},away_team_id.eq.${teamId}`
+            )
+            .order(
+                "match_date",
+                {
+                    ascending: false
+                }
+            )
+            .limit(1000);
+
+        if (error) {
+            console.error(
+                "BR: erro ao carregar todos os jogos:",
+                error
+            );
+            return;
+        }
+
+        /*
+         * Exact provider-ID protection.
+         */
+        const fixtures =
+            (data || [])
+                .filter(match => {
+
+                    const homeProviderId =
+                        Number(
+                            match.home_provider_team_id
+                        );
+
+                    const awayProviderId =
+                        Number(
+                            match.away_provider_team_id
+                        );
+
+                    return (
+                        homeProviderId === providerTeamId ||
+                        awayProviderId === providerTeamId
+                    );
+                })
+                .sort((a, b) => {
+
+                    return (
+                        new Date(
+                            a.match_date
+                        ).getTime() -
+                        new Date(
+                            b.match_date
+                        ).getTime()
+                    );
+
+                });
+
+        renderAllFixturesView(
+            fixtures,
+            currentTeam
+        );
+
+    } catch (error) {
+
+        console.error(
+            "BR: erro ao abrir todos os jogos:",
+            error
+        );
+    }
+}
+
+
+/*
+ * Render complete fixture list inside
+ * the existing focused content view.
+ */
+function renderAllFixturesView(
+    fixtures,
+    team
+) {
+
+    const article =
+        $("#focused-content");
+
+    if (!article) return;
+
+    const teamName =
+        team.name ||
+        team.short_name ||
+        "Equipa";
+
+    const liveStatuses = [
+        "1H",
+        "HT",
+        "2H",
+        "ET",
+        "BT",
+        "P",
+        "LIVE"
+    ];
+
+    const rows =
+        fixtures.map(match => {
+
+            const status =
+                String(
+                    match.status_short || ""
+                ).toUpperCase();
+
+            const isLive =
+                Boolean(match.is_live) ||
+                liveStatuses.includes(status);
+
+            const date =
+                match.match_date
+                    ? new Date(
+                        match.match_date
+                    )
+                    : null;
+
+            const now =
+                Date.now();
+
+            const isFinished =
+                !isLive &&
+                date &&
+                date.getTime() < now;
+
+            const homeScore =
+                match.home_score;
+
+            const awayScore =
+                match.away_score;
+
+            const hasScore =
+                homeScore !== null &&
+                homeScore !== undefined &&
+                awayScore !== null &&
+                awayScore !== undefined;
+
+            let statusText =
+                "";
+
+            if (isLive) {
+                statusText =
+                    "AO VIVO";
+            } else if (
+                isFinished
+            ) {
+                statusText =
+                    hasScore
+                        ? `${homeScore} - ${awayScore}`
+                        : "Terminado";
+            } else {
+                statusText =
+                    "Próximo";
+            }
+
+            return `
+                <div class="all-fixture-row">
+
+                    <div class="all-fixture-date">
+                        ${
+                            match.match_date
+                                ? escapeHTML(
+                                    formatShortDate(
+                                        match.match_date
+                                    )
+                                )
+                                : "Data por confirmar"
+                        }
+                    </div>
+
+                    <div class="all-fixture-competition">
+                        ${escapeHTML(
+                            match.competition_name ||
+                            "Jogo"
+                        )}
+                    </div>
+
+                    <div class="all-fixture-teams">
+
+                        <div class="all-fixture-team">
+
+                            ${
+                                match.home_team_logo
+                                    ? `
+                                        <img
+                                            src="${escapeAttribute(match.home_team_logo)}"
+                                            alt="${escapeAttribute(match.home_team_name || "Casa")}"
+                                            class="all-fixture-badge"
+                                            loading="lazy"
+                                        >
+                                    `
+                                    : ""
+                            }
+
+                            <span>
+                                ${escapeHTML(
+                                    match.home_team_name ||
+                                    "Casa"
+                                )}
+                            </span>
+
+                        </div>
+
+                        <div class="all-fixture-result">
+
+                            <strong>
+                                ${escapeHTML(
+                                    statusText
+                                )}
+                            </strong>
+
+                        </div>
+
+                        <div class="all-fixture-team">
+
+                            <span>
+                                ${escapeHTML(
+                                    match.away_team_name ||
+                                    "Fora"
+                                )}
+                            </span>
+
+                            ${
+                                match.away_team_logo
+                                    ? `
+                                        <img
+                                            src="${escapeAttribute(match.away_team_logo)}"
+                                            alt="${escapeAttribute(match.away_team_name || "Fora")}"
+                                            class="all-fixture-badge"
+                                            loading="lazy"
+                                        >
+                                    `
+                                    : ""
+                            }
+
+                        </div>
+
+                    </div>
+
+                </div>
+            `;
+
+        }).join("");
+
+    article.innerHTML = `
+        <div class="focused-content-meta">
+            JOGOS
+        </div>
+
+        <h1>
+            ${escapeHTML(teamName)}
+        </h1>
+
+        <div class="all-fixtures-header">
+            Todos os jogos
+        </div>
+
+        ${
+            fixtures.length
+                ? `
+                    <div class="all-fixtures-list">
+                        ${rows}
+                    </div>
+                `
+                : `
+                    <div class="homepage-empty">
+                        Ainda não existem jogos disponíveis.
+                    </div>
+                `
+        }
+    `;
+
+    showFocusedView();
+}
 /* ============================================================
    LEAGUE TABLE
    SOURCE: football_standings
