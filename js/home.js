@@ -2405,14 +2405,10 @@ nextContainer.innerHTML =
         `;
 
 
-/*
- * MAIS JOGOS button.
- *
- * Create it dynamically so no HTML change is required.
- */
-ensureMoreFixturesButton();
+    ensureMoreFixturesButton();
+}
 
-   /* ============================================================
+/* ============================================================
    ALL FIXTURES
    ============================================================ */
 
@@ -2488,9 +2484,7 @@ async function openAllFixtures() {
             teamName.includes("barca")
         ) {
             providerTeamId = 81;
-        }
-
-        if (
+        } else if (
             teamName.includes("real madrid")
         ) {
             providerTeamId = 86;
@@ -2515,16 +2509,18 @@ async function openAllFixtures() {
             .order(
                 "match_date",
                 {
-                    ascending: false
+                    ascending: true
                 }
             )
             .limit(1000);
 
         if (error) {
+
             console.error(
                 "BR: erro ao carregar todos os jogos:",
                 error
             );
+
             return;
         }
 
@@ -2650,16 +2646,19 @@ function renderAllFixturesView(
                 "";
 
             if (isLive) {
+
                 statusText =
                     "AO VIVO";
-            } else if (
-                isFinished
-            ) {
+
+            } else if (isFinished) {
+
                 statusText =
                     hasScore
                         ? `${homeScore} - ${awayScore}`
                         : "Terminado";
+
             } else {
+
                 statusText =
                     "Próximo";
             }
