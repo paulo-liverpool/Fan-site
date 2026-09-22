@@ -216,53 +216,15 @@ async function loadHome() {
 // ============================================================
 
 async function loadFeaturedContent(teamId) {
-    const track = document.getElementById("featured-track");
-    if (!track) return;
 
-    const { data, error } = await supabaseClient
-        .from("content")
-        .select("*")
-        .eq("area", "featured")
-        .eq("status", "published")
-        .or(`team_id.eq.${teamId},team_id.is.null`)
-        .order("sort_order", { ascending: true })
-        .order("created_at", { ascending: false });
+    const track =
+        document.getElementById(
+            "featured-track"
+        );
 
-    if (error) {
-        console.error("Error loading featured content:", error);
+    if (!track) {
         return;
     }
-
-    const activeItems = (data || []).filter(item => {
-        const now = new Date();
-
-        if (item.start_date && new Date(item.start_date) > now) {
-            return false;
-        }
-
-        if (item.end_date && new Date(item.end_date) < now) {
-            return false;
-        }
-
-        return true;
-    });
-
-    if (!activeItems.length) {
-        track.innerHTML = `
-            <article class="featured-slide">
-                <div class="featured-slide-image">
-                    <div class="featured-empty">
-                        <span>⚽</span>
-                        <p>Sem destaques disponíveis</p>
-                    </div>
-                </div>
-            </article>
-        `;
-        return;
-    }
-
-    renderFeaturedSlides(activeItems);
-}
 
 
     // --------------------------------------------------------
@@ -465,93 +427,7 @@ function renderFeaturedSlides(items) {
 
             `;
 
-function renderFeaturedSlides(items) {
-    const track = document.getElementById("featured-track");
-    if (!track) return;
 
-    track.innerHTML = items.map(item => `
-        <article class="featured-slide" data-id="${item.id}">
-            <div class="featured-slide-image">
-                <img
-                    src="${escapeAttribute(item.image_url || "")}"
-                    alt="${escapeAttribute(item.title || "")}"
-                    loading="lazy"
-                >
-            </div>
-
-            <div class="featured-slide-overlay"></div>
-
-            <div class="featured-content">
-                <div class="featured-tag">
-                    ${escapeHTML(getFeaturedLabel(item))}
-                </div>
-
-                <h2>${escapeHTML(item.title || "")}</h2>
-
-                ${item.description ? `
-                    <p>${escapeHTML(item.description)}</p>
-                ` : ""}
-            </div>
-
-            ${item.audio_url ? `
-                <button
-                    class="featured-audio-button"
-                    type="button"
-                    data-audio="${escapeAttribute(item.audio_url)}"
-                    aria-label="Ouvir destaque"
-                >
-                    🔊
-                </button>
-            ` : ""}
-        </article>
-    `).join("");
-
-    track.querySelectorAll(".featured-audio-button").forEach(button => {
-        button.addEventListener("click", event => {
-            event.stopPropagation();
-
-            const audioUrl = button.dataset.audio;
-            if (!audioUrl) return;
-
-            playFeaturedAudio(audioUrl, button);
-        });
-    });
-
-    setupFeaturedCarousel();
-}
-
-
-function getFeaturedLabel(item) {
-    if (item.content_type === "video") return "VÍDEO";
-    if (item.content_type === "audio") return "ÁUDIO";
-    if (item.content_type === "article") return "NOTÍCIA";
-
-    return "DESTAQUE";
-}
-
-
-let featuredAudio = null;
-
-function playFeaturedAudio(url, button) {
-    if (featuredAudio) {
-        featuredAudio.pause();
-        featuredAudio.currentTime = 0;
-    }
-
-    featuredAudio = new Audio(url);
-
-    featuredAudio.play()
-        .then(() => {
-            button.textContent = "⏸";
-        })
-        .catch(error => {
-            console.error("Audio playback error:", error);
-        });
-
-    featuredAudio.addEventListener("ended", () => {
-        button.textContent = "🔊";
-    });
-}
             // ------------------------------------------------
             // OPEN FEATURED CONTENT
             // ------------------------------------------------
@@ -810,6 +686,7 @@ function renderEmptyFeatured() {
 
 let featuredAudio = null;
 
+
 function playFeaturedAudio(
     url,
     button
@@ -820,12 +697,17 @@ function playFeaturedAudio(
     }
 
 
+    // --------------------------------------------------------
+    // STOP CURRENT AUDIO
+    // --------------------------------------------------------
+
     if (
         featuredAudio &&
         !featuredAudio.paused
     ) {
 
         featuredAudio.pause();
+
 
         if (
             featuredAudio.currentSrc ===
@@ -834,15 +716,21 @@ function playFeaturedAudio(
 
             featuredAudio = null;
 
+
             if (button) {
                 button.textContent = "🔊";
             }
+
 
             return;
         }
 
     }
 
+
+    // --------------------------------------------------------
+    // PLAY AUDIO
+    // --------------------------------------------------------
 
     featuredAudio =
         new Audio(url);
@@ -1020,7 +908,7 @@ function setupFeaturedCarousel() {
 
 
     // --------------------------------------------------------
-    // DETECT CURRENT SLIDE FROM SCROLL
+    // DETECT CURRENT SLIDE
     // --------------------------------------------------------
 
     function detectCurrentSlide() {
@@ -1386,7 +1274,7 @@ function setupFeaturedCarousel() {
 
 
     // --------------------------------------------------------
-    // PAUSE WHEN MOUSE IS OVER CAROUSEL
+    // PAUSE ON HOVER
     // --------------------------------------------------------
 
     track.addEventListener(
@@ -1426,8 +1314,6 @@ function setupFeaturedCarousel() {
     startAutoPlay();
 
 }
-
-
 // ============================================================
 // NEWS
 // ============================================================
