@@ -343,9 +343,27 @@ body {
 .featured-slide-image {
     position: absolute;
     inset: 0;
+
     width: 100%;
     height: 100%;
-    object-fit: cover;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    overflow: hidden;
+
+    background: #111318;
+}
+
+.featured-slide-image img {
+    width: 100%;
+    height: 100%;
+
+    object-fit: contain;
+    object-position: center;
+    
+    display: block;
 }
 
 .featured-slide-overlay {
