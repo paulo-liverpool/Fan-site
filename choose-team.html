@@ -1,155 +1,195 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Choose Your Side | Barça Real</title>
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Escolhe o teu clube | Barça Real</title>
 
     <link rel="stylesheet" href="css/global.css">
 
     <style>
-
-        /* =====================================================
+        /* ========================================================
            CHOOSE TEAM
-           ===================================================== */
+           ======================================================== */
 
         body {
-            min-height: 100vh;
+            background: #08090c;
             overflow-x: hidden;
-            background: #09090b;
         }
 
         .team-page {
             min-height: 100vh;
 
+            position: relative;
+
             display: flex;
             align-items: center;
             justify-content: center;
 
-            padding: 30px 20px;
+            padding: 40px 20px;
 
-            position: relative;
             overflow: hidden;
         }
 
 
-        /* =====================================================
+        /* ========================================================
            BACKGROUND
-           ===================================================== */
+           ======================================================== */
 
-        .background-glow {
+        .team-page::before {
+            content: "";
+
             position: absolute;
 
             width: 500px;
             height: 500px;
 
+            left: -220px;
+            top: -180px;
+
             border-radius: 50%;
 
-            filter: blur(120px);
+            background: rgba(165, 0, 68, 0.16);
 
-            opacity: 0.15;
-
-            pointer-events: none;
+            filter: blur(100px);
         }
 
-        .glow-barca {
-            background: #a50044;
+        .team-page::after {
+            content: "";
 
-            top: -250px;
-            left: -200px;
+            position: absolute;
+
+            width: 500px;
+            height: 500px;
+
+            right: -220px;
+            bottom: -180px;
+
+            border-radius: 50%;
+
+            background: rgba(0, 82, 204, 0.14);
+
+            filter: blur(100px);
         }
 
-        .glow-madrid {
-            background: #d4af37;
 
-            bottom: -250px;
-            right: -200px;
-        }
-
-
-        /* =====================================================
-           CONTENT
-           ===================================================== */
+        /* ========================================================
+           CONTAINER
+           ======================================================== */
 
         .team-container {
-            width: 100%;
-            max-width: 1050px;
-
             position: relative;
             z-index: 2;
+
+            width: min(100%, 850px);
 
             text-align: center;
         }
 
-        .brand-small {
-            font-size: 12px;
-            font-weight: 800;
 
-            letter-spacing: 4px;
+        /* ========================================================
+           BRAND
+           ======================================================== */
 
-            color: #a1a1aa;
-
-            margin-bottom: 25px;
+        .team-brand {
+            margin-bottom: 45px;
         }
 
-        .team-container h1 {
-            font-size: clamp(34px, 6vw, 58px);
+        .team-brand-logo {
+            width: 58px;
+            height: 58px;
 
-            line-height: 1;
+            margin: 0 auto 18px;
 
+            border: 2px solid white;
+
+            border-radius: 50%;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            font-size: 17px;
             font-weight: 900;
 
             letter-spacing: -2px;
         }
 
-        .team-subtitle {
-            margin: 15px auto 42px;
+        .team-brand h1 {
+            font-size: 22px;
 
-            max-width: 500px;
+            font-weight: 900;
 
-            color: #a1a1aa;
+            letter-spacing: 4px;
+        }
 
-            font-size: 15px;
+        .team-brand p {
+            margin-top: 10px;
 
-            line-height: 1.6;
+            color: rgba(255,255,255,0.45);
+
+            font-size: 13px;
         }
 
 
-        /* =====================================================
+        /* ========================================================
+           TITLE
+           ======================================================== */
+
+        .team-heading {
+            margin-bottom: 30px;
+        }
+
+        .team-heading h2 {
+            font-size: clamp(30px, 6vw, 46px);
+
+            font-weight: 900;
+
+            letter-spacing: -1.5px;
+        }
+
+        .team-heading p {
+            margin-top: 10px;
+
+            font-size: 13px;
+
+            color: rgba(255,255,255,0.45);
+        }
+
+
+        /* ========================================================
            TEAM CARDS
-           ===================================================== */
+           ======================================================== */
 
         .team-options {
             display: grid;
 
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-columns: 1fr 1fr;
 
-            gap: 20px;
-
-            max-width: 850px;
-
-            margin: 0 auto;
+            gap: 18px;
         }
 
         .team-card {
-            min-height: 330px;
-
-            border: 1px solid rgba(255,255,255,0.10);
-
-            border-radius: 26px;
-
-            padding: 35px 30px;
-
-            background: rgba(24,24,27,0.78);
+            min-height: 300px;
 
             position: relative;
 
             overflow: hidden;
 
-            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.09);
 
-            text-align: center;
+            border-radius: 22px;
+
+            background: rgba(255,255,255,0.035);
+
+            color: white;
+
+            text-align: left;
 
             transition:
                 transform 0.25s ease,
@@ -158,63 +198,61 @@
         }
 
         .team-card:hover {
-            transform: translateY(-6px);
+            transform: translateY(-5px);
+
+            border-color: rgba(255,255,255,0.22);
+        }
+
+        .team-card:active {
+            transform: scale(0.98);
         }
 
 
-        /* =====================================================
-           BARÇA CARD
-           ===================================================== */
+        /* ========================================================
+           CARD BACKGROUNDS
+           ======================================================== */
 
-        .barca-card {
+        .team-card.barcelona {
             background:
+                radial-gradient(
+                    circle at 85% 20%,
+                    rgba(165,0,68,0.4),
+                    transparent 45%
+                ),
                 linear-gradient(
                     145deg,
-                    rgba(165,0,68,0.24),
-                    rgba(0,77,152,0.18)
-                ),
-                #111113;
+                    #10131d,
+                    #08090c
+                );
         }
 
-        .barca-card:hover {
-            border-color: rgba(165,0,68,0.65);
-
-            box-shadow:
-                0 20px 60px rgba(165,0,68,0.18);
-        }
-
-
-        /* =====================================================
-           MADRID CARD
-           ===================================================== */
-
-        .madrid-card {
+        .team-card.madrid {
             background:
+                radial-gradient(
+                    circle at 85% 20%,
+                    rgba(255,204,0,0.25),
+                    transparent 45%
+                ),
                 linear-gradient(
                     145deg,
-                    rgba(255,255,255,0.10),
-                    rgba(212,175,55,0.08)
-                ),
-                #111113;
-        }
-
-        .madrid-card:hover {
-            border-color: rgba(212,175,55,0.55);
-
-            box-shadow:
-                0 20px 60px rgba(212,175,55,0.12);
+                    #15151a,
+                    #08090c
+                );
         }
 
 
-        /* =====================================================
-           CREST PLACEHOLDER
-           ===================================================== */
+        /* ========================================================
+           CREST
+           ======================================================== */
 
         .team-crest {
-            width: 105px;
-            height: 105px;
+            width: 82px;
+            height: 82px;
 
-            margin: 0 auto 24px;
+            position: absolute;
+
+            top: 28px;
+            right: 28px;
 
             border-radius: 50%;
 
@@ -222,437 +260,386 @@
             align-items: center;
             justify-content: center;
 
-            font-size: 23px;
+            font-size: 18px;
+
             font-weight: 900;
 
-            background: rgba(255,255,255,0.06);
+            background: rgba(255,255,255,0.07);
 
-            border: 1px solid rgba(255,255,255,0.12);
-
-            transition: transform 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.13);
         }
 
-        .team-card:hover .team-crest {
-            transform: scale(1.06);
+        .barcelona .team-crest {
+            box-shadow:
+                0 0 45px rgba(165,0,68,0.35);
         }
 
-        .barca-crest {
-            border-color: rgba(165,0,68,0.5);
-
-            background:
-                linear-gradient(
-                    135deg,
-                    #a50044,
-                    #004d98
-                );
-        }
-
-        .madrid-crest {
-            background:
-                linear-gradient(
-                    135deg,
-                    #f4f4f5,
-                    #d4af37
-                );
-
-            color: #18181b;
+        .madrid .team-crest {
+            box-shadow:
+                0 0 45px rgba(255,204,0,0.25);
         }
 
 
-        /* =====================================================
-           TEAM TEXT
-           ===================================================== */
+        /* ========================================================
+           CARD CONTENT
+           ======================================================== */
 
-        .team-name {
+        .team-card-content {
+            position: absolute;
+
+            left: 25px;
+            right: 25px;
+            bottom: 25px;
+        }
+
+        .team-card-content small {
+            display: block;
+
+            margin-bottom: 8px;
+
+            font-size: 10px;
+
+            letter-spacing: 2px;
+
+            font-weight: 800;
+
+            color: rgba(255,255,255,0.4);
+        }
+
+        .team-card-content h3 {
             font-size: 25px;
 
             font-weight: 900;
 
-            margin-bottom: 8px;
+            letter-spacing: -0.7px;
         }
 
-        .team-description {
-            color: #a1a1aa;
+        .team-card-content span {
+            display: block;
 
-            font-size: 13px;
+            margin-top: 7px;
 
-            line-height: 1.5;
+            font-size: 12px;
+
+            color: rgba(255,255,255,0.45);
         }
 
-        .team-action {
+
+        /* ========================================================
+           FOOTER
+           ======================================================== */
+
+        .team-footer {
             margin-top: 25px;
 
-            display: inline-flex;
+            font-size: 10px;
 
-            align-items: center;
-            justify-content: center;
-
-            min-height: 42px;
-
-            padding: 0 20px;
-
-            border-radius: 10px;
-
-            background: rgba(255,255,255,0.08);
-
-            color: #ffffff;
-
-            font-size: 13px;
-
-            font-weight: 800;
+            color: rgba(255,255,255,0.28);
         }
 
 
-        /* =====================================================
-           STATUS
-           ===================================================== */
-
-        .team-message {
-            margin: 25px auto 0;
-
-            min-height: 20px;
-
-            color: #fca5a5;
-
-            font-size: 13px;
-        }
-
-
-        /* =====================================================
-           LOADING STATE
-           ===================================================== */
-
-        .team-card.loading {
-            pointer-events: none;
-
-            opacity: 0.65;
-        }
-
-        .team-card.loading .team-action {
-            background: rgba(255,255,255,0.14);
-        }
-
-
-        /* =====================================================
+        /* ========================================================
            MOBILE
-           ===================================================== */
+           ======================================================== */
 
-        @media (max-width: 700px) {
+        @media (max-width: 600px) {
 
             .team-page {
-                padding: 25px 15px;
+                padding: 30px 16px;
             }
 
-            .team-container h1 {
-                letter-spacing: -1.5px;
-            }
-
-            .team-subtitle {
-                margin-bottom: 30px;
+            .team-brand {
+                margin-bottom: 35px;
             }
 
             .team-options {
                 grid-template-columns: 1fr;
 
-                max-width: 430px;
-
-                gap: 15px;
+                gap: 14px;
             }
 
             .team-card {
-                min-height: 270px;
-
-                padding: 28px 22px;
+                min-height: 220px;
             }
 
             .team-crest {
-                width: 82px;
-                height: 82px;
+                width: 68px;
+                height: 68px;
 
-                margin-bottom: 18px;
+                top: 22px;
+                right: 22px;
             }
 
-            .team-name {
-                font-size: 22px;
+            .team-card-content {
+                left: 21px;
+                bottom: 21px;
             }
         }
-
     </style>
 </head>
 
 <body>
 
-    <main class="team-page">
+<main class="team-page">
 
-        <div class="background-glow glow-barca"></div>
-        <div class="background-glow glow-madrid"></div>
+    <div class="team-container">
 
 
-        <div class="team-container">
+        <!-- ====================================================
+             BRAND
+             ==================================================== -->
 
-            <!-- =================================================
-                 HEADER
-                 ================================================= -->
+        <div class="team-brand">
 
-            <div class="brand-small">
-                BARÇA REAL
+            <div class="team-brand-logo">
+                BR
             </div>
 
             <h1>
-                Choose Your Side
+                BARÇA REAL
             </h1>
 
-            <p class="team-subtitle">
-                Your choice shapes your Barça Real experience.
-                Choose the club you support.
+            <p>
+                O teu futebol. O teu lado. A tua comunidade.
             </p>
-
-
-            <!-- =================================================
-                 TEAM OPTIONS
-                 ================================================= -->
-
-            <div class="team-options">
-
-                <!-- =============================================
-                     BARCELONA
-                     ============================================= -->
-
-                <button
-                    type="button"
-                    class="team-card barca-card"
-                    data-team="barcelona"
-                    id="barcelona-card"
-                >
-
-                    <div class="team-crest barca-crest">
-                        FCB
-                    </div>
-
-                    <div class="team-name">
-                        FC Barcelona
-                    </div>
-
-                    <div class="team-description">
-                        More than a club.
-                    </div>
-
-                    <div class="team-action">
-                        Choose Barça
-                    </div>
-
-                </button>
-
-
-                <!-- =============================================
-                     REAL MADRID
-                     ============================================= -->
-
-                <button
-                    type="button"
-                    class="team-card madrid-card"
-                    data-team="real-madrid"
-                    id="madrid-card"
-                >
-
-                    <div class="team-crest madrid-crest">
-                        RMA
-                    </div>
-
-                    <div class="team-name">
-                        Real Madrid
-                    </div>
-
-                    <div class="team-description">
-                        Hala Madrid.
-                    </div>
-
-                    <div class="team-action">
-                        Choose Madrid
-                    </div>
-
-                </button>
-
-            </div>
-
-
-            <div
-                id="team-message"
-                class="team-message"
-                aria-live="polite"
-            ></div>
 
         </div>
 
-    </main>
+
+        <!-- ====================================================
+             HEADING
+             ==================================================== -->
+
+        <div class="team-heading">
+
+            <h2>
+                Escolhe o teu clube
+            </h2>
+
+            <p>
+                A tua escolha vai personalizar a tua experiência
+                no Barça Real.
+            </p>
+
+        </div>
 
 
-    <!-- =========================================================
-         SUPABASE
-         ========================================================= -->
+        <!-- ====================================================
+             TEAM OPTIONS
+             ==================================================== -->
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-    <script src="js/supabase.js"></script>
+        <div class="team-options">
 
 
-    <!-- =========================================================
-         TEAM SELECTION
-         ========================================================= -->
+            <!-- BARCELONA -->
 
-    <script>
+            <button
+                class="team-card barcelona"
+                id="barcelona-card"
+                data-team="barcelona"
+                onclick="selectTeam('barcelona', this)"
+            >
 
-        const barcelonaCard =
-            document.getElementById("barcelona-card");
+                <div class="team-crest">
+                    FCB
+                </div>
 
-        const madridCard =
-            document.getElementById("madrid-card");
+                <div class="team-card-content">
 
-        const message =
-            document.getElementById("team-message");
+                    <small>
+                        LA LIGA
+                    </small>
+
+                    <h3>
+                        FC Barcelona
+                    </h3>
+
+                    <span>
+                        Visca Barça
+                    </span>
+
+                </div>
+
+            </button>
 
 
-        // ======================================================
-        // GET CURRENT USER
-        // ======================================================
+            <!-- REAL MADRID -->
 
-        async function getCurrentUser() {
+            <button
+                class="team-card madrid"
+                id="madrid-card"
+                data-team="real-madrid"
+                onclick="selectTeam('real-madrid', this)"
+            >
 
-            const {
-                data: { user },
-                error
-            } = await supabaseClient.auth.getUser();
+                <div class="team-crest">
+                    RMA
+                </div>
+
+                <div class="team-card-content">
+
+                    <small>
+                        LA LIGA
+                    </small>
+
+                    <h3>
+                        Real Madrid
+                    </h3>
+
+                    <span>
+                        Hala Madrid
+                    </span>
+
+                </div>
+
+            </button>
+
+        </div>
 
 
-            if (error || !user) {
+        <div class="team-footer">
+            Podes alterar a tua preferência mais tarde.
+        </div>
 
-                window.location.href = "login.html";
+    </div>
 
-                return null;
+</main>
+
+
+<!-- ============================================================
+     SUPABASE
+     ============================================================ -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+
+
+<script>
+
+    // ============================================================
+    // GET CURRENT USER
+    // ============================================================
+
+    async function getCurrentUser() {
+
+        const {
+            data: {
+                user
             }
+        } = await supabaseClient.auth.getUser();
 
 
-            return user;
+        if (!user) {
+
+            window.location.href =
+                "login.html";
+
+            return null;
         }
 
 
-        // ======================================================
-        // SELECT TEAM
-        // ======================================================
-
-        async function selectTeam(teamSlug, card) {
-
-            message.textContent = "";
-
-            barcelonaCard.classList.remove("loading");
-            madridCard.classList.remove("loading");
-
-            card.classList.add("loading");
+        return user;
+    }
 
 
-            const user =
-                await getCurrentUser();
+    // ============================================================
+    // SELECT TEAM
+    // ============================================================
+
+    async function selectTeam(teamSlug, card) {
+
+        const user =
+            await getCurrentUser();
 
 
-            if (!user) {
-                return;
-            }
-
-
-            try {
-
-                // =================================================
-                // Find team in database
-                // =================================================
-
-                const {
-                    data: team,
-                    error: teamError
-                } = await supabaseClient
-                    .from("teams")
-                    .select("id, name, slug")
-                    .eq("slug", teamSlug)
-                    .eq("is_active", true)
-                    .single();
-
-
-                if (teamError || !team) {
-
-                    throw new Error(
-                        "Unable to find the selected team."
-                    );
-
-                }
-
-
-                // =================================================
-                // Save team to profile
-                // =================================================
-
-                const {
-                    error: profileError
-                } = await supabaseClient
-                    .from("profiles")
-                    .update({
-                        supported_team_id: team.id
-                    })
-                    .eq("id", user.id);
-
-
-                if (profileError) {
-                    throw profileError;
-                }
-
-
-                // =================================================
-                // Continue to loading experience
-                // =================================================
-
-                window.location.href =
-                    "loading.html?team=" +
-                    encodeURIComponent(team.slug);
-
-            } catch (error) {
-
-                console.error(error);
-
-                message.textContent =
-                    error.message ||
-                    "Something went wrong. Please try again.";
-
-                barcelonaCard.classList.remove("loading");
-                madridCard.classList.remove("loading");
-            }
+        if (!user) {
+            return;
         }
 
 
-        // ======================================================
-        // EVENTS
-        // ======================================================
+        // --------------------------------------------------------
+        // Prevent multiple clicks
+        // --------------------------------------------------------
 
-        barcelonaCard.addEventListener(
-            "click",
-            function () {
-                selectTeam("barcelona", barcelonaCard);
-            }
-        );
+        card.disabled = true;
+
+        card.style.opacity = "0.6";
 
 
-        madridCard.addEventListener(
-            "click",
-            function () {
-                selectTeam("real-madrid", madridCard);
-            }
-        );
+        // --------------------------------------------------------
+        // Find team
+        // --------------------------------------------------------
+
+        const {
+            data: team,
+            error: teamError
+        } = await supabaseClient
+            .from("teams")
+            .select("id")
+            .eq("slug", teamSlug)
+            .eq("is_active", true)
+            .single();
 
 
-        // ======================================================
-        // INITIAL AUTH CHECK
-        // ======================================================
+        if (teamError || !team) {
 
-        getCurrentUser();
+            card.disabled = false;
 
-    </script>
+            card.style.opacity = "1";
+
+            alert(
+                "Não foi possível encontrar este clube."
+            );
+
+            return;
+        }
+
+
+        // --------------------------------------------------------
+        // Save preference
+        // --------------------------------------------------------
+
+        const {
+            error
+        } = await supabaseClient
+            .from("profiles")
+            .update({
+                supported_team_id: team.id
+            })
+            .eq("id", user.id);
+
+
+        if (error) {
+
+            card.disabled = false;
+
+            card.style.opacity = "1";
+
+            alert(
+                "Não foi possível guardar a tua escolha."
+            );
+
+            return;
+        }
+
+
+        // --------------------------------------------------------
+        // Continue
+        // --------------------------------------------------------
+
+        window.location.href =
+            "loading.html?team=" +
+            encodeURIComponent(teamSlug);
+    }
+
+
+    // ============================================================
+    // VERIFY USER
+    // ============================================================
+
+    getCurrentUser();
+
+</script>
 
 </body>
 </html>
