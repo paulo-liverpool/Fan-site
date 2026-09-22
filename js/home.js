@@ -1895,9 +1895,9 @@ function renderOpinion(items) {
         });
 }
 
-
-/* ============================================================
+   /* ============================================================
    FIXTURES
+   SOURCE: football_matches
    ============================================================ */
 
 async function loadFixtures(teamId) {
@@ -1906,30 +1906,80 @@ async function loadFixtures(teamId) {
     if (!client) return;
 
     try {
+        /*
+         * API-Football stores Barcelona and Real Madrid
+         * fixtures together in football_matches.
+         *
+         * We identify the user's team using the local
+         * home_team_id / away_team_id where available,
+         * while also supporting provider IDs 529 / 541.
+         */
 
-        const {
-            data,
-            error
-        } = await client
-            .from("fixtures")
+        const { data, error } = await client
+            .from("football_matches")
             .select("*")
-            .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
+            .or(
+                `home_team_id.eq.${teamId},away_team_id.eq.${teamId},home_provider_team_id.eq.529,away_provider_team_id.eq.529,home_provider_team_id.eq.541,away_provider_team_id.eq.541`
+            )
             .order("match_date", {
                 ascending: true
             })
-            .limit(10);
+            .limit(20);
 
         if (error) {
             console.warn(
-                "BR: fixtures não carregadas:",
+                "BR: football_matches não carregadas:",
                 error
             );
             return;
         }
 
-        renderFixtures(
-            data || []
-        );
+        const now = Date.now();
+
+        /*
+         * Keep upcoming matches and currently live matches.
+         * Finished matches in the past are not used for
+         * the homepage "Próximo Jogo" area.
+         */
+        const upcoming = (data || [])
+            .filter(match => {
+                if (!match.match_date) return false;
+
+                const status = String(
+                    match.status_short || ""
+                ).toUpperCase();
+
+                const liveStatuses = [
+                    "1H",
+                    "HT",
+                    "2H",
+                    "ET",
+                    "BT",
+                    "P",
+                    "LIVE"
+                ];
+
+                if (
+                    match.is_live ||
+                    liveStatuses.includes(status)
+                ) {
+                    return true;
+                }
+
+                return (
+                    new Date(match.match_date).getTime() >=
+                    now
+                );
+            })
+            .sort((a, b) => {
+                return (
+                    new Date(a.match_date).getTime() -
+                    new Date(b.match_date).getTime()
+                );
+            })
+            .slice(0, 10);
+
+        renderFixtures(upcoming);
 
     } catch (error) {
         console.warn(
@@ -1941,107 +1991,270 @@ async function loadFixtures(teamId) {
 
 
 function renderFixtures(fixtures) {
+    const mainCompetition =
+        $("#main-fixture-competition");
+
+    const mainDate =
+        $("#main-fixture-date");
+
+    const mainHomeName =
+        $("#main-home-name");
+
+    const mainAwayName =
+        $("#main-away-name");
+
+    const mainHomeBadge =
+        $("#main-home-badge");
+
+    const mainAwayBadge =
+        $("#main-away-badge");
+
+    const nextContainer =
+        $("#next-fixtures");
+
+    /*
+     * No upcoming match.
+     */
     if (!fixtures.length) {
+
+        currentFixture = null;
+
+        setText(
+            "#main-fixture-competition",
+            "Sem próximo jogo"
+        );
+
+        setText(
+            "#main-fixture-date",
+            "Ainda não disponível"
+        );
+
+        setText(
+            "#main-home-name",
+            "—"
+        );
+
+        setText(
+            "#main-away-name",
+            "—"
+        );
+
+        if (mainHomeBadge) {
+            mainHomeBadge.innerHTML = "—";
+        }
+
+        if (mainAwayBadge) {
+            mainAwayBadge.innerHTML = "—";
+        }
+
+        if (nextContainer) {
+            nextContainer.innerHTML = `
+                <div class="fixture-small-card">
+                    <div class="fixture-small-date">
+                        Não há outros jogos disponíveis.
+                    </div>
+                </div>
+            `;
+        }
+
         return;
     }
 
-    currentFixture =
-        fixtures[0];
+    /*
+     * First match = large "PRÓXIMO JOGO".
+     */
+    currentFixture = fixtures[0];
 
     const fixture =
         currentFixture;
 
     const competition =
-        fixture.competition ||
         fixture.competition_name ||
         "Jogo";
 
     const date =
-        fixture.match_date ||
-        fixture.date ||
-        fixture.kickoff;
+        fixture.match_date;
 
+    const homeName =
+        fixture.home_team_name ||
+        "Casa";
+
+    const awayName =
+        fixture.away_team_name ||
+        "Fora";
+
+    const homeLogo =
+        fixture.home_team_logo ||
+        "";
+
+    const awayLogo =
+        fixture.away_team_logo ||
+        "";
+
+    const status =
+        String(
+            fixture.status_short || ""
+        ).toUpperCase();
+
+    const isLive =
+        Boolean(fixture.is_live) ||
+        [
+            "1H",
+            "HT",
+            "2H",
+            "ET",
+            "BT",
+            "P",
+            "LIVE"
+        ].includes(status);
+
+    /*
+     * Competition.
+     */
     setText(
         "#main-fixture-competition",
         competition
     );
 
+    /*
+     * Date / live status.
+     */
     setText(
         "#main-fixture-date",
-        date
-            ? formatArticleDate(date)
-            : "Data por confirmar"
+        isLive
+            ? "AO VIVO"
+            : date
+                ? formatArticleDate(date)
+                : "Data por confirmar"
     );
 
+    /*
+     * Teams.
+     */
     setText(
         "#main-home-name",
-        fixture.home_team_name ||
-        fixture.home_name ||
-        "Casa"
+        homeName
     );
 
     setText(
         "#main-away-name",
-        fixture.away_team_name ||
-        fixture.away_name ||
-        "Fora"
+        awayName
     );
 
+    /*
+     * Team logos.
+     */
+    if (mainHomeBadge) {
+        mainHomeBadge.innerHTML =
+            homeLogo
+                ? `
+                    <img
+                        src="${escapeAttribute(homeLogo)}"
+                        alt="${escapeAttribute(homeName)}"
+                        loading="eager"
+                    >
+                `
+                : "—";
+    }
+
+    if (mainAwayBadge) {
+        mainAwayBadge.innerHTML =
+            awayLogo
+                ? `
+                    <img
+                        src="${escapeAttribute(awayLogo)}"
+                        alt="${escapeAttribute(awayName)}"
+                        loading="eager"
+                    >
+                `
+                : "—";
+    }
+
+    /*
+     * Next two matches.
+     */
     const next =
         fixtures.slice(1, 3);
 
-    const container =
-        $("#next-fixtures");
+    if (!nextContainer) return;
 
-    if (!container) return;
-
-    container.innerHTML =
+    nextContainer.innerHTML =
         next.length
-            ? next.map(item => `
-                <div class="fixture-small-card">
+            ? next.map(item => {
 
-                    <div class="fixture-small-date">
-                        ${
-                            item.match_date ||
-                            item.date
-                                ? formatShortDate(
-                                    item.match_date ||
-                                    item.date
-                                )
-                                : "—"
-                        }
-                    </div>
+                const itemDate =
+                    item.match_date;
 
-                    <div class="fixture-small-teams">
-                        <strong>
+                const itemStatus =
+                    String(
+                        item.status_short || ""
+                    ).toUpperCase();
+
+                const itemIsLive =
+                    Boolean(item.is_live) ||
+                    [
+                        "1H",
+                        "HT",
+                        "2H",
+                        "ET",
+                        "BT",
+                        "P",
+                        "LIVE"
+                    ].includes(itemStatus);
+
+                const itemHome =
+                    item.home_team_name ||
+                    "—";
+
+                const itemAway =
+                    item.away_team_name ||
+                    "—";
+
+                const itemCompetition =
+                    item.competition_name ||
+                    "—";
+
+                return `
+                    <div class="fixture-small-card">
+
+                        <div class="fixture-small-date">
                             ${
-                                item.home_team_name ||
-                                item.home_name ||
-                                "—"
+                                itemIsLive
+                                    ? "AO VIVO"
+                                    : itemDate
+                                        ? escapeHTML(
+                                            formatShortDate(
+                                                itemDate
+                                            )
+                                        )
+                                        : "—"
                             }
-                        </strong>
+                        </div>
 
-                        <span>vs</span>
+                        <div class="fixture-small-teams">
 
-                        <strong>
-                            ${
-                                item.away_team_name ||
-                                item.away_name ||
-                                "—"
-                            }
-                        </strong>
+                            <strong>
+                                ${escapeHTML(itemHome)}
+                            </strong>
+
+                            <span>
+                                vs
+                            </span>
+
+                            <strong>
+                                ${escapeHTML(itemAway)}
+                            </strong>
+
+                        </div>
+
+                        <div class="fixture-small-competition">
+                            ${escapeHTML(itemCompetition)}
+                        </div>
+
                     </div>
+                `;
 
-                    <div class="fixture-small-competition">
-                        ${
-                            item.competition ||
-                            item.competition_name ||
-                            "—"
-                        }
-                    </div>
-
-                </div>
-            `).join("")
+            }).join("")
             : `
                 <div class="fixture-small-card">
                     <div class="fixture-small-date">
@@ -2051,9 +2264,9 @@ function renderFixtures(fixtures) {
             `;
 }
 
-
 /* ============================================================
    LEAGUE TABLE
+   SOURCE: football_standings
    ============================================================ */
 
 async function loadLeagueTable(teamId) {
@@ -2063,31 +2276,42 @@ async function loadLeagueTable(teamId) {
 
     try {
 
-        let query =
-            client
-                .from("league_table")
-                .select("*")
-                .order("position", {
-                    ascending: true
-                })
-                .limit(20);
+        /*
+         * HTML tabs:
+         *
+         * league    = La Liga
+         * champions = Champions League
+         */
 
-        if (currentTableType) {
-            query =
-                query.eq(
-                    "competition",
-                    currentTableType
-                );
-        }
+        const leagueId =
+            currentTableType === "champions"
+                ? 2
+                : 140;
 
-        const {
-            data,
-            error
-        } = await query;
+        const competitionName =
+            currentTableType === "champions"
+                ? "Champions League"
+                : "La Liga";
+
+        const { data, error } = await client
+            .from("football_standings")
+            .select("*")
+            .eq(
+                "provider_league_id",
+                leagueId
+            )
+            .eq(
+                "competition_name",
+                competitionName
+            )
+            .order("position", {
+                ascending: true
+            })
+            .limit(40);
 
         if (error) {
             console.warn(
-                "BR: tabela não carregada:",
+                "BR: football_standings não carregada:",
                 error
             );
             return;
@@ -2113,6 +2337,7 @@ function renderLeagueTable(rows) {
     if (!body) return;
 
     if (!rows.length) {
+
         body.innerHTML = `
             <div class="table-empty">
                 Classificação ainda não disponível.
@@ -2123,72 +2348,89 @@ function renderLeagueTable(rows) {
     }
 
     body.innerHTML =
-        rows.map((row, index) => {
+        rows
+            .sort(
+                (a, b) =>
+                    Number(a.position || 999) -
+                    Number(b.position || 999)
+            )
+            .map((row, index) => {
 
-            const position =
-                row.position ||
-                row.rank ||
-                index + 1;
+                const position =
+                    row.position ||
+                    index + 1;
 
-            const name =
-                row.team_name ||
-                row.name ||
-                "Equipa";
+                const name =
+                    row.team_name ||
+                    "Equipa";
 
-            const logo =
-                row.team_logo ||
-                row.logo_url ||
-                "";
+                const logo =
+                    row.team_logo ||
+                    "";
 
-            return `
-                <div class="league-table-row">
+                const played =
+                    row.played ??
+                    0;
 
-                    <span>
-                        ${escapeHTML(
-                            String(position)
-                        )}
-                    </span>
+                const goalDifference =
+                    row.goal_difference ??
+                    0;
 
-                    <span class="table-team">
+                const points =
+                    row.points ??
+                    0;
 
-                        ${
-                            logo
-                                ? `
-                                    <img
-                                        src="${escapeAttribute(logo)}"
-                                        alt=""
-                                    >
-                                `
-                                : ""
-                        }
+                return `
+                    <div class="league-table-row">
 
-                        ${escapeHTML(name)}
+                        <span>
+                            ${escapeHTML(
+                                String(position)
+                            )}
+                        </span>
 
-                    </span>
+                        <span class="table-team">
 
-                    <span>
-                        ${row.played ?? row.games ?? "—"}
-                    </span>
+                            ${
+                                logo
+                                    ? `
+                                        <img
+                                            src="${escapeAttribute(logo)}"
+                                            alt="${escapeAttribute(name)}"
+                                            loading="lazy"
+                                        >
+                                    `
+                                    : ""
+                            }
 
-                    <span>
-                        ${
-                            row.goal_difference ??
-                            row.gd ??
-                            "—"
-                        }
-                    </span>
+                            ${escapeHTML(name)}
 
-                    <strong>
-                        ${row.points ?? "—"}
-                    </strong>
+                        </span>
 
-                </div>
-            `;
+                        <span>
+                            ${escapeHTML(
+                                String(played)
+                            )}
+                        </span>
 
-        }).join("");
+                        <span>
+                            ${escapeHTML(
+                                String(goalDifference)
+                            )}
+                        </span>
+
+                        <strong>
+                            ${escapeHTML(
+                                String(points)
+                            )}
+                        </strong>
+
+                    </div>
+                `;
+
+            })
+            .join("");
 }
-
-
 /* ============================================================
    PLAYER RATINGS
    ============================================================ */
