@@ -1,595 +1,1554 @@
-// ============================================================
-// BARÇA REAL — ADMINISTRAÇÃO
-// DASHBOARD + BIBLIOTECA DE DESTAQUES
-// ============================================================
+/* ============================================================
+   BARÇA REAL
+   HOME.JS
+   ============================================================ */
 
-let currentAdmin = null;
+let currentUser = null;
+let currentTeam = null;
+let currentFixtures = [];
+let currentLibraryType = null;
 
 
-// ============================================================
-// 1. VERIFICAR ADMINISTRADOR
-// ============================================================
+/* ============================================================
+   INITIAL LOAD
+   ============================================================ */
 
-async function verifyAdministrator() {
+async function loadHome() {
 
     try {
 
         const {
-            data: { user },
-            error: authError
+            data: {
+                user
+            }
         } = await supabaseClient.auth.getUser();
 
-        if (authError || !user) {
+        if (!user) {
             window.location.href = "login.html";
-            return false;
+            return;
         }
+
+        currentUser = user;
 
         const {
             data: profile,
             error: profileError
         } = await supabaseClient
             .from("profiles")
-            .select("id, display_name, username, role_id")
+            .select("supported_team_id")
             .eq("id", user.id)
             .single();
 
-        if (profileError || !profile) {
-            window.location.href = "login.html";
-            return false;
+        if (profileError) {
+            console.error(profileError);
+        }
+
+        if (!profile || !profile.supported_team_id) {
+            window.location.href = "choose-team.html";
+            return;
         }
 
         const {
-            data: role,
-            error: roleError
+            data: team,
+            error: teamError
         } = await supabaseClient
-            .from("roles")
-            .select("id, name")
-            .eq("id", profile.role_id)
+            .from("teams")
+            .select(`
+                id,
+                name,
+                slug,
+                short_name,
+                primary_color,
+                secondary_color,
+                loading_player
+            `)
+            .eq("id", profile.supported_team_id)
             .single();
 
-        if (roleError || !role || role.name !== "administrator") {
-            window.location.href = "home.html";
-            return false;
+        if (teamError || !team) {
+            console.error(teamError);
+            return;
         }
 
-        currentAdmin = { user, profile, role };
+        currentTeam = team;
 
-        const profileButton =
-            document.getElementById("admin-profile-button");
+        applyTeamTheme(team);
+        updateTeamHeader(team);
+        updateTeamBadge(team);
 
-        if (profileButton) {
+        await loadFeaturedContent(team.id);
+        setupFeaturedCarousel();
 
-            const name =
-                profile.display_name ||
-                profile.username ||
-                user.email ||
-                "Administrador";
+        await Promise.all([
+            loadNews(team.id),
+            loadOpinions(team.id),
+            loadFixtures(team),
+            loadLeagueTable(team),
+            loadPlayerRatings(team),
+            loadVideos(team.id)
+        ]);
 
-            profileButton.textContent =
-                name.charAt(0).toUpperCase();
+        setupHomepageNavigation();
 
-            profileButton.title = name;
+    } catch (error) {
+
+        console.error("Erro ao carregar homepage:", error);
+
+    }
+}
+
+
+/* ============================================================
+   TEAM THEME
+   ============================================================ */
+
+function applyTeamTheme(team) {
+
+    document.documentElement.style.setProperty(
+        "--team-primary",
+        team.primary_color || "#a50044"
+    );
+
+    document.documentElement.style.setProperty(
+        "--team-secondary",
+        team.secondary_color || "#004d98"
+    );
+
+    const primary = team.primary_color || "#a50044";
+
+    document.documentElement.style.setProperty(
+        "--team-glow",
+        hexToRgba(primary, 0.18)
+    );
+}
+
+
+function hexToRgba(hex, alpha) {
+
+    if (!hex) {
+        return `rgba(165,0,68,${alpha})`;
+    }
+
+    const clean = hex.replace("#", "");
+
+    if (clean.length !== 6) {
+        return `rgba(165,0,68,${alpha})`;
+    }
+
+    const r = parseInt(clean.substring(0, 2), 16);
+    const g = parseInt(clean.substring(2, 4), 16);
+    const b = parseInt(clean.substring(4, 6), 16);
+
+    return `rgba(${r},${g},${b},${alpha})`;
+}
+
+
+/* ============================================================
+   TEAM HEADER
+   ============================================================ */
+
+function updateTeamHeader(team) {
+
+    const title = document.getElementById("team-title");
+    const subtitle = document.getElementById("team-subtitle");
+
+    if (!title) return;
+
+    const slug = String(team.slug || "").toLowerCase();
+
+    if (slug.includes("barca") || slug.includes("barcelona")) {
+
+        title.textContent = "VISCA BARÇA";
+
+    } else if (
+        slug.includes("real") ||
+        slug.includes("madrid")
+    ) {
+
+        title.textContent = "HALA MADRID";
+
+    } else {
+
+        title.textContent =
+            team.name ? team.name.toUpperCase() : "BARÇA REAL";
+    }
+
+    if (subtitle) {
+        subtitle.textContent =
+            "Bem-vindo à tua experiência de futebol personalizada.";
+    }
+}
+
+
+function updateTeamBadge(team) {
+
+    const name = document.getElementById("selected-team-name");
+    const badge = document.getElementById("selected-team-badge");
+
+    if (name) {
+        name.textContent =
+            team.short_name || team.name || "Equipa";
+    }
+
+    if (badge) {
+        badge.textContent =
+            team.short_name
+            ? team.short_name.substring(0, 3).toUpperCase()
+            : "?";
+    }
+}
+
+
+/* ============================================================
+   DESTAQUE — EXISTING SYSTEM
+   ============================================================ */
+
+async function loadFeaturedContent(teamId) {
+
+    const track = document.getElementById("featured-track");
+    const dots = document.getElementById("featured-dots");
+
+    if (!track) return;
+
+    track.innerHTML = `
+        <article class="featured-slide">
+            <div class="featured-content">
+                <span class="featured-tag">A CARREGAR</span>
+                <h2>A carregar conteúdo...</h2>
+                <p>Estamos a preparar os destaques para ti.</p>
+            </div>
+        </article>
+    `;
+
+    if (dots) {
+        dots.innerHTML = "";
+    }
+
+    try {
+
+        const {
+            data,
+            error
+        } = await supabaseClient
+            .from("content")
+            .select("*")
+            .eq("area", "featured")
+            .eq("status", "published")
+            .or(`team_id.eq.${teamId},team_id.is.null`)
+            .order("sort_order", {
+                ascending: true
+            })
+            .order("created_at", {
+                ascending: false
+            });
+
+        if (error) {
+            throw error;
         }
 
-        return true;
+        const now = new Date();
+
+        const activeItems = (data || []).filter(item => {
+
+            if (!item.image_url) {
+                return false;
+            }
+
+            if (
+                item.start_date &&
+                new Date(item.start_date) > now
+            ) {
+                return false;
+            }
+
+            if (
+                item.end_date &&
+                new Date(item.end_date) < now
+            ) {
+                return false;
+            }
+
+            return true;
+        });
+
+        if (!activeItems.length) {
+
+            renderEmptyFeatured(
+                "Ainda não existem destaques publicados."
+            );
+
+            return;
+        }
+
+        renderFeaturedSlides(activeItems);
 
     } catch (error) {
 
         console.error(
-            "Erro ao verificar administrador:",
+            "Erro ao carregar destaques:",
             error
         );
 
-        window.location.href = "login.html";
-
-        return false;
+        renderEmptyFeatured(
+            "Não foi possível carregar os destaques."
+        );
     }
 }
 
 
-// ============================================================
-// 2. NAVEGAÇÃO
-// ============================================================
+function renderFeaturedSlides(items) {
 
-function setupNavigation() {
+    const track =
+        document.getElementById("featured-track");
 
-    const navItems =
-        document.querySelectorAll("[data-section]");
+    const dots =
+        document.getElementById("featured-dots");
 
-    const sections =
-        document.querySelectorAll(".admin-section");
+    if (!track) return;
 
-    navItems.forEach(item => {
+    track.innerHTML = "";
 
-        item.addEventListener(
-            "click",
-            async () => {
+    if (dots) {
+        dots.innerHTML = "";
+    }
 
-                const target =
-                    item.dataset.section;
+    items.forEach((item, index) => {
 
-                if (!target) return;
+        const slide =
+            document.createElement("article");
 
-                navItems.forEach(nav =>
-                    nav.classList.toggle(
-                        "active",
-                        nav === item
-                    )
-                );
+        slide.className =
+            "featured-slide";
 
-                sections.forEach(section =>
-                    section.classList.toggle(
-                        "active",
-                        section.id ===
-                        `section-${target}`
-                    )
-                );
+        slide.dataset.contentId =
+            item.id;
 
-                closeMobileSidebar();
+        slide.innerHTML = `
 
-                if (target === "featured") {
-                    await loadFeaturedLibrary();
+            <img
+                class="featured-slide-image"
+                src="${escapeAttribute(item.image_url)}"
+                alt="${escapeAttribute(item.title || "")}"
+                loading="${index === 0 ? "eager" : "lazy"}">
+
+            <div class="featured-slide-overlay"></div>
+
+            <div class="featured-content">
+
+                <span class="featured-tag">
+                    ${escapeHtml(getFeaturedLabel(item))}
+                </span>
+
+                <h2>
+                    ${escapeHtml(item.title || "Sem título")}
+                </h2>
+
+                ${
+                    item.description
+                    ? `
+                        <p>
+                            ${escapeHtml(item.description)}
+                        </p>
+                    `
+                    : ""
                 }
 
-                if (target === "dashboard") {
-                    await loadDashboardCounts();
-                    await loadRecentActivity();
+                ${
+                    item.audio_url
+                    ? `
+                        <button
+                            type="button"
+                            class="featured-audio-button"
+                            data-audio="${escapeAttribute(item.audio_url)}">
+                            ▶ Ouvir
+                        </button>
+                    `
+                    : ""
                 }
+
+            </div>
+        `;
+
+        slide.addEventListener("click", event => {
+
+            if (
+                event.target.closest(
+                    ".featured-audio-button"
+                )
+            ) {
+                return;
             }
-        );
+
+            openContent(item);
+
+        });
+
+        track.appendChild(slide);
+
+
+        if (dots) {
+
+            const dot =
+                document.createElement("button");
+
+            dot.type = "button";
+
+            dot.className =
+                "featured-dot" +
+                (index === 0 ? " active" : "");
+
+            dot.addEventListener("click", () => {
+
+                track.scrollTo({
+                    left:
+                        index * track.clientWidth,
+                    behavior: "smooth"
+                });
+
+            });
+
+            dots.appendChild(dot);
+        }
     });
+
+
+    track
+        .querySelectorAll(".featured-audio-button")
+        .forEach(button => {
+
+            button.addEventListener(
+                "click",
+                () => {
+                    playFeaturedAudio(
+                        button,
+                        button.dataset.audio
+                    );
+                }
+            );
+
+        });
 }
 
 
-// ============================================================
-// 3. SIDEBAR
-// ============================================================
+function getFeaturedLabel(item) {
 
-function setupSidebar() {
-
-    const page =
-        document.querySelector(".admin-page");
-
-    const toggle =
-        document.getElementById("sidebar-toggle");
-
-    const close =
-        document.getElementById("mobile-sidebar-close");
-
-    const overlay =
-        document.getElementById("sidebar-overlay");
-
-    if (toggle && page) {
-
-        toggle.addEventListener(
-            "click",
-            () => {
-
-                if (window.innerWidth <= 768) {
-
-                    page.classList.toggle(
-                        "sidebar-open"
-                    );
-
-                } else {
-
-                    page.classList.toggle(
-                        "sidebar-collapsed"
-                    );
-                }
-            }
-        );
+    if (item.content_type === "advertisement") {
+        return "PUBLICIDADE";
     }
 
-    close?.addEventListener(
-        "click",
-        closeMobileSidebar
-    );
+    if (item.content_type === "community") {
+        return "COMUNIDADE";
+    }
 
-    overlay?.addEventListener(
-        "click",
-        closeMobileSidebar
-    );
+    if (item.content_type === "story") {
+        return "HISTÓRIA";
+    }
 
-    window.addEventListener(
-        "resize",
-        () => {
+    if (item.team_id) {
+        return "DESTAQUE";
+    }
 
-            if (window.innerWidth > 768) {
+    return "BARÇA REAL";
+}
 
-                page?.classList.remove(
-                    "sidebar-open"
-                );
+
+function renderEmptyFeatured(message) {
+
+    const track =
+        document.getElementById("featured-track");
+
+    const dots =
+        document.getElementById("featured-dots");
+
+    if (track) {
+
+        track.innerHTML = `
+            <article class="featured-slide">
+
+                <div class="featured-content">
+
+                    <span class="featured-tag">
+                        BARÇA REAL
+                    </span>
+
+                    <h2>
+                        ${escapeHtml(message)}
+                    </h2>
+
+                    <p>
+                        Os conteúdos publicados aparecerão aqui.
+                    </p>
+
+                </div>
+
+            </article>
+        `;
+    }
+
+    if (dots) {
+        dots.innerHTML = "";
+    }
+}
+
+
+function playFeaturedAudio(button, audioUrl) {
+
+    if (!audioUrl) return;
+
+    document
+        .querySelectorAll(".featured-audio-button")
+        .forEach(other => {
+
+            if (other !== button) {
+                other.textContent = "▶ Ouvir";
             }
+
+        });
+
+    if (
+        button._audio &&
+        !button._audio.paused
+    ) {
+
+        button._audio.pause();
+        button.textContent = "▶ Ouvir";
+        return;
+    }
+
+    if (button._audio) {
+        button._audio.pause();
+    }
+
+    const audio =
+        new Audio(audioUrl);
+
+    button._audio = audio;
+
+    button.textContent = "❚❚ A ouvir";
+
+    audio.play().catch(error => {
+        console.error(error);
+        button.textContent = "▶ Ouvir";
+    });
+
+    audio.addEventListener(
+        "ended",
+        () => {
+            button.textContent = "▶ Ouvir";
         }
     );
 }
 
 
-function closeMobileSidebar() {
+function setupFeaturedCarousel() {
 
-    document
-        .querySelector(".admin-page")
-        ?.classList.remove(
-            "sidebar-open"
-        );
+    const track =
+        document.getElementById("featured-track");
+
+    const dots =
+        document.getElementById("featured-dots");
+
+    if (!track) return;
+
+    let currentIndex = 0;
+    let autoPlay;
+
+    function updateDots() {
+
+        if (!dots) return;
+
+        const allDots =
+            dots.querySelectorAll(".featured-dot");
+
+        allDots.forEach((dot, index) => {
+
+            dot.classList.toggle(
+                "active",
+                index === currentIndex
+            );
+
+        });
+    }
+
+    function goTo(index) {
+
+        const slides =
+            track.querySelectorAll(".featured-slide");
+
+        if (!slides.length) return;
+
+        currentIndex =
+            (index + slides.length) %
+            slides.length;
+
+        track.scrollTo({
+            left:
+                currentIndex * track.clientWidth,
+            behavior: "smooth"
+        });
+
+        updateDots();
+    }
+
+    function startAutoPlay() {
+
+        clearInterval(autoPlay);
+
+        autoPlay =
+            setInterval(() => {
+
+                goTo(currentIndex + 1);
+
+            }, 4000);
+    }
+
+    track.addEventListener(
+        "scroll",
+        () => {
+
+            const index =
+                Math.round(
+                    track.scrollLeft /
+                    track.clientWidth
+                );
+
+            if (index !== currentIndex) {
+
+                currentIndex = index;
+                updateDots();
+            }
+
+        }
+    );
+
+    let mouseDown = false;
+    let startX = 0;
+    let scrollLeft = 0;
+
+    track.addEventListener(
+        "mousedown",
+        event => {
+
+            mouseDown = true;
+            startX = event.pageX;
+            scrollLeft = track.scrollLeft;
+
+        }
+    );
+
+    track.addEventListener(
+        "mouseleave",
+        () => {
+            mouseDown = false;
+        }
+    );
+
+    track.addEventListener(
+        "mouseup",
+        () => {
+            mouseDown = false;
+        }
+    );
+
+    track.addEventListener(
+        "mousemove",
+        event => {
+
+            if (!mouseDown) return;
+
+            event.preventDefault();
+
+            const walk =
+                event.pageX - startX;
+
+            track.scrollLeft =
+                scrollLeft - walk;
+
+        }
+    );
+
+    startAutoPlay();
 }
 
 
-// ============================================================
-// 4. TERMINAR SESSÃO
-// ============================================================
+/* ============================================================
+   NEWS
+   ============================================================ */
 
-function setupLogout() {
+async function loadNews(teamId) {
+
+    const container =
+        document.getElementById("news-home-grid");
+
+    if (!container) return;
+
+    try {
+
+        const {
+            data,
+            error
+        } = await supabaseClient
+            .from("content")
+            .select("*")
+            .eq("status", "published")
+            .in("area", ["news", "noticias"])
+            .or(`team_id.eq.${teamId},team_id.is.null`)
+            .order("created_at", {
+                ascending: false
+            });
+
+        if (error) {
+            throw error;
+        }
+
+        const items =
+            filterActiveContent(data || []);
+
+        renderNews(items);
+
+    } catch (error) {
+
+        console.error(
+            "Erro ao carregar notícias:",
+            error
+        );
+
+        container.innerHTML = `
+            <div class="homepage-empty">
+                Não foi possível carregar as notícias.
+            </div>
+        `;
+    }
+}
+
+
+function renderNews(items) {
+
+    const container =
+        document.getElementById("news-home-grid");
+
+    if (!container) return;
+
+    if (!items.length) {
+
+        container.innerHTML = `
+            <div class="homepage-empty">
+                Ainda não existem notícias publicadas.
+            </div>
+        `;
+
+        return;
+    }
+
+    const main =
+        items[0];
+
+    const secondary =
+        items.slice(1, 7);
+
+    container.innerHTML = "";
+
+
+    /* MAIN STORY */
+
+    const mainCard =
+        document.createElement("article");
+
+    mainCard.className =
+        "news-main-card content-clickable";
+
+    mainCard.innerHTML = `
+
+        ${
+            main.image_url
+            ? `
+                <img
+                    src="${escapeAttribute(main.image_url)}"
+                    alt="${escapeAttribute(main.title || "")}">
+            `
+            : `
+                <div class="news-main-placeholder">
+                    BR
+                </div>
+            `
+        }
+
+        <div class="news-main-body">
+
+            <div class="news-type">
+                ${escapeHtml(getContentLabel(main))}
+            </div>
+
+            <h3>
+                ${escapeHtml(main.title || "Sem título")}
+            </h3>
+
+            ${
+                main.description
+                ? `
+                    <p>
+                        ${escapeHtml(main.description)}
+                    </p>
+                `
+                : ""
+            }
+
+            <div class="news-time">
+                ${formatDate(main.created_at)}
+            </div>
+
+        </div>
+    `;
+
+    mainCard.addEventListener(
+        "click",
+        () => openContent(main)
+    );
+
+    container.appendChild(mainCard);
+
+
+    /* SIX SMALL STORIES */
+
+    const smallContainer =
+        document.createElement("div");
+
+    smallContainer.className =
+        "news-small-list";
+
+    secondary.forEach(item => {
+
+        const card =
+            document.createElement("article");
+
+        card.className =
+            "news-small-card content-clickable";
+
+        card.innerHTML = `
+
+            ${
+                item.image_url
+                ? `
+                    <img
+                        src="${escapeAttribute(item.image_url)}"
+                        alt="${escapeAttribute(item.title || "")}"
+                        loading="lazy">
+                `
+                : `
+                    <div class="news-small-placeholder">
+                        BR
+                    </div>
+                `
+            }
+
+            <div class="news-small-body">
+
+                <div class="news-type">
+                    ${escapeHtml(getContentLabel(item))}
+                </div>
+
+                <h3>
+                    ${escapeHtml(item.title || "Sem título")}
+                </h3>
+
+                <div class="news-time">
+                    ${formatDate(item.created_at)}
+                </div>
+
+            </div>
+        `;
+
+        card.addEventListener(
+            "click",
+            () => openContent(item)
+        );
+
+        smallContainer.appendChild(card);
+    });
+
+    container.appendChild(smallContainer);
+}
+
+
+/* ============================================================
+   OPINION & ANALYSIS
+   ============================================================ */
+
+async function loadOpinions(teamId) {
+
+    const container =
+        document.getElementById("opinion-home-grid");
+
+    if (!container) return;
+
+    try {
+
+        const {
+            data,
+            error
+        } = await supabaseClient
+            .from("content")
+            .select("*")
+            .eq("status", "published")
+            .in("area", [
+                "opinion",
+                "opiniao",
+                "analysis",
+                "analise"
+            ])
+            .or(`team_id.eq.${teamId},team_id.is.null`)
+            .order("created_at", {
+                ascending: false
+            });
+
+        if (error) {
+            throw error;
+        }
+
+        renderOpinions(
+            filterActiveContent(data || [])
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Erro ao carregar opiniões:",
+            error
+        );
+
+        container.innerHTML = `
+            <div class="homepage-empty">
+                Não foi possível carregar a área de opinião.
+            </div>
+        `;
+    }
+}
+
+
+function renderOpinions(items) {
+
+    const container =
+        document.getElementById("opinion-home-grid");
+
+    if (!container) return;
+
+    if (!items.length) {
+
+        container.innerHTML = `
+            <div class="homepage-empty">
+                Ainda não existem opiniões publicadas.
+            </div>
+        `;
+
+        return;
+    }
+
+    const main =
+        items[0];
+
+    const others =
+        items.slice(1, 7);
+
+    container.innerHTML = "";
+
+
+    const mainCard =
+        document.createElement("article");
+
+    mainCard.className =
+        "opinion-main-card content-clickable";
+
+    mainCard.innerHTML = `
+
+        ${
+            main.image_url
+            ? `
+                <img
+                    src="${escapeAttribute(main.image_url)}"
+                    alt="${escapeAttribute(main.title || "")}">
+            `
+            : `
+                <div class="opinion-main-placeholder">
+                    OPINIÃO
+                </div>
+            `
+        }
+
+        <div class="opinion-main-body">
+
+            <div class="news-type">
+                OPINIÃO &amp; ANÁLISE
+            </div>
+
+            <h3>
+                ${escapeHtml(main.title || "Sem título")}
+            </h3>
+
+            ${
+                main.description
+                ? `
+                    <p>
+                        ${escapeHtml(main.description)}
+                    </p>
+                `
+                : ""
+            }
+
+            <div class="opinion-author">
+                ${escapeHtml(getAuthorName(main))}
+            </div>
+
+        </div>
+    `;
+
+    mainCard.addEventListener(
+        "click",
+        () => openContent(main)
+    );
+
+    container.appendChild(mainCard);
+
+
+    const smallContainer =
+        document.createElement("div");
+
+    smallContainer.className =
+        "opinion-small-list";
+
+    others.forEach(item => {
+
+        const card =
+            document.createElement("article");
+
+        card.className =
+            "opinion-small-card content-clickable";
+
+        card.innerHTML = `
+
+            ${
+                item.image_url
+                ? `
+                    <img
+                        src="${escapeAttribute(item.image_url)}"
+                        alt="${escapeAttribute(item.title || "")}"
+                        loading="lazy">
+                `
+                : `
+                    <div class="opinion-small-placeholder">
+                        OP
+                    </div>
+                `
+            }
+
+            <div class="opinion-small-body">
+
+                <div class="news-type">
+                    OPINIÃO
+                </div>
+
+                <h3>
+                    ${escapeHtml(item.title || "Sem título")}
+                </h3>
+
+                <div class="opinion-author">
+                    ${escapeHtml(getAuthorName(item))}
+                </div>
+
+            </div>
+        `;
+
+        card.addEventListener(
+            "click",
+            () => openContent(item)
+        );
+
+        smallContainer.appendChild(card);
+    });
+
+    container.appendChild(smallContainer);
+}
+
+
+/* ============================================================
+   FIXTURES
+   ============================================================ */
+
+/*
+   Fixture adapter.
+
+   Later, connect this function to the selected football-data
+   provider/API. The homepage itself already has the complete
+   presentation layer.
+
+   Expected object:
+
+   {
+       competition: "La Liga",
+       date: "2026-09-25T20:00:00",
+       home: {
+           name: "Barcelona",
+           badge: "..."
+       },
+       away: {
+           name: "Real Madrid",
+           badge: "..."
+       }
+   }
+*/
+
+async function loadFixtures(team) {
+
+    const mainDate =
+        document.getElementById(
+            "main-fixture-date"
+        );
+
+    if (!mainDate) return;
+
+    try {
+
+        const fixtures =
+            await getExternalFixtures(team);
+
+        currentFixtures =
+            Array.isArray(fixtures)
+                ? fixtures
+                : [];
+
+        renderFixtures(currentFixtures);
+
+    } catch (error) {
+
+        console.error(
+            "Erro ao carregar jogos:",
+            error
+        );
+
+        renderNoFixtures();
+    }
+}
+
+
+async function getExternalFixtures(team) {
+
+    /*
+       This is intentionally kept as the external-data adapter.
+
+       When the football API is connected, only this function
+       needs to be connected to that provider.
+    */
+
+    if (
+        window.BARCA_REAL_FIXTURES &&
+        Array.isArray(
+            window.BARCA_REAL_FIXTURES
+        )
+    ) {
+
+        return window.BARCA_REAL_FIXTURES;
+    }
+
+    return [];
+}
+
+
+function renderFixtures(fixtures) {
+
+    const main =
+        fixtures[0];
+
+    const next =
+        fixtures.slice(1, 3);
+
+    if (!main) {
+        renderNoFixtures();
+        return;
+    }
+
+    setText(
+        "main-fixture-competition",
+        main.competition || "JOGO"
+    );
+
+    setText(
+        "main-fixture-date",
+        formatFixtureDate(main.date)
+    );
+
+    setText(
+        "main-home-name",
+        main.home?.name || "—"
+    );
+
+    setText(
+        "main-away-name",
+        main.away?.name || "—"
+    );
+
+    setBadge(
+        "main-home-badge",
+        main.home
+    );
+
+    setBadge(
+        "main-away-badge",
+        main.away
+    );
+
+    const list =
+        document.getElementById(
+            "next-fixtures"
+        );
+
+    if (!list) return;
+
+    list.innerHTML = "";
+
+    next.forEach(fixture => {
+
+        const card =
+            document.createElement("div");
+
+        card.className =
+            "fixture-small-card";
+
+        card.innerHTML = `
+
+            <div class="fixture-small-date">
+                ${escapeHtml(
+                    formatFixtureDate(fixture.date)
+                )}
+            </div>
+
+            <div class="fixture-small-teams">
+
+                <strong>
+                    ${escapeHtml(
+                        fixture.home?.name || "—"
+                    )}
+                </strong>
+
+                <span>vs</span>
+
+                <strong>
+                    ${escapeHtml(
+                        fixture.away?.name || "—"
+                    )}
+                </strong>
+
+            </div>
+
+            <div class="fixture-small-competition">
+                ${escapeHtml(
+                    fixture.competition || "JOGO"
+                )}
+            </div>
+        `;
+
+        list.appendChild(card);
+    });
+}
+
+
+function renderNoFixtures() {
+
+    setText(
+        "main-fixture-competition",
+        "JOGOS"
+    );
+
+    setText(
+        "main-fixture-date",
+        "Dados dos próximos jogos ainda não disponíveis"
+    );
+
+    setText(
+        "main-home-name",
+        currentTeam?.short_name ||
+        currentTeam?.name ||
+        "—"
+    );
+
+    setText(
+        "main-away-name",
+        "Adversário"
+    );
+
+    setText(
+        "main-home-badge",
+        currentTeam?.short_name ||
+        "—"
+    );
+
+    setText(
+        "main-away-badge",
+        "?"
+    );
+
+    const list =
+        document.getElementById(
+            "next-fixtures"
+        );
+
+    if (list) {
+
+        list.innerHTML = `
+            <div class="fixture-small-card fixture-data-empty">
+                Os próximos jogos serão apresentados aqui.
+            </div>
+        `;
+    }
+}
+
+
+function setBadge(id, team) {
+
+    const element =
+        document.getElementById(id);
+
+    if (!element) return;
+
+    if (team?.badge) {
+
+        element.innerHTML = `
+            <img
+                src="${escapeAttribute(team.badge)}"
+                alt="${escapeAttribute(team.name || "")}">
+        `;
+
+    } else {
+
+        element.textContent =
+            team?.short_name ||
+            team?.name?.substring(0, 3) ||
+            "?";
+    }
+}
+
+
+/* ============================================================
+   PREDICTION
+   ============================================================ */
+
+function setupPrediction() {
 
     const button =
-        document.getElementById("admin-logout");
+        document.getElementById(
+            "prediction-button"
+        );
 
     if (!button) return;
 
     button.addEventListener(
         "click",
+        () => {
+
+            if (!currentFixtures.length) {
+                return;
+            }
+
+            const fixture =
+                currentFixtures[0];
+
+            setText(
+                "prediction-match-title",
+                `${fixture.home?.name || "—"} vs ${fixture.away?.name || "—"}`
+            );
+
+            setText(
+                "prediction-home-name",
+                fixture.home?.name || "—"
+            );
+
+            setText(
+                "prediction-away-name",
+                fixture.away?.name || "—"
+            );
+
+            showView("prediction-view");
+        }
+    );
+
+
+    const submit =
+        document.getElementById(
+            "prediction-submit"
+        );
+
+    if (!submit) return;
+
+    submit.addEventListener(
+        "click",
         async () => {
 
-            try {
+            const homeScore =
+                document.getElementById(
+                    "prediction-home-score"
+                )?.value;
 
-                await supabaseClient.auth.signOut();
+            const awayScore =
+                document.getElementById(
+                    "prediction-away-score"
+                )?.value;
 
-            } finally {
+            const message =
+                document.getElementById(
+                    "prediction-message"
+                );
 
-                window.location.href =
-                    "login.html";
+            if (
+                homeScore === "" ||
+                awayScore === ""
+            ) {
+
+                if (message) {
+                    message.textContent =
+                        "Indica o resultado da tua previsão.";
+                }
+
+                return;
+            }
+
+            /*
+               Prediction storage can be connected once the
+               predictions table/schema is defined.
+            */
+
+            if (message) {
+
+                message.textContent =
+                    "Previsão registada nesta sessão.";
             }
         }
     );
 }
 
 
-// ============================================================
-// 5. DASHBOARD — CONTADORES
-// ============================================================
+/* ============================================================
+   LEAGUE TABLE
+   ============================================================ */
 
-async function loadDashboardCounts() {
+async function loadLeagueTable(team) {
 
-    await Promise.all([
-        loadFeaturedCount(),
-        loadUserCount(),
-        loadNewsCount(),
-        loadMatchCount()
-    ]);
-}
-
-
-// ============================================================
-// DESTAQUES
-// ============================================================
-
-async function loadFeaturedCount() {
-
-    const element =
+    const body =
         document.getElementById(
-            "stat-featured"
+            "league-table-body"
         );
 
-    if (!element) return;
-
-    try {
-
-        const {
-            count,
-            error
-        } = await supabaseClient
-            .from("content")
-            .select("id", {
-                count: "exact",
-                head: true
-            })
-            .eq("area", "featured");
-
-        if (error) throw error;
-
-        element.textContent =
-            count ?? 0;
-
-    } catch (error) {
-
-        console.error(
-            "Erro no contador de Destaques:",
-            error
-        );
-
-        element.textContent =
-            "—";
-    }
-}
-
-
-// ============================================================
-// UTILIZADORES
-// ============================================================
-
-async function loadUserCount() {
-
-    const element =
-        document.getElementById(
-            "stat-users"
-        );
-
-    if (!element) return;
-
-    try {
-
-        const {
-            count,
-            error
-        } = await supabaseClient
-            .from("profiles")
-            .select("id", {
-                count: "exact",
-                head: true
-            });
-
-        if (error) throw error;
-
-        element.textContent =
-            count ?? 0;
-
-    } catch (error) {
-
-        console.error(
-            "Erro no contador de Utilizadores:",
-            error
-        );
-
-        element.textContent =
-            "—";
-    }
-}
-
-
-// ============================================================
-// NOTÍCIAS
-// ============================================================
-
-async function loadNewsCount() {
-
-    const element =
-        document.getElementById(
-            "stat-news"
-        );
-
-    if (!element) return;
-
-    try {
-
-        const {
-            count,
-            error
-        } = await supabaseClient
-            .from("content")
-            .select("id", {
-                count: "exact",
-                head: true
-            })
-            .eq("content_type", "news")
-            .in(
-                "area",
-                [
-                    "news",
-                    "both"
-                ]
-            );
-
-        if (error) throw error;
-
-        element.textContent =
-            count ?? 0;
-
-    } catch (error) {
-
-        console.warn(
-            "Contador de Notícias:",
-            error
-        );
-
-        element.textContent =
-            "0";
-    }
-}
-
-
-// ============================================================
-// JOGOS
-// ============================================================
-
-async function loadMatchCount() {
-
-    const element =
-        document.getElementById(
-            "stat-matches"
-        );
-
-    if (!element) return;
-
-    element.textContent =
-        "0";
-}
-
-
-// ============================================================
-// 6. DASHBOARD — ACTIVIDADE
-// ============================================================
-
-async function loadRecentActivity() {
-
-    const list =
-        document.getElementById(
-            "dashboard-activity"
-        );
-
-    if (!list) return;
-
-    try {
-
-        const {
-            data,
-            error
-        } = await supabaseClient
-            .from("content")
-            .select(
-                "id,title,area,status,created_at"
-            )
-            .order(
-                "created_at",
-                {
-                    ascending: false
-                }
-            )
-            .limit(6);
-
-        if (error) throw error;
-
-        if (!data?.length) {
-
-            list.innerHTML =
-                "Ainda não existem atividades.";
-
-            return;
-        }
-
-        list.innerHTML =
-            data
-                .map(
-                    item => `
-                        <div class="activity-item">
-
-                            <div class="activity-icon">
-                                ★
-                            </div>
-
-                            <div class="activity-content">
-
-                                <div class="activity-title">
-                                    ${escapeHTML(
-                                        getActivityLabel(
-                                            item
-                                        )
-                                    )}
-                                </div>
-
-                                <div class="activity-meta">
-                                    ${escapeHTML(
-                                        item.title ||
-                                        "Sem título"
-                                    )}
-                                    ·
-                                    ${escapeHTML(
-                                        formatDate(
-                                            item.created_at
-                                        )
-                                    )}
-                                </div>
-
-                            </div>
-
-                        </div>
-                    `
-                )
-                .join("");
-
-    } catch (error) {
-
-        console.warn(
-            "Erro na actividade recente:",
-            error
-        );
-
-        list.innerHTML =
-            "Não foi possível carregar a actividade recente.";
-    }
-}
-
-
-function getActivityLabel(item) {
-
-    if (item.area === "featured") {
-
-        if (
-            item.status ===
-            "published"
-        ) {
-            return "Destaque publicado";
-        }
-
-        if (
-            item.status ===
-            "draft"
-        ) {
-            return "Destaque criado";
-        }
-
-        if (
-            item.status ===
-            "archived"
-        ) {
-            return "Destaque arquivado";
-        }
-
-        return "Destaque actualizado";
-    }
-
-    if (
-        item.area === "news" ||
-        item.area === "both"
-    ) {
-
-        return item.status ===
-            "published"
-
-            ? "Notícia publicada"
-
-            : "Notícia criada";
-    }
-
-    return "Conteúdo criado";
-}
-
-
-function setupDashboardRetry() {
+    if (!body) return;
+
+    renderEmptyTable(
+        "A classificação será carregada a partir da fonte oficial de jogos."
+    );
 
     document
-        .getElementById(
-            "dashboard-retry"
-        )
-        ?.addEventListener(
-            "click",
-            async () => {
+        .querySelectorAll(".table-tab")
+        .forEach(tab => {
 
-                await loadDashboardCounts();
-                await loadRecentActivity();
-            }
-        );
+            tab.addEventListener(
+                "click",
+                () => {
+
+                    document
+                        .querySelectorAll(".table-tab")
+                        .forEach(other =>
+                            other.classList.remove("active")
+                        );
+
+                    tab.classList.add("active");
+
+                    const competition =
+                        tab.dataset.competition;
+
+                    loadTableCompetition(
+                        team,
+                        competition
+                    );
+                }
+            );
+
+        });
 }
 
 
-// ============================================================
-// 7. BIBLIOTECA DE DESTAQUES
-// ============================================================
+async function loadTableCompetition(
+    team,
+    competition
+) {
 
-async function loadFeaturedLibrary() {
+    renderEmptyTable(
+        `${competition === "champions"
+            ? "Champions League"
+            : "Liga"} — classificação a carregar.`
+    );
 
-    const list =
+    /*
+       External league-table adapter.
+
+       Connect the football-data provider here when the API
+       credentials/source are configured.
+    */
+}
+
+
+function renderEmptyTable(message) {
+
+    const body =
         document.getElementById(
-            "featured-list"
+            "league-table-body"
         );
 
-    if (!list) return;
+    if (!body) return;
 
-    list.innerHTML = `
-        <div class="featured-library-loading">
-            A carregar a biblioteca de destaques...
+    body.innerHTML = `
+        <div class="table-empty">
+            ${escapeHtml(message)}
         </div>
     `;
+}
+
+
+/* ============================================================
+   PLAYER RATINGS
+   ============================================================ */
+
+async function loadPlayerRatings(team) {
+
+    const container =
+        document.getElementById(
+            "ratings-list"
+        );
+
+    if (!container) return;
+
+    /*
+       Ratings should eventually come from a dedicated
+       Supabase ratings table.
+
+       We deliberately do not query a table that has not yet
+       been defined in the project.
+    */
+
+    container.innerHTML = `
+        <div class="table-empty">
+            As avaliações dos adeptos aparecerão aqui depois dos jogos.
+        </div>
+    `;
+}
+
+
+/* ============================================================
+   VIDEOS
+   ============================================================ */
+
+async function loadVideos(teamId) {
+
+    const container =
+        document.getElementById(
+            "videos-home-grid"
+        );
+
+    if (!container) return;
 
     try {
 
@@ -598,2637 +1557,810 @@ async function loadFeaturedLibrary() {
             error
         } = await supabaseClient
             .from("content")
-            .select(`
-                id,
-                title,
-                description,
-                content_type,
-                area,
-                team_id,
-                image_url,
-                audio_url,
-                status,
-                sort_order,
-                created_at,
-                updated_at
-            `)
-            .eq(
-                "area",
-                "featured"
-            )
-            .order(
-                "sort_order",
-                {
-                    ascending: true,
-                    nullsFirst: false
-                }
-            )
-            .order(
-                "created_at",
-                {
-                    ascending: false
-                }
-            );
+            .select("*")
+            .eq("status", "published")
+            .eq("content_type", "video")
+            .or(`team_id.eq.${teamId},team_id.is.null`)
+            .order("created_at", {
+                ascending: false
+            });
 
-        if (error) throw error;
+        if (error) {
+            throw error;
+        }
 
-        const items =
-            data || [];
-
-        await renderFeaturedLibrary(
-            items
+        renderVideos(
+            filterActiveContent(data || [])
         );
 
     } catch (error) {
 
         console.error(
-            "Erro ao carregar Destaques:",
+            "Erro ao carregar vídeos:",
             error
         );
 
-        list.innerHTML = `
-            <div class="featured-library-error">
-                <strong>
-                    Não foi possível carregar os destaques.
-                </strong>
-
-                <span>
-                    ${escapeHTML(
-                        error.message ||
-                        "Erro desconhecido."
-                    )}
-                </span>
+        container.innerHTML = `
+            <div class="homepage-empty">
+                Ainda não existem vídeos publicados.
             </div>
         `;
     }
 }
 
 
-async function renderFeaturedLibrary(
-    items
-) {
+function renderVideos(items) {
 
-    const list =
+    const container =
         document.getElementById(
-            "featured-list"
+            "videos-home-grid"
         );
 
-    if (!list) return;
-
-    const counts = {
-
-        all:
-            items.length,
-
-        published:
-            items.filter(
-                item =>
-                    item.status ===
-                    "published"
-            ).length,
-
-        draft:
-            items.filter(
-                item =>
-                    item.status ===
-                    "draft"
-            ).length,
-
-        archived:
-            items.filter(
-                item =>
-                    item.status ===
-                    "archived"
-            ).length
-    };
-
-    let teams = [];
-
-    const {
-        data: teamData,
-        error: teamError
-    } = await supabaseClient
-        .from("teams")
-        .select(
-            "id,name,short_name"
-        )
-        .order(
-            "name",
-            {
-                ascending: true
-            }
-        );
-
-    if (!teamError) {
-        teams =
-            teamData || [];
-    }
-
-    const teamMap =
-        Object.fromEntries(
-            teams.map(
-                team => [
-                    team.id,
-                    team
-                ]
-            )
-        );
-
-    list.innerHTML = `
-
-        <div class="featured-library-shell">
-
-            <div class="featured-library-toolbar">
-
-                <div class="featured-library-summary">
-
-                    <strong>
-                        ${counts.all}
-                    </strong>
-
-                    <span>
-                        ${
-                            counts.all === 1
-                                ? "destaque"
-                                : "destaques"
-                        }
-                    </span>
-
-                </div>
-
-                <label class="featured-filter-wrap">
-
-                    <span>
-                        Estado
-                    </span>
-
-                    <select
-                        id="featured-status-filter"
-                    >
-
-                        <option value="all">
-                            Todos (${counts.all})
-                        </option>
-
-                        <option value="published">
-                            Publicados (${counts.published})
-                        </option>
-
-                        <option value="draft">
-                            Rascunhos (${counts.draft})
-                        </option>
-
-                        <option value="archived">
-                            Arquivados (${counts.archived})
-                        </option>
-
-                    </select>
-
-                </label>
-
-            </div>
-
-            <div
-                class="featured-library-results"
-                id="featured-library-results"
-            >
-                ${renderFeaturedCards(
-                    items,
-                    teamMap
-                )}
-            </div>
-
-        </div>
-    `;
-
-    document
-        .getElementById(
-            "featured-status-filter"
-        )
-        ?.addEventListener(
-            "change",
-            event => {
-
-                const filter =
-                    event.target.value;
-
-                const filteredItems =
-                    filter === "all"
-
-                        ? items
-
-                        : items.filter(
-                            item =>
-                                item.status ===
-                                filter
-                        );
-
-                const results =
-                    document.getElementById(
-                        "featured-library-results"
-                    );
-
-                if (results) {
-
-                    results.innerHTML =
-                        renderFeaturedCards(
-                            filteredItems,
-                            teamMap
-                        );
-                }
-
-                bindFeaturedActions();
-            }
-        );
-
-    bindFeaturedActions();
-}
-
-
-function renderFeaturedCards(
-    items,
-    teamMap
-) {
+    if (!container) return;
 
     if (!items.length) {
 
-        return `
-            <div class="featured-library-empty">
+        container.innerHTML = `
+            <div class="homepage-empty">
+                Ainda não existem vídeos publicados.
+            </div>
+        `;
 
-                <div class="featured-library-empty-icon">
-                    ★
-                </div>
+        return;
+    }
 
-                <strong>
-                    Nenhum destaque nesta categoria.
-                </strong>
+    container.innerHTML = "";
 
-                <span>
-                    Cria um novo destaque ou altera o filtro.
+    items.slice(0, 4).forEach(item => {
+
+        const card =
+            document.createElement("article");
+
+        card.className =
+            "video-card content-clickable";
+
+        card.innerHTML = `
+
+            <div class="video-image">
+
+                ${
+                    item.image_url
+                    ? `
+                        <img
+                            src="${escapeAttribute(item.image_url)}"
+                            alt="${escapeAttribute(item.title || "")}"
+                            loading="lazy">
+                    `
+                    : ""
+                }
+
+                <span class="video-play">
+                    ▶
                 </span>
 
             </div>
+
+            <div class="video-body">
+
+                <div class="news-type">
+                    VÍDEO
+                </div>
+
+                <h3>
+                    ${escapeHtml(
+                        item.title || "Sem título"
+                    )}
+                </h3>
+
+            </div>
         `;
-    }
 
-    return items
-        .map(
-            item => {
+        card.addEventListener(
+            "click",
+            () => openContent(item)
+        );
 
-                const team =
-                    item.team_id
-                        ? teamMap[
-                            item.team_id
-                        ]
-                        : null;
-
-                const status =
-                    normalizeStatus(
-                        item.status
-                    );
-
-                const media =
-                    item.image_url
-
-                        ? `
-                            <img
-                                src="${escapeAttribute(
-                                    item.image_url
-                                )}"
-                                alt="${escapeAttribute(
-                                    item.title ||
-                                    "Destaque"
-                                )}"
-                                class="featured-card-image"
-                                loading="lazy"
-                                onerror="this.style.display='none';"
-                            >
-                        `
-
-                        : `
-                            <div class="featured-card-placeholder">
-                                ★
-                            </div>
-                        `;
-
-                const teamLabel =
-                    team?.short_name ||
-                    team?.name ||
-                    "Ambos os clubes";
-
-                return `
-                    <article
-                        class="featured-library-card"
-                        data-featured-id="${escapeAttribute(
-                            item.id
-                        )}"
-                    >
-
-                        <div class="featured-card-media">
-
-                            ${media}
-
-                            <span
-                                class="featured-status-badge ${escapeAttribute(
-                                    item.status ||
-                                    "draft"
-                                )}"
-                            >
-                                ${escapeHTML(
-                                    status.label
-                                )}
-                            </span>
-
-                            ${
-                                item.audio_url
-                                    ? `
-                                        <span class="featured-audio-badge">
-                                            ♪ Áudio
-                                        </span>
-                                    `
-                                    : ""
-                            }
-
-                        </div>
-
-                        <div class="featured-card-content">
-
-                            <div class="featured-card-topline">
-
-                                <span>
-                                    DESTAQUE
-                                </span>
-
-                                <span>
-                                    ${escapeHTML(
-                                        teamLabel
-                                    )}
-                                </span>
-
-                            </div>
-
-                            <h3>
-                                ${escapeHTML(
-                                    item.title ||
-                                    "Sem título"
-                                )}
-                            </h3>
-
-                            <p>
-                                ${escapeHTML(
-                                    item.description ||
-                                    "Sem descrição."
-                                )}
-                            </p>
-
-                            <div class="featured-card-meta">
-
-                                <span>
-                                    Criado
-                                    ${escapeHTML(
-                                        formatDate(
-                                            item.created_at
-                                        )
-                                    )}
-                                </span>
-
-                                ${
-                                    item.updated_at &&
-                                    item.updated_at !==
-                                    item.created_at
-
-                                        ? `
-                                            <span>
-                                                Actualizado
-                                                ${escapeHTML(
-                                                    formatDate(
-                                                        item.updated_at
-                                                    )
-                                                )}
-                                            </span>
-                                        `
-
-                                        : ""
-                                }
-
-                            </div>
-
-                            <div class="featured-card-actions">
-
-                                <button
-                                    type="button"
-                                    class="featured-action-button secondary"
-                                    data-featured-action="edit"
-                                    data-featured-id="${escapeAttribute(
-                                        item.id
-                                    )}"
-                                >
-                                    Editar
-                                </button>
-
-                                ${getStatusAction(
-                                    item
-                                )}
-
-                                <button
-                                    type="button"
-                                    class="featured-action-button danger"
-                                    data-featured-action="delete"
-                                    data-featured-id="${escapeAttribute(
-                                        item.id
-                                    )}"
-                                >
-                                    Eliminar
-                                </button>
-
-                            </div>
-
-                            <div class="featured-card-secondary-actions">
-
-                                ${getArchiveAction(
-                                    item
-                                )}
-
-                            </div>
-
-                        </div>
-
-                    </article>
-                `;
-            }
-        )
-        .join("");
+        container.appendChild(card);
+    });
 }
 
 
-function getStatusAction(
-    item
-) {
+/* ============================================================
+   CONTENT VIEW
+   ============================================================ */
 
-    if (
-        item.status ===
-        "published"
-    ) {
-
-        return `
-            <button
-                type="button"
-                class="featured-action-button"
-                data-featured-action="unpublish"
-                data-featured-id="${escapeAttribute(
-                    item.id
-                )}"
-            >
-                Despublicar
-            </button>
-        `;
-    }
-
-    if (
-        item.status ===
-        "archived"
-    ) {
-
-        return `
-            <button
-                type="button"
-                class="featured-action-button"
-                data-featured-action="restore"
-                data-featured-id="${escapeAttribute(
-                    item.id
-                )}"
-            >
-                Restaurar
-            </button>
-        `;
-    }
-
-    return `
-        <button
-            type="button"
-            class="featured-action-button primary"
-            data-featured-action="publish"
-            data-featured-id="${escapeAttribute(
-                item.id
-            )}"
-        >
-            Publicar
-        </button>
-    `;
-}
-
-
-function getArchiveAction(
-    item
-) {
-
-    if (
-        item.status ===
-        "archived"
-    ) {
-        return "";
-    }
-
-    return `
-        <button
-            type="button"
-            class="featured-text-action"
-            data-featured-action="archive"
-            data-featured-id="${escapeAttribute(
-                item.id
-            )}"
-        >
-            Arquivar
-        </button>
-    `;
-}
-
-
-function bindFeaturedActions() {
-
-    document
-        .querySelectorAll(
-            "[data-featured-action]"
-        )
-        .forEach(
-            button => {
-
-                if (
-                    button.dataset.bound ===
-                    "true"
-                ) {
-                    return;
-                }
-
-                button.dataset.bound =
-                    "true";
-
-                button.addEventListener(
-                    "click",
-                    async () => {
-
-                        const id =
-                            button.dataset.featuredId;
-
-                        const action =
-                            button.dataset.featuredAction;
-
-                        if (
-                            !id ||
-                            !action
-                        ) {
-                            return;
-                        }
-
-                        if (
-                            action ===
-                            "edit"
-                        ) {
-
-                            await editFeatured(
-                                id
-                            );
-
-                            return;
-                        }
-
-                        if (
-                            action ===
-                            "delete"
-                        ) {
-
-                            await deleteFeatured(
-                                id
-                            );
-
-                            return;
-                        }
-
-                        if (
-                            action ===
-                            "publish"
-                        ) {
-
-                            await changeFeaturedStatus(
-                                id,
-                                "published"
-                            );
-
-                            return;
-                        }
-
-                        if (
-                            action ===
-                            "unpublish"
-                        ) {
-
-                            await changeFeaturedStatus(
-                                id,
-                                "draft"
-                            );
-
-                            return;
-                        }
-
-                        if (
-                            action ===
-                            "archive"
-                        ) {
-
-                            await changeFeaturedStatus(
-                                id,
-                                "archived"
-                            );
-
-                            return;
-                        }
-
-                        if (
-                            action ===
-                            "restore"
-                        ) {
-
-                            await changeFeaturedStatus(
-                                id,
-                                "draft"
-                            );
-                        }
-                    }
-                );
-            }
-        );
-}
-
-
-// ============================================================
-// 8. ESTADOS DE DESTAQUE
-// ============================================================
-
-async function changeFeaturedStatus(
-    id,
-    status
-) {
-
-    const item =
-        await getFeaturedById(
-            id
-        );
-
-    if (!item) return;
-
-    const messages = {
-
-        published:
-            "Publicar este destaque?",
-
-        draft:
-            item.status ===
-            "published"
-
-                ? "Despublicar este destaque?"
-
-                : "Restaurar este destaque como rascunho?",
-
-        archived:
-            "Arquivar este destaque?"
-    };
-
-    if (
-        !confirm(
-            messages[status] ||
-            "Alterar o estado deste destaque?"
-        )
-    ) {
-        return;
-    }
-
-    try {
-
-        const {
-            error
-        } = await supabaseClient
-            .from("content")
-            .update({
-                status,
-                updated_at:
-                    new Date().toISOString()
-            })
-            .eq(
-                "id",
-                id
-            )
-            .eq(
-                "area",
-                "featured"
-            );
-
-        if (error) throw error;
-
-        await loadFeaturedLibrary();
-
-        await loadDashboardCounts();
-
-    } catch (error) {
-
-        console.error(
-            error
-        );
-
-        alert(
-            error.message ||
-            "Não foi possível alterar o estado."
-        );
-    }
-}
-
-
-// ============================================================
-// 9. APAGAR DESTAQUE
-// ============================================================
-
-async function deleteFeatured(
-    id
-) {
-
-    const item =
-        await getFeaturedById(
-            id
-        );
+function openContent(item) {
 
     if (!item) return;
 
     const title =
-        item.title ||
-        "este destaque";
-
-    if (
-        !confirm(
-            `Eliminar "${title}"? Esta ação não pode ser anulada.`
-        )
-    ) {
-        return;
-    }
-
-    try {
-
-        const {
-            error
-        } = await supabaseClient
-            .from("content")
-            .delete()
-            .eq(
-                "id",
-                id
-            )
-            .eq(
-                "area",
-                "featured"
-            );
-
-        if (error) throw error;
-
-        await loadFeaturedLibrary();
-
-        await loadDashboardCounts();
-
-    } catch (error) {
-
-        console.error(
-            error
+        document.getElementById(
+            "focused-content-title"
         );
 
-        alert(
-            error.message ||
-            "Não foi possível eliminar o destaque."
+    const description =
+        document.getElementById(
+            "focused-content-description"
         );
+
+    const image =
+        document.getElementById(
+            "focused-content-image"
+        );
+
+    const meta =
+        document.getElementById(
+            "focused-content-meta"
+        );
+
+    const author =
+        document.getElementById(
+            "focused-content-author"
+        );
+
+    const media =
+        document.getElementById(
+            "focused-content-media"
+        );
+
+    if (title) {
+        title.textContent =
+            item.title || "Sem título";
     }
+
+    if (description) {
+        description.textContent =
+            item.description || "";
+    }
+
+    if (meta) {
+        meta.textContent =
+            getContentLabel(item);
+    }
+
+    if (author) {
+
+        const authorName =
+            getAuthorName(item);
+
+        author.textContent =
+            authorName !== "Barça Real"
+                ? `Por ${authorName}`
+                : "";
+    }
+
+    if (image) {
+
+        if (item.image_url) {
+
+            image.innerHTML = `
+                <img
+                    src="${escapeAttribute(item.image_url)}"
+                    alt="${escapeAttribute(item.title || "")}">
+            `;
+
+        } else {
+
+            image.innerHTML = `
+                <div class="focused-image-placeholder">
+                    BARÇA REAL
+                </div>
+            `;
+        }
+    }
+
+    if (media) {
+
+        media.innerHTML = "";
+
+        if (item.audio_url) {
+
+            const audio =
+                document.createElement("audio");
+
+            audio.controls = true;
+            audio.src = item.audio_url;
+
+            media.appendChild(audio);
+        }
+
+        if (
+            item.content_type === "video" &&
+            item.video_url
+        ) {
+
+            const video =
+                document.createElement("video");
+
+            video.controls = true;
+            video.src = item.video_url;
+
+            media.appendChild(video);
+        }
+    }
+
+    showView("focused-content-view");
 }
 
 
-// ============================================================
-// 10. OBTER DESTAQUE
-// ============================================================
+/* ============================================================
+   LIBRARY
+   ============================================================ */
 
-async function getFeaturedById(
-    id
-) {
+async function openLibrary(type) {
 
-    const {
-        data,
-        error
-    } = await supabaseClient
-        .from("content")
-        .select(`
-            id,
-            title,
-            description,
-            team_id,
-            image_url,
-            audio_url,
-            status,
-            sort_order,
-            created_at,
-            updated_at
-        `)
-        .eq(
-            "id",
-            id
-        )
-        .eq(
-            "area",
-            "featured"
-        )
-        .single();
+    currentLibraryType = type;
 
-    if (
-        error ||
-        !data
-    ) {
-
-        console.error(
-            error
+    const title =
+        document.getElementById(
+            "library-title"
         );
 
-        return null;
+    const label =
+        document.getElementById(
+            "library-label"
+        );
+
+    const grid =
+        document.getElementById(
+            "library-grid"
+        );
+
+    if (!grid) return;
+
+    if (type === "news") {
+
+        title.textContent =
+            "Todas as Notícias";
+
+        label.textContent =
+            "NOTÍCIAS";
+
+    } else if (type === "opinion") {
+
+        title.textContent =
+            "Opinião & Análise";
+
+        label.textContent =
+            "VOZES";
+
+    } else if (type === "videos") {
+
+        title.textContent =
+            "Todos os Vídeos";
+
+        label.textContent =
+            "VÍDEOS";
     }
 
-    return data;
-}
-
-
-// ============================================================
-// 11. NOVO DESTAQUE
-// ============================================================
-
-function setupFeaturedCreation() {
-
-    document
-        .getElementById(
-            "create-featured"
-        )
-        ?.addEventListener(
-            "click",
-            openFeaturedModal
-        );
-}
-
-
-function openFeaturedModal() {
-
-    closeModalById(
-        "featured-modal"
-    );
-
-    const modal =
-        document.createElement(
-            "div"
-        );
-
-    modal.id =
-        "featured-modal";
-
-    modal.className =
-        "admin-modal-overlay";
-
-    modal.innerHTML = `
-
-        <div class="admin-modal featured-modal">
-
-            <div class="admin-modal-header">
-
-                <div>
-
-                    <span class="admin-modal-eyebrow">
-                        NOVO DESTAQUE
-                    </span>
-
-                    <h2>
-                        Criar destaque
-                    </h2>
-
-                    <p class="admin-modal-subtitle">
-                        Carrega a imagem principal e,
-                        opcionalmente, áudio,
-                        título e descrição.
-                    </p>
-
-                </div>
-
-                <button
-                    type="button"
-                    class="admin-modal-close"
-                    id="close-featured-modal"
-                    aria-label="Fechar"
-                >
-                    ×
-                </button>
-
-            </div>
-
-            <form id="featured-form">
-
-                <div class="admin-form-group">
-
-                    <label>
-                        Imagem
-                        <span class="required-mark">*</span>
-                    </label>
-
-                    <label
-                        class="media-upload"
-                        for="featured-image"
-                    >
-
-                        <div class="media-upload-icon">
-                            ↑
-                        </div>
-
-                        <div class="media-upload-text">
-
-                            <strong>
-                                Carregar imagem
-                            </strong>
-
-                            <span>
-                                JPG, PNG ou WEBP
-                            </span>
-
-                        </div>
-
-                        <input
-                            id="featured-image"
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp"
-                            required
-                        >
-
-                    </label>
-
-                    <div
-                        id="featured-image-preview"
-                        class="media-preview"
-                    ></div>
-
-                </div>
-
-                <div class="admin-form-group">
-
-                    <label>
-                        Áudio
-                        <span class="optional-mark">
-                            Opcional
-                        </span>
-                    </label>
-
-                    <label
-                        class="media-upload media-upload-audio"
-                        for="featured-audio"
-                    >
-
-                        <div class="media-upload-icon">
-                            ♪
-                        </div>
-
-                        <div class="media-upload-text">
-
-                            <strong>
-                                Adicionar áudio
-                            </strong>
-
-                            <span>
-                                MP3, M4A, WAV ou OGG
-                            </span>
-
-                        </div>
-
-                        <input
-                            id="featured-audio"
-                            type="file"
-                            accept="audio/mpeg,audio/mp4,audio/wav,audio/ogg,audio/x-m4a"
-                        >
-
-                    </label>
-
-                    <div
-                        id="featured-audio-preview"
-                        class="audio-preview"
-                    ></div>
-
-                </div>
-
-                <div class="admin-form-group">
-
-                    <label for="featured-title">
-                        Título
-                        <span class="optional-mark">
-                            Opcional
-                        </span>
-                    </label>
-
-                    <input
-                        id="featured-title"
-                        type="text"
-                        maxlength="150"
-                        placeholder="Ex.: O próximo grande jogo aproxima-se"
-                    >
-
-                </div>
-
-                <div class="admin-form-group">
-
-                    <label for="featured-description">
-                        Descrição
-                        <span class="optional-mark">
-                            Opcional
-                        </span>
-                    </label>
-
-                    <textarea
-                        id="featured-description"
-                        rows="4"
-                        maxlength="500"
-                        placeholder="Texto para acompanhar o destaque..."
-                    ></textarea>
-
-                </div>
-
-                <div class="admin-form-row">
-
-                    <div class="admin-form-group">
-
-                        <label for="featured-team">
-                            Clube
-                        </label>
-
-                        <select id="featured-team">
-
-                            <option value="">
-                                Ambos os clubes
-                            </option>
-
-                            <option value="barcelona">
-                                FC Barcelona
-                            </option>
-
-                            <option value="real-madrid">
-                                Real Madrid
-                            </option>
-
-                        </select>
-
-                    </div>
-
-                    <div class="admin-form-group">
-
-                        <label for="featured-status">
-                            Estado
-                        </label>
-
-                        <select id="featured-status">
-
-                            <option value="draft">
-                                Rascunho
-                            </option>
-
-                            <option value="published">
-                                Publicado
-                            </option>
-
-                        </select>
-
-                    </div>
-
-                </div>
-
-                <div
-                    id="featured-form-message"
-                    class="admin-form-message"
-                ></div>
-
-                <div class="admin-modal-actions">
-
-                    <button
-                        type="button"
-                        class="admin-button secondary"
-                        id="cancel-featured"
-                    >
-                        Cancelar
-                    </button>
-
-                    <button
-                        type="submit"
-                        class="admin-button primary"
-                        id="submit-featured"
-                    >
-                        Criar destaque
-                    </button>
-
-                </div>
-
-            </form>
-
+    grid.innerHTML = `
+        <div class="homepage-loading">
+            A carregar biblioteca...
         </div>
     `;
 
-    document.body.appendChild(
-        modal
-    );
+    showView("library-view");
 
-    document
-        .getElementById(
-            "close-featured-modal"
-        )
-        ?.addEventListener(
-            "click",
-            closeFeaturedModal
-        );
+    let areas = [];
 
-    document
-        .getElementById(
-            "cancel-featured"
-        )
-        ?.addEventListener(
-            "click",
-            closeFeaturedModal
-        );
+    if (type === "news") {
+        areas = ["news", "noticias"];
+    }
 
-    document
-        .getElementById(
-            "featured-form"
-        )
-        ?.addEventListener(
-            "submit",
-            createFeatured
-        );
+    if (type === "opinion") {
+        areas = [
+            "opinion",
+            "opiniao",
+            "analysis",
+            "analise"
+        ];
+    }
 
-    document
-        .getElementById(
-            "featured-image"
-        )
-        ?.addEventListener(
-            "change",
-            previewFeaturedImage
-        );
+    try {
 
-    document
-        .getElementById(
-            "featured-audio"
-        )
-        ?.addEventListener(
-            "change",
-            previewFeaturedAudio
-        );
+        let query =
+            supabaseClient
+                .from("content")
+                .select("*")
+                .eq("status", "published")
+                .or(`team_id.eq.${currentTeam.id},team_id.is.null`)
+                .order("created_at", {
+                    ascending: false
+                });
 
-    modal.addEventListener(
-        "click",
-        event => {
+        if (type === "videos") {
 
-            if (
-                event.target ===
-                modal
-            ) {
+            query =
+                query.eq(
+                    "content_type",
+                    "video"
+                );
 
-                closeFeaturedModal();
-            }
+        } else {
+
+            query =
+                query.in(
+                    "area",
+                    areas
+                );
         }
-    );
+
+        const {
+            data,
+            error
+        } = await query;
+
+        if (error) {
+            throw error;
+        }
+
+        renderLibrary(
+            filterActiveContent(data || [])
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Erro na biblioteca:",
+            error
+        );
+
+        grid.innerHTML = `
+            <div class="homepage-empty">
+                Não foi possível carregar os conteúdos.
+            </div>
+        `;
+    }
 }
 
 
-function closeFeaturedModal() {
+function renderLibrary(items) {
 
-    closeModalById(
-        "featured-modal"
-    );
-}
-
-
-async function createFeatured(
-    event
-) {
-
-    event.preventDefault();
-
-    const imageFile =
-        document
-            .getElementById(
-                "featured-image"
-            )
-            ?.files?.[0];
-
-    const audioFile =
-        document
-            .getElementById(
-                "featured-audio"
-            )
-            ?.files?.[0];
-
-    const title =
-        document
-            .getElementById(
-                "featured-title"
-            )
-            ?.value
-            .trim() ||
-        null;
-
-    const description =
-        document
-            .getElementById(
-                "featured-description"
-            )
-            ?.value
-            .trim() ||
-        null;
-
-    const teamSlug =
-        document
-            .getElementById(
-                "featured-team"
-            )
-            ?.value ||
-        "";
-
-    const status =
-        document
-            .getElementById(
-                "featured-status"
-            )
-            ?.value ||
-        "draft";
-
-    const message =
+    const grid =
         document.getElementById(
-            "featured-form-message"
+            "library-grid"
         );
 
-    const submitButton =
-        document.getElementById(
-            "submit-featured"
-        );
+    if (!grid) return;
 
-    if (!imageFile) {
+    if (!items.length) {
 
-        if (message) {
-
-            message.textContent =
-                "É necessário carregar uma imagem.";
-        }
+        grid.innerHTML = `
+            <div class="homepage-empty">
+                Não existem conteúdos publicados nesta área.
+            </div>
+        `;
 
         return;
     }
 
-    if (submitButton) {
+    grid.innerHTML = "";
 
-        submitButton.disabled =
-            true;
+    items.forEach(item => {
 
-        submitButton.textContent =
-            "A guardar...";
-    }
+        const card =
+            document.createElement("article");
 
-    try {
+        card.className =
+            "library-card content-clickable";
 
-        let teamId = null;
+        card.innerHTML = `
 
-        if (teamSlug) {
-
-            const {
-                data: team,
-                error: teamError
-            } = await supabaseClient
-                .from("teams")
-                .select("id")
-                .eq(
-                    "slug",
-                    teamSlug
-                )
-                .single();
-
-            if (
-                teamError ||
-                !team
-            ) {
-                throw new Error(
-                    "Não foi possível encontrar o clube."
-                );
+            ${
+                item.image_url
+                ? `
+                    <img
+                        src="${escapeAttribute(item.image_url)}"
+                        alt="${escapeAttribute(item.title || "")}"
+                        loading="lazy">
+                `
+                : `
+                    <div class="library-placeholder">
+                        BR
+                    </div>
+                `
             }
 
-            teamId =
-                team.id;
-        }
+            <div class="library-card-body">
 
-        if (message) {
-
-            message.textContent =
-                "A carregar a imagem...";
-        }
-
-        const imageUrl =
-            await uploadContentFile(
-                imageFile,
-                "images"
-            );
-
-        let audioUrl =
-            null;
-
-        if (audioFile) {
-
-            if (message) {
-
-                message.textContent =
-                    "A carregar o áudio...";
-            }
-
-            audioUrl =
-                await uploadContentFile(
-                    audioFile,
-                    "audio"
-                );
-        }
-
-        if (message) {
-
-            message.textContent =
-                "A guardar o destaque...";
-        }
-
-        const {
-            error
-        } = await supabaseClient
-            .from("content")
-            .insert({
-
-                title,
-
-                description,
-
-                content_type:
-                    "news",
-
-                area:
-                    "featured",
-
-                team_id:
-                    teamId,
-
-                image_url:
-                    imageUrl,
-
-                audio_url:
-                    audioUrl,
-
-                status,
-
-                created_by:
-                    currentAdmin
-                        .user
-                        .id
-            });
-
-        if (error) throw error;
-
-        if (message) {
-
-            message.textContent =
-                "Destaque criado com sucesso.";
-        }
-
-        await loadFeaturedLibrary();
-
-        await loadDashboardCounts();
-
-        setTimeout(
-            closeFeaturedModal,
-            500
-        );
-
-    } catch (error) {
-
-        console.error(
-            error
-        );
-
-        if (message) {
-
-            message.textContent =
-                error.message ||
-                "Não foi possível criar o destaque.";
-        }
-
-        if (submitButton) {
-
-            submitButton.disabled =
-                false;
-
-            submitButton.textContent =
-                "Criar destaque";
-        }
-    }
-}
-
-
-// ============================================================
-// 12. EDITAR DESTAQUE
-// ============================================================
-
-async function editFeatured(
-    id
-) {
-
-    const item =
-        await getFeaturedById(
-            id
-        );
-
-    if (!item) return;
-
-    closeModalById(
-        "featured-edit-modal"
-    );
-
-    const modal =
-        document.createElement(
-            "div"
-        );
-
-    modal.id =
-        "featured-edit-modal";
-
-    modal.className =
-        "admin-modal-overlay";
-
-    modal.innerHTML = `
-
-        <div class="admin-modal featured-modal">
-
-            <div class="admin-modal-header">
-
-                <div>
-
-                    <span class="admin-modal-eyebrow">
-                        EDITAR DESTAQUE
-                    </span>
-
-                    <h2>
-                        Editar destaque
-                    </h2>
-
-                    <p class="admin-modal-subtitle">
-                        Altera o conteúdo,
-                        o clube, o estado
-                        ou os ficheiros
-                        deste destaque.
-                    </p>
-
+                <div class="news-type">
+                    ${escapeHtml(
+                        getContentLabel(item)
+                    )}
                 </div>
 
-                <button
-                    type="button"
-                    class="admin-modal-close"
-                    id="close-featured-edit-modal"
-                    aria-label="Fechar"
-                >
-                    ×
-                </button>
+                <h3>
+                    ${escapeHtml(
+                        item.title || "Sem título"
+                    )}
+                </h3>
+
+                <div class="news-time">
+                    ${formatDate(item.created_at)}
+                </div>
 
             </div>
-
-            <form id="featured-edit-form">
-
-                <div class="featured-edit-current-media">
-
-                    <div>
-
-                        <span>
-                            Imagem actual
-                        </span>
-
-                        ${
-                            item.image_url
-
-                                ? `
-                                    <img
-                                        src="${escapeAttribute(
-                                            item.image_url
-                                        )}"
-                                        alt="Imagem actual"
-                                    >
-                                `
-
-                                : `
-                                    <div class="featured-edit-no-media">
-                                        Sem imagem
-                                    </div>
-                                `
-                        }
-
-                    </div>
-
-                    <div>
-
-                        <span>
-                            Áudio actual
-                        </span>
-
-                        ${
-                            item.audio_url
-
-                                ? `
-                                    <audio
-                                        controls
-                                        src="${escapeAttribute(
-                                            item.audio_url
-                                        )}"
-                                    ></audio>
-                                `
-
-                                : `
-                                    <div class="featured-edit-no-media">
-                                        Sem áudio
-                                    </div>
-                                `
-                        }
-
-                    </div>
-
-                </div>
-
-                <div class="admin-form-group">
-
-                    <label for="edit-featured-image">
-
-                        Nova imagem
-                        <span class="optional-mark">
-                            Opcional
-                        </span>
-
-                    </label>
-
-                    <label
-                        class="media-upload"
-                        for="edit-featured-image"
-                    >
-
-                        <div class="media-upload-icon">
-                            ↑
-                        </div>
-
-                        <div class="media-upload-text">
-
-                            <strong>
-                                Substituir imagem
-                            </strong>
-
-                            <span>
-                                JPG, PNG ou WEBP
-                            </span>
-
-                        </div>
-
-                        <input
-                            id="edit-featured-image"
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp"
-                        >
-
-                    </label>
-
-                    <div
-                        id="edit-featured-image-preview"
-                        class="media-preview"
-                    ></div>
-
-                </div>
-
-                <div class="admin-form-group">
-
-                    <label for="edit-featured-audio">
-
-                        Novo áudio
-                        <span class="optional-mark">
-                            Opcional
-                        </span>
-
-                    </label>
-
-                    <label
-                        class="media-upload media-upload-audio"
-                        for="edit-featured-audio"
-                    >
-
-                        <div class="media-upload-icon">
-                            ♪
-                        </div>
-
-                        <div class="media-upload-text">
-
-                            <strong>
-                                Substituir áudio
-                            </strong>
-
-                            <span>
-                                MP3, M4A, WAV ou OGG
-                            </span>
-
-                        </div>
-
-                        <input
-                            id="edit-featured-audio"
-                            type="file"
-                            accept="audio/mpeg,audio/mp4,audio/wav,audio/ogg,audio/x-m4a"
-                        >
-
-                    </label>
-
-                    <div
-                        id="edit-featured-audio-preview"
-                        class="audio-preview"
-                    ></div>
-
-                    ${
-                        item.audio_url
-
-                            ? `
-                                <label class="featured-remove-audio">
-
-                                    <input
-                                        id="edit-featured-remove-audio"
-                                        type="checkbox"
-                                    >
-
-                                    Remover o áudio actual
-
-                                </label>
-                            `
-
-                            : ""
-                    }
-
-                </div>
-
-                <div class="admin-form-group">
-
-                    <label for="edit-featured-title">
-                        Título
-                    </label>
-
-                    <input
-                        id="edit-featured-title"
-                        type="text"
-                        maxlength="150"
-                        value="${escapeAttribute(
-                            item.title ||
-                            ""
-                        )}"
-                    >
-
-                </div>
-
-                <div class="admin-form-group">
-
-                    <label for="edit-featured-description">
-                        Descrição
-                    </label>
-
-                    <textarea
-                        id="edit-featured-description"
-                        rows="4"
-                        maxlength="500"
-                    >${escapeHTML(
-                        item.description ||
-                        ""
-                    )}</textarea>
-
-                </div>
-
-                <div class="admin-form-row">
-
-                    <div class="admin-form-group">
-
-                        <label for="edit-featured-team">
-                            Clube
-                        </label>
-
-                        <select
-                            id="edit-featured-team"
-                        >
-
-                            <option value="">
-                                Ambos os clubes
-                            </option>
-
-                            <option value="barcelona">
-                                FC Barcelona
-                            </option>
-
-                            <option value="real-madrid">
-                                Real Madrid
-                            </option>
-
-                        </select>
-
-                    </div>
-
-                    <div class="admin-form-group">
-
-                        <label for="edit-featured-status">
-                            Estado
-                        </label>
-
-                        <select
-                            id="edit-featured-status"
-                        >
-
-                            <option value="draft">
-                                Rascunho
-                            </option>
-
-                            <option value="published">
-                                Publicado
-                            </option>
-
-                            <option value="archived">
-                                Arquivado
-                            </option>
-
-                        </select>
-
-                    </div>
-
-                </div>
-
-                <div class="admin-form-group">
-
-                    <label for="edit-featured-order">
-
-                        Ordem
-                        <span class="optional-mark">
-                            Opcional
-                        </span>
-
-                    </label>
-
-                    <input
-                        id="edit-featured-order"
-                        type="number"
-                        min="0"
-                        step="1"
-                        value="${
-                            Number.isFinite(
-                                Number(
-                                    item.sort_order
-                                )
-                            )
-                                ? Number(
-                                    item.sort_order
-                                )
-                                : 0
-                        }"
-                    >
-
-                </div>
-
-                <div
-                    id="featured-edit-message"
-                    class="admin-form-message"
-                ></div>
-
-                <div class="admin-modal-actions">
-
-                    <button
-                        type="button"
-                        class="admin-button secondary"
-                        id="cancel-featured-edit"
-                    >
-                        Cancelar
-                    </button>
-
-                    <button
-                        type="submit"
-                        class="admin-button primary"
-                        id="save-featured-edit"
-                    >
-                        Guardar alterações
-                    </button>
-
-                </div>
-
-            </form>
-
-        </div>
-    `;
-
-    document.body.appendChild(
-        modal
-    );
-
-    document
-        .getElementById(
-            "edit-featured-team"
-        )
-        .value =
-        await getTeamSlugById(
-            item.team_id
+        `;
+
+        card.addEventListener(
+            "click",
+            () => openContent(item)
         );
 
-    document
-        .getElementById(
-            "edit-featured-status"
-        )
-        .value =
-        item.status ||
-        "draft";
+        grid.appendChild(card);
+    });
+}
+
+
+/* ============================================================
+   VIEW SWITCHING
+   ============================================================ */
+
+function showView(viewId) {
+
+    const homepageSections =
+        document.querySelectorAll(
+            ".homepage-section"
+        );
+
+    const featured =
+        document.querySelector(
+            ".section:not(.homepage-section)"
+        );
+
+    const focused =
+        document.getElementById(
+            "focused-content-view"
+        );
+
+    const library =
+        document.getElementById(
+            "library-view"
+        );
+
+    const prediction =
+        document.getElementById(
+            "prediction-view"
+        );
+
+    homepageSections.forEach(section => {
+        section.hidden = true;
+    });
+
+    if (featured) {
+        featured.hidden = true;
+    }
+
+    if (focused) {
+        focused.hidden = true;
+    }
+
+    if (library) {
+        library.hidden = true;
+    }
+
+    if (prediction) {
+        prediction.hidden = true;
+    }
+
+    const selected =
+        document.getElementById(viewId);
+
+    if (selected) {
+        selected.hidden = false;
+    }
+
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+    });
+}
+
+
+function returnHome() {
+
+    const homepageSections =
+        document.querySelectorAll(
+            ".homepage-section"
+        );
+
+    const featured =
+        document.querySelector(
+            ".section:not(.homepage-section)"
+        );
+
+    const focused =
+        document.getElementById(
+            "focused-content-view"
+        );
+
+    const library =
+        document.getElementById(
+            "library-view"
+        );
+
+    const prediction =
+        document.getElementById(
+            "prediction-view"
+        );
+
+    homepageSections.forEach(section => {
+        section.hidden = false;
+    });
+
+    if (featured) {
+        featured.hidden = false;
+    }
+
+    if (focused) {
+        focused.hidden = true;
+    }
+
+    if (library) {
+        library.hidden = true;
+    }
+
+    if (prediction) {
+        prediction.hidden = true;
+    }
+
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+    });
+}
+
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+
+function setupHomepageNavigation() {
+
+    const moreNews =
+        document.getElementById(
+            "more-news-button"
+        );
+
+    if (moreNews) {
+
+        moreNews.addEventListener(
+            "click",
+            () => openLibrary("news")
+        );
+    }
+
+
+    const moreOpinion =
+        document.getElementById(
+            "more-opinion-button"
+        );
+
+    if (moreOpinion) {
+
+        moreOpinion.addEventListener(
+            "click",
+            () => openLibrary("opinion")
+        );
+    }
+
+
+    const moreVideos =
+        document.getElementById(
+            "more-videos-button"
+        );
+
+    if (moreVideos) {
+
+        moreVideos.addEventListener(
+            "click",
+            () => openLibrary("videos")
+        );
+    }
+
 
     document
-        .getElementById(
-            "close-featured-edit-modal"
-        )
+        .getElementById("focused-back-button")
         ?.addEventListener(
             "click",
-            closeFeaturedEditModal
+            returnHome
         );
 
+
     document
-        .getElementById(
-            "cancel-featured-edit"
-        )
+        .getElementById("library-back-button")
         ?.addEventListener(
             "click",
-            closeFeaturedEditModal
+            returnHome
         );
+
 
     document
-        .getElementById(
-            "featured-edit-form"
-        )
+        .getElementById("prediction-back-button")
         ?.addEventListener(
-            "submit",
-            event =>
-                saveFeaturedEdit(
-                    event,
-                    item
-                )
+            "click",
+            returnHome
         );
+
+
+    setupPrediction();
+
 
     document
-        .getElementById(
-            "edit-featured-image"
-        )
+        .getElementById("community-nav")
         ?.addEventListener(
-            "change",
-            previewEditFeaturedImage
-        );
-
-    document
-        .getElementById(
-            "edit-featured-audio"
-        )
-        ?.addEventListener(
-            "change",
-            previewEditFeaturedAudio
-        );
-
-    modal.addEventListener(
-        "click",
-        event => {
-
-            if (
-                event.target ===
-                modal
-            ) {
-
-                closeFeaturedEditModal();
+            "click",
+            () => {
+                window.location.href =
+                    "community.html";
             }
+        );
+
+
+    document
+        .getElementById("games-nav")
+        ?.addEventListener(
+            "click",
+            () => {
+                window.location.href =
+                    "games.html";
+            }
+        );
+}
+
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+
+function filterActiveContent(items) {
+
+    const now =
+        new Date();
+
+    return items.filter(item => {
+
+        if (
+            item.start_date &&
+            new Date(item.start_date) > now
+        ) {
+            return false;
         }
+
+        if (
+            item.end_date &&
+            new Date(item.end_date) < now
+        ) {
+            return false;
+        }
+
+        return true;
+    });
+}
+
+
+function getContentLabel(item) {
+
+    if (
+        item.area === "opinion" ||
+        item.area === "opiniao" ||
+        item.area === "analysis" ||
+        item.area === "analise"
+    ) {
+        return "OPINIÃO & ANÁLISE";
+    }
+
+    if (
+        item.content_type === "video"
+    ) {
+        return "VÍDEO";
+    }
+
+    if (
+        item.content_type === "community"
+    ) {
+        return "COMUNIDADE";
+    }
+
+    if (
+        item.content_type === "advertisement"
+    ) {
+        return "PUBLICIDADE";
+    }
+
+    return "NOTÍCIA";
+}
+
+
+function getAuthorName(item) {
+
+    return (
+        item.author_name ||
+        item.writer_name ||
+        item.author ||
+        "Barça Real"
     );
 }
 
 
-async function getTeamSlugById(
-    teamId
-) {
+function formatDate(date) {
 
-    if (!teamId) return "";
+    if (!date) return "";
 
-    const {
-        data,
-        error
-    } = await supabaseClient
-        .from("teams")
-        .select("slug")
-        .eq(
-            "id",
-            teamId
-        )
-        .single();
+    const value =
+        new Date(date);
 
-    if (
-        error ||
-        !data
-    ) {
+    if (Number.isNaN(value.getTime())) {
         return "";
     }
 
-    return data.slug ||
-        "";
-}
-
-
-function closeFeaturedEditModal() {
-
-    closeModalById(
-        "featured-edit-modal"
-    );
-}
-
-
-async function saveFeaturedEdit(
-    event,
-    item
-) {
-
-    event.preventDefault();
-
-    const message =
-        document.getElementById(
-            "featured-edit-message"
-        );
-
-    const saveButton =
-        document.getElementById(
-            "save-featured-edit"
-        );
-
-    const imageFile =
-        document
-            .getElementById(
-                "edit-featured-image"
-            )
-            ?.files?.[0] ||
-        null;
-
-    const audioFile =
-        document
-            .getElementById(
-                "edit-featured-audio"
-            )
-            ?.files?.[0] ||
-        null;
-
-    const removeAudio =
-        document
-            .getElementById(
-                "edit-featured-remove-audio"
-            )
-            ?.checked ||
-        false;
-
-    const title =
-        document
-            .getElementById(
-                "edit-featured-title"
-            )
-            ?.value
-            .trim() ||
-        null;
-
-    const description =
-        document
-            .getElementById(
-                "edit-featured-description"
-            )
-            ?.value
-            .trim() ||
-        null;
-
-    const teamSlug =
-        document
-            .getElementById(
-                "edit-featured-team"
-            )
-            ?.value ||
-        "";
-
-    const status =
-        document
-            .getElementById(
-                "edit-featured-status"
-            )
-            ?.value ||
-        "draft";
-
-    const orderValue =
-        document
-            .getElementById(
-                "edit-featured-order"
-            )
-            ?.value;
-
-    const sortOrder =
-        orderValue === ""
-
-            ? 0
-
-            : Math.max(
-                0,
-                Number(
-                    orderValue
-                ) || 0
-            );
-
-    if (saveButton) {
-
-        saveButton.disabled =
-            true;
-
-        saveButton.textContent =
-            "A guardar...";
-    }
-
-    try {
-
-        let teamId =
-            null;
-
-        if (teamSlug) {
-
-            const {
-                data: team,
-                error: teamError
-            } = await supabaseClient
-                .from("teams")
-                .select("id")
-                .eq(
-                    "slug",
-                    teamSlug
-                )
-                .single();
-
-            if (
-                teamError ||
-                !team
-            ) {
-                throw new Error(
-                    "Não foi possível encontrar o clube."
-                );
-            }
-
-            teamId =
-                team.id;
-        }
-
-        let imageUrl =
-            item.image_url ||
-            null;
-
-        let audioUrl =
-            item.audio_url ||
-            null;
-
-        if (imageFile) {
-
-            if (message) {
-
-                message.textContent =
-                    "A carregar a nova imagem...";
-            }
-
-            imageUrl =
-                await uploadContentFile(
-                    imageFile,
-                    "images"
-                );
-        }
-
-        if (audioFile) {
-
-            if (message) {
-
-                message.textContent =
-                    "A carregar o novo áudio...";
-            }
-
-            audioUrl =
-                await uploadContentFile(
-                    audioFile,
-                    "audio"
-                );
-
-        } else if (
-            removeAudio
-        ) {
-
-            audioUrl =
-                null;
-        }
-
-        if (message) {
-
-            message.textContent =
-                "A guardar as alterações...";
-        }
-
-        const {
-            error
-        } = await supabaseClient
-            .from("content")
-            .update({
-
-                title,
-
-                description,
-
-                team_id:
-                    teamId,
-
-                image_url:
-                    imageUrl,
-
-                audio_url:
-                    audioUrl,
-
-                status,
-
-                sort_order:
-                    sortOrder,
-
-                updated_at:
-                    new Date().toISOString()
-            })
-            .eq(
-                "id",
-                item.id
-            )
-            .eq(
-                "area",
-                "featured"
-            );
-
-        if (error) throw error;
-
-        if (message) {
-
-            message.textContent =
-                "Destaque actualizado com sucesso.";
-        }
-
-        await loadFeaturedLibrary();
-
-        await loadDashboardCounts();
-
-        setTimeout(
-            closeFeaturedEditModal,
-            500
-        );
-
-    } catch (error) {
-
-        console.error(
-            error
-        );
-
-        if (message) {
-
-            message.textContent =
-                error.message ||
-                "Não foi possível guardar as alterações.";
-        }
-
-        if (saveButton) {
-
-            saveButton.disabled =
-                false;
-
-            saveButton.textContent =
-                "Guardar alterações";
-        }
-    }
-}
-
-
-// ============================================================
-// 13. PREVIEWS
-// ============================================================
-
-function previewFeaturedImage(
-    event
-) {
-
-    const file =
-        event.target.files?.[0];
-
-    const preview =
-        document.getElementById(
-            "featured-image-preview"
-        );
-
-    if (!preview) return;
-
-    preview.innerHTML =
-        "";
-
-    if (!file) return;
-
-    const image =
-        document.createElement(
-            "img"
-        );
-
-    image.src =
-        URL.createObjectURL(
-            file
-        );
-
-    image.alt =
-        "Pré-visualização";
-
-    preview.appendChild(
-        image
-    );
-}
-
-
-function previewFeaturedAudio(
-    event
-) {
-
-    const file =
-        event.target.files?.[0];
-
-    const preview =
-        document.getElementById(
-            "featured-audio-preview"
-        );
-
-    if (!preview) return;
-
-    preview.innerHTML =
-        "";
-
-    if (!file) return;
-
-    const audio =
-        document.createElement(
-            "audio"
-        );
-
-    audio.controls =
-        true;
-
-    audio.src =
-        URL.createObjectURL(
-            file
-        );
-
-    preview.appendChild(
-        audio
-    );
-}
-
-
-function previewEditFeaturedImage(
-    event
-) {
-
-    const file =
-        event.target.files?.[0];
-
-    const preview =
-        document.getElementById(
-            "edit-featured-image-preview"
-        );
-
-    if (!preview) return;
-
-    preview.innerHTML =
-        "";
-
-    if (!file) return;
-
-    const image =
-        document.createElement(
-            "img"
-        );
-
-    image.src =
-        URL.createObjectURL(
-            file
-        );
-
-    image.alt =
-        "Nova imagem";
-
-    preview.appendChild(
-        image
-    );
-}
-
-
-function previewEditFeaturedAudio(
-    event
-) {
-
-    const file =
-        event.target.files?.[0];
-
-    const preview =
-        document.getElementById(
-            "edit-featured-audio-preview"
-        );
-
-    if (!preview) return;
-
-    preview.innerHTML =
-        "";
-
-    if (!file) return;
-
-    const audio =
-        document.createElement(
-            "audio"
-        );
-
-    audio.controls =
-        true;
-
-    audio.src =
-        URL.createObjectURL(
-            file
-        );
-
-    preview.appendChild(
-        audio
-    );
-}
-
-
-// ============================================================
-// 14. STORAGE
-// ============================================================
-
-async function uploadContentFile(
-    file,
-    folder
-) {
-
-    if (!file) return null;
-
-    const extension =
-        file.name
-            .split(".")
-            .pop()
-            ?.toLowerCase() ||
-        "bin";
-
-    const randomPart =
-        typeof crypto?.randomUUID ===
-        "function"
-
-            ? crypto.randomUUID()
-
-            : `${Date.now()}-${Math.random()
-                .toString(36)
-                .slice(2)}`;
-
-    const filePath =
-        `${folder}/${Date.now()}-${randomPart}.${extension}`;
-
-    const {
-        error
-    } = await supabaseClient
-        .storage
-        .from("content-media")
-        .upload(
-            filePath,
-            file,
-            {
-                cacheControl:
-                    "3600",
-                upsert:
-                    false
-            }
-        );
-
-    if (error) {
-
-        console.error(
-            "Storage upload error:",
-            error
-        );
-
-        throw error;
-    }
-
-    const {
-        data
-    } = supabaseClient
-        .storage
-        .from("content-media")
-        .getPublicUrl(
-            filePath
-        );
-
-    return data.publicUrl;
-}
-
-
-// ============================================================
-// 15. TECLADO / MODAIS
-// ============================================================
-
-document.addEventListener(
-    "keydown",
-    event => {
-
-        if (
-            event.key !==
-            "Escape"
-        ) {
-            return;
-        }
-
-        if (
-            document.getElementById(
-                "featured-edit-modal"
-            )
-        ) {
-
-            closeFeaturedEditModal();
-
-            return;
-        }
-
-        if (
-            document.getElementById(
-                "featured-modal"
-            )
-        ) {
-
-            closeFeaturedModal();
-        }
-    }
-);
-
-
-function closeModalById(
-    id
-) {
-
-    const modal =
-        document.getElementById(
-            id
-        );
-
-    if (modal) {
-
-        modal.remove();
-    }
-}
-
-
-// ============================================================
-// 16. UTILITÁRIOS
-// ============================================================
-
-function normalizeStatus(
-    status
-) {
-
-    const labels = {
-
-        draft:
-            "Rascunho",
-
-        published:
-            "Publicado",
-
-        archived:
-            "Arquivado"
-    };
-
-    return {
-
-        value:
-            status ||
-            "draft",
-
-        label:
-            labels[status] ||
-            "Rascunho"
-    };
-}
-
-
-function formatDate(
-    value
-) {
-
-    if (!value) return "—";
-
-    const date =
-        new Date(
-            value
-        );
-
-    if (
-        Number.isNaN(
-            date.getTime()
-        )
-    ) {
-        return "—";
-    }
-
-    return date.toLocaleDateString(
+    return value.toLocaleDateString(
         "pt-PT",
         {
-            day:
-                "2-digit",
-
-            month:
-                "short",
-
-            year:
-                "numeric"
+            day: "2-digit",
+            month: "short",
+            year: "numeric"
         }
     );
 }
 
 
-function escapeHTML(
-    value
-) {
+function formatFixtureDate(date) {
 
-    return String(
-        value ??
-        ""
-    )
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-        .replace(
-            /</g,
-            "&lt;"
-        )
-        .replace(
-            />/g,
-            "&gt;"
-        )
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-        .replace(
-            /'/g,
-            "&#039;"
-        );
-}
+    if (!date) {
+        return "Data a confirmar";
+    }
 
+    const value =
+        new Date(date);
 
-function escapeAttribute(
-    value
-) {
+    if (Number.isNaN(value.getTime())) {
+        return "Data a confirmar";
+    }
 
-    return escapeHTML(
-        value
+    return value.toLocaleString(
+        "pt-PT",
+        {
+            weekday: "short",
+            day: "2-digit",
+            month: "short",
+            hour: "2-digit",
+            minute: "2-digit"
+        }
     );
 }
 
 
-// ============================================================
-// 17. INICIALIZAÇÃO
-// ============================================================
+function setText(id, value) {
 
-async function initAdmin() {
+    const element =
+        document.getElementById(id);
 
-    const authorized =
-        await verifyAdministrator();
-
-    if (!authorized) {
-        return;
+    if (element) {
+        element.textContent =
+            value ?? "";
     }
-
-    setupNavigation();
-
-    setupSidebar();
-
-    setupLogout();
-
-    setupFeaturedCreation();
-
-    setupDashboardRetry();
-
-    await loadDashboardCounts();
-
-    await loadRecentActivity();
-
-    await loadFeaturedLibrary();
 }
 
 
-document.addEventListener(
-    "DOMContentLoaded",
-    initAdmin
-);
+function escapeHtml(value) {
+
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+
+function escapeAttribute(value) {
+    return escapeHtml(value);
+}
+
+
+/* ============================================================
+   START
+   ============================================================ */
+
+loadHome();
