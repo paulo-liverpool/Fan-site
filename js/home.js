@@ -1906,16 +1906,67 @@ async function loadFixtures(teamId) {
     if (!client || !teamId) return;
 
     try {
+
         /*
-         * IMPORTANT:
-         * The homepage must only show fixtures belonging
-         * to the currently selected team.
+         * Determine the selected BR team from the local teams table.
          *
-         * Barcelona page  -> Barcelona fixtures
-         * Real Madrid page -> Real Madrid fixtures
+         * We then use the football-data.org provider ID as a
+         * second, exact filter.
          *
-         * teamId is the local BR team UUID.
+         * Barcelona = 81
+         * Real Madrid = 86
          */
+        const team =
+            currentTeam;
+
+        if (!team) {
+            console.warn(
+                "BR: equipa atual não encontrada para fixtures."
+            );
+            return;
+        }
+
+        const teamName =
+            normalize(
+                team.name ||
+                team.short_name ||
+                team.slug ||
+                ""
+            );
+
+        let providerTeamId = null;
+
+        if (
+            teamName.includes("barcelona") ||
+            teamName.includes("barca")
+        ) {
+            providerTeamId = 81;
+        } else if (
+            teamName.includes("real madrid")
+        ) {
+            providerTeamId = 86;
+        }
+
+        /*
+         * If this is one of our two supported teams,
+         * require the exact football provider ID.
+         */
+        if (!providerTeamId) {
+            console.warn(
+                "BR: provider ID da equipa não identificado:",
+                team
+            );
+            return;
+        }
+
+        console.log(
+            "BR: carregando fixtures:",
+            {
+                teamName: team.name,
+                localTeamId: teamId,
+                providerTeamId: providerTeamId
+            }
+        );
 
         const { data, error } = await client
             .from("football_matches")
@@ -1926,7 +1977,7 @@ async function loadFixtures(teamId) {
             .order("match_date", {
                 ascending: true
             })
-            .limit(20);
+            .limit(30);
 
         if (error) {
             console.warn(
@@ -1936,18 +1987,51 @@ async function loadFixtures(teamId) {
             return;
         }
 
-        const now = Date.now();
+        /*
+         * SECOND SAFETY FILTER
+         *
+         * A match is accepted only when the selected team
+         * appears with its exact football provider ID.
+         *
+         * This prevents:
+         *
+         * Barcelona page -> Espanyol
+         * Real Madrid page -> another Madrid team
+         */
+        const teamMatches =
+            (data || [])
+                .filter(match => {
+
+                    const homeProviderId =
+                        Number(
+                            match.home_provider_team_id
+                        );
+
+                    const awayProviderId =
+                        Number(
+                            match.away_provider_team_id
+                        );
+
+                    return (
+                        homeProviderId === providerTeamId ||
+                        awayProviderId === providerTeamId
+                    );
+                });
+
+        console.log(
+            "BR: fixtures após filtro exacto:",
+            teamMatches
+        );
+
+        const now =
+            Date.now();
 
         /*
          * Keep only:
          *
          * 1. Upcoming matches
          * 2. Currently live matches
-         *
-         * Finished matches in the past are excluded from
-         * the "Próximo Jogo" section.
          */
-
         const liveStatuses = [
             "1H",
             "HT",
@@ -1958,37 +2042,42 @@ async function loadFixtures(teamId) {
             "LIVE"
         ];
 
-        const upcoming = (data || [])
-            .filter(match => {
+        const upcoming =
+            teamMatches
+                .filter(match => {
 
-                if (!match.match_date) {
-                    return false;
-                }
+                    if (!match.match_date) {
+                        return false;
+                    }
 
-                const status = String(
-                    match.status_short || ""
-                ).toUpperCase();
+                    const status =
+                        String(
+                            match.status_short || ""
+                        ).toUpperCase();
 
-                const isLive =
-                    Boolean(match.is_live) ||
-                    liveStatuses.includes(status);
+                    const isLive =
+                        Boolean(match.is_live) ||
+                        liveStatuses.includes(status);
 
-                if (isLive) {
-                    return true;
-                }
+                    if (isLive) {
+                        return true;
+                    }
 
-                return (
-                    new Date(match.match_date).getTime() >=
-                    now
-                );
-            })
-            .sort((a, b) => {
-                return (
-                    new Date(a.match_date).getTime() -
-                    new Date(b.match_date).getTime()
-                );
-            })
-            .slice(0, 10);
+                    return (
+                        new Date(
+                            match.match_date
+                        ).getTime() >= now
+                    );
+                })
+                .sort((a, b) => {
+
+                    return (
+                        new Date(a.match_date).getTime() -
+                        new Date(b.match_date).getTime()
+                    );
+
+                })
+                .slice(0, 10);
 
         renderFixtures(upcoming);
 
