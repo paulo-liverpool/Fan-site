@@ -1732,3 +1732,115 @@ button {
         height: 68px;
     }
 }
+/* ============================================================
+   FIXTURE BADGES + MAIS JOGOS
+   ============================================================ */
+
+.fixture-small-teams {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.fixture-small-team {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.fixture-small-badge {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+}
+
+.fixture-small-vs {
+    opacity: 0.6;
+    font-size: 12px;
+}
+
+.section-more-button {
+    display: block;
+    margin: 18px auto 0;
+    padding: 10px 20px;
+    border: 1px solid var(--team-primary);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--team-primary);
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.section-more-button:hover {
+    background: var(--team-primary);
+    color: #fff;
+}
+
+
+/* ============================================================
+   ALL FIXTURES VIEW
+   ============================================================ */
+
+.all-fixtures-header {
+    margin: 10px 0 20px;
+    font-size: 14px;
+    opacity: 0.65;
+}
+
+.all-fixtures-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.all-fixture-row {
+    padding: 16px;
+    border-radius: 14px;
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.all-fixture-date {
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.all-fixture-competition {
+    font-size: 12px;
+    opacity: 0.65;
+    margin-bottom: 12px;
+}
+
+.all-fixture-teams {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 12px;
+}
+
+.all-fixture-team {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+.all-fixture-team:last-child {
+    justify-content: flex-end;
+    text-align: right;
+}
+
+.all-fixture-badge {
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+}
+
+.all-fixture-result {
+    min-width: 60px;
+    text-align: center;
+    font-size: 13px;
+}
