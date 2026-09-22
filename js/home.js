@@ -1,3 +1,4 @@
+```javascript
 // ============================================================
 // BARÇA REAL
 // HOME PAGE
@@ -19,8 +20,7 @@ async function loadHome() {
 
     if (!user) {
 
-        window.location.href =
-            "login.html";
+        window.location.href = "login.html";
 
         return;
     }
@@ -48,8 +48,7 @@ async function loadHome() {
         !profile.supported_team_id
     ) {
 
-        window.location.href =
-            "choose-team.html";
+        window.location.href = "choose-team.html";
 
         return;
     }
@@ -79,8 +78,7 @@ async function loadHome() {
 
     if (teamError || !team) {
 
-        window.location.href =
-            "choose-team.html";
+        window.location.href = "choose-team.html";
 
         return;
     }
@@ -174,6 +172,15 @@ function setupFeaturedCarousel() {
     }
 
 
+    const slides =
+        track.querySelectorAll(
+            ".featured-slide"
+        );
+
+
+    let currentSlide = 0;
+
+
     // --------------------------------------------------------
     // ACTUALIZAR DOTS
     // --------------------------------------------------------
@@ -188,7 +195,7 @@ function setupFeaturedCarousel() {
         }
 
 
-        const currentSlide =
+        currentSlide =
             Math.round(
                 track.scrollLeft /
                 slideWidth
@@ -205,6 +212,44 @@ function setupFeaturedCarousel() {
 
             }
         );
+    }
+
+
+    // --------------------------------------------------------
+    // IR PARA UM SLIDE
+    // --------------------------------------------------------
+
+    function goToSlide(index) {
+
+        if (!slides.length) {
+            return;
+        }
+
+
+        if (index >= slides.length) {
+            index = 0;
+        }
+
+
+        if (index < 0) {
+            index = slides.length - 1;
+        }
+
+
+        currentSlide = index;
+
+
+        track.scrollTo({
+            left:
+                track.clientWidth *
+                currentSlide,
+
+            behavior:
+                "smooth"
+        });
+
+
+        updateDots();
     }
 
 
@@ -238,19 +283,28 @@ function setupFeaturedCarousel() {
                         );
 
 
-                    track.scrollTo({
-                        left:
-                            track.clientWidth *
-                            slide,
-
-                        behavior:
-                            "smooth"
-                    });
+                    goToSlide(slide);
 
                 }
             );
 
         }
+    );
+
+
+    // --------------------------------------------------------
+    // MOVIMENTO AUTOMÁTICO
+    // --------------------------------------------------------
+
+    setInterval(
+        () => {
+
+            goToSlide(
+                currentSlide + 1
+            );
+
+        },
+        4000
     );
 
 
@@ -340,3 +394,4 @@ function setupFeaturedCarousel() {
 setupFeaturedCarousel();
 
 loadHome();
+```
