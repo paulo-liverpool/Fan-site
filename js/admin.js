@@ -1,882 +1,953 @@
-// ============================================================
-// BARÇA REAL
-// ADMIN — DASHBOARD + DESTAQUES
-// ============================================================
+/* ============================================================
+   BARÇA REAL
+   ADMINISTRATION
+   ============================================================ */
 
-let currentAdmin = null;
-
-
-// ============================================================
-// 1. VERIFICAR ADMINISTRADOR
-// ============================================================
-
-async function verifyAdministrator() {
-
-    const {
-        data: { user },
-        error: authError
-    } = await supabaseClient.auth.getUser();
-
-    if (authError || !user) {
-        window.location.href = "login.html";
-        return false;
-    }
-
-    const {
-        data: profile,
-        error: profileError
-    } = await supabaseClient
-        .from("profiles")
-        .select(`
-            id,
-            display_name,
-            username,
-            role_id
-        `)
-        .eq("id", user.id)
-        .single();
-
-    if (profileError || !profile) {
-        window.location.href = "login.html";
-        return false;
-    }
-
-    const {
-        data: role,
-        error: roleError
-    } = await supabaseClient
-        .from("roles")
-        .select("id, name")
-        .eq("id", profile.role_id)
-        .single();
-
-    if (roleError || !role || role.name !== "administrator") {
-        window.location.href = "home.html";
-        return false;
-    }
-
-    currentAdmin = {
-        user,
-        profile,
-        role
-    };
-
-    const profileButton =
-        document.getElementById("admin-profile-button");
-
-    if (profileButton) {
-
-        const name =
-            profile.display_name ||
-            profile.username ||
-            user.email ||
-            "Administrador";
-
-        profileButton.textContent =
-            name.charAt(0).toUpperCase();
-
-        profileButton.title = name;
-    }
-
-    return true;
+:root {
+    --admin-bg: #0b0d11;
+    --admin-panel: #11141a;
+    --admin-panel-2: #171b22;
+    --admin-border: rgba(255,255,255,0.08);
+    --admin-text: #f5f5f5;
+    --admin-muted: #8e96a3;
+    --admin-primary: #a50044;
+    --admin-secondary: #004d98;
 }
 
 
-// ============================================================
-// 2. NAVEGAÇÃO
-// ============================================================
+/* ============================================================
+   BASE
+   ============================================================ */
 
-function setupNavigation() {
+.admin-page {
+    min-height: 100vh;
 
-    const navItems =
-        document.querySelectorAll("[data-section]");
+    background: var(--admin-bg);
 
-    const sections =
-        document.querySelectorAll(".admin-section");
-
-    navItems.forEach(item => {
-
-        item.addEventListener("click", () => {
-
-            const target = item.dataset.section;
-
-            navItems.forEach(nav => {
-                nav.classList.remove("active");
-            });
-
-            item.classList.add("active");
-
-            sections.forEach(section => {
-                section.classList.remove("active");
-            });
-
-            const targetSection =
-                document.getElementById(
-                    `section-${target}`
-                );
-
-            if (targetSection) {
-                targetSection.classList.add("active");
-            }
-        });
-    });
+    color: var(--admin-text);
 }
 
 
-// ============================================================
-// 3. TERMINAR SESSÃO
-// ============================================================
+/* ============================================================
+   TOPBAR
+   ============================================================ */
 
-function setupLogout() {
+.admin-topbar {
+    height: 72px;
 
-    const logoutButton =
-        document.querySelector("[data-action='logout']");
+    padding: 0 28px;
 
-    if (!logoutButton) return;
+    display: flex;
 
-    logoutButton.addEventListener("click", async () => {
+    align-items: center;
 
-        await supabaseClient.auth.signOut();
+    justify-content: space-between;
 
-        window.location.href = "login.html";
-    });
+    border-bottom:
+        1px solid var(--admin-border);
+
+    background: #0d1015;
 }
 
 
-// ============================================================
-// 4. BOTÃO CRIAR DESTAQUE
-// ============================================================
+.admin-brand {
+    font-size: 20px;
 
-function setupFeaturedCreation() {
+    font-weight: 900;
 
-    const button =
-        document.getElementById("create-featured");
-
-    if (!button) return;
-
-    button.addEventListener("click", openFeaturedModal);
+    letter-spacing: -0.8px;
 }
 
 
-// ============================================================
-// 5. MODAL DE CRIAR DESTAQUE
-// ============================================================
-
-function openFeaturedModal() {
-
-    const existing =
-        document.getElementById("featured-modal");
-
-    if (existing) {
-        existing.remove();
-    }
-
-    const modal =
-        document.createElement("div");
-
-    modal.id = "featured-modal";
-    modal.className = "admin-modal-overlay";
-
-    modal.innerHTML = `
-
-        <div class="admin-modal featured-modal">
-
-            <div class="admin-modal-header">
-
-                <div>
-                    <span class="admin-modal-eyebrow">
-                        NOVO DESTAQUE
-                    </span>
-
-                    <h2>Criar destaque</h2>
-
-                    <p class="admin-modal-subtitle">
-                        Publica uma imagem para a área de destaques.
-                        Podes adicionar áudio, título ou descrição.
-                    </p>
-                </div>
-
-                <button
-                    type="button"
-                    class="admin-modal-close"
-                    id="close-featured-modal"
-                    aria-label="Fechar"
-                >
-                    ×
-                </button>
-
-            </div>
-
-
-            <form id="featured-form">
-
-
-                <!-- ==================================================
-                     IMAGEM
-                     ================================================== -->
-
-                <div class="admin-form-group">
-
-                    <label>
-                        Imagem
-                        <span class="required-mark">*</span>
-                    </label>
-
-                    <label
-                        class="media-upload"
-                        for="featured-image"
-                        id="featured-image-upload"
-                    >
-
-                        <div class="media-upload-icon">
-                            ↑
-                        </div>
-
-                        <div class="media-upload-text">
-
-                            <strong>
-                                Carregar imagem
-                            </strong>
-
-                            <span>
-                                JPG, PNG ou WEBP
-                            </span>
-
-                        </div>
-
-                        <input
-                            id="featured-image"
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp"
-                            required
-                        >
-
-                    </label>
-
-                    <div
-                        id="featured-image-preview"
-                        class="media-preview"
-                    ></div>
-
-                </div>
-
-
-                <!-- ==================================================
-                     ÁUDIO
-                     ================================================== -->
-
-                <div class="admin-form-group">
-
-                    <label>
-                        Áudio
-                        <span class="optional-mark">
-                            Opcional
-                        </span>
-                    </label>
-
-                    <label
-                        class="media-upload media-upload-audio"
-                        for="featured-audio"
-                    >
-
-                        <div class="media-upload-icon">
-                            ♪
-                        </div>
-
-                        <div class="media-upload-text">
-
-                            <strong>
-                                Adicionar áudio
-                            </strong>
-
-                            <span>
-                                MP3, M4A, WAV ou OGG
-                            </span>
-
-                        </div>
-
-                        <input
-                            id="featured-audio"
-                            type="file"
-                            accept="audio/mpeg,audio/mp4,audio/wav,audio/ogg,audio/x-m4a"
-                        >
-
-                    </label>
-
-                    <div
-                        id="featured-audio-preview"
-                        class="audio-preview"
-                    ></div>
-
-                </div>
-
-
-                <!-- ==================================================
-                     TÍTULO
-                     ================================================== -->
-
-                <div class="admin-form-group">
-
-                    <label for="featured-title">
-                        Título
-                        <span class="optional-mark">
-                            Opcional
-                        </span>
-                    </label>
-
-                    <input
-                        id="featured-title"
-                        type="text"
-                        maxlength="150"
-                        placeholder="Ex.: O próximo grande jogo aproxima-se"
-                    >
-
-                </div>
-
-
-                <!-- ==================================================
-                     DESCRIÇÃO
-                     ================================================== -->
-
-                <div class="admin-form-group">
-
-                    <label for="featured-description">
-                        Descrição
-                        <span class="optional-mark">
-                            Opcional
-                        </span>
-                    </label>
-
-                    <textarea
-                        id="featured-description"
-                        rows="4"
-                        maxlength="500"
-                        placeholder="Texto para acompanhar o destaque..."
-                    ></textarea>
-
-                </div>
-
-
-                <!-- ==================================================
-                     CLUBE + ESTADO
-                     ================================================== -->
-
-                <div class="admin-form-row">
-
-                    <div class="admin-form-group">
-
-                        <label for="featured-team">
-                            Clube
-                        </label>
-
-                        <select id="featured-team">
-
-                            <option value="">
-                                Ambos os clubes
-                            </option>
-
-                            <option value="barcelona">
-                                FC Barcelona
-                            </option>
-
-                            <option value="real-madrid">
-                                Real Madrid
-                            </option>
-
-                        </select>
-
-                    </div>
-
-
-                    <div class="admin-form-group">
-
-                        <label for="featured-status">
-                            Estado
-                        </label>
-
-                        <select id="featured-status">
-
-                            <option value="draft">
-                                Rascunho
-                            </option>
-
-                            <option value="published">
-                                Publicado
-                            </option>
-
-                        </select>
-
-                    </div>
-
-                </div>
-
-
-                <!-- ==================================================
-                     MENSAGEM
-                     ================================================== -->
-
-                <div
-                    id="featured-form-message"
-                    class="admin-form-message"
-                ></div>
-
-
-                <!-- ==================================================
-                     BOTÕES
-                     ================================================== -->
-
-                <div class="admin-modal-actions">
-
-                    <button
-                        type="button"
-                        class="admin-button secondary"
-                        id="cancel-featured"
-                    >
-                        Cancelar
-                    </button>
-
-                    <button
-                        type="submit"
-                        class="admin-button primary"
-                        id="submit-featured"
-                    >
-                        Criar destaque
-                    </button>
-
-                </div>
-
-            </form>
-
-        </div>
-    `;
-
-    document.body.appendChild(modal);
-
-
-    // Fechar
-    document
-        .getElementById("close-featured-modal")
-        .addEventListener("click", closeFeaturedModal);
-
-    document
-        .getElementById("cancel-featured")
-        .addEventListener("click", closeFeaturedModal);
-
-
-    // Formulário
-    document
-        .getElementById("featured-form")
-        .addEventListener("submit", createFeatured);
-
-
-    // Preview da imagem
-    document
-        .getElementById("featured-image")
-        .addEventListener("change", previewFeaturedImage);
-
-
-    // Preview do áudio
-    document
-        .getElementById("featured-audio")
-        .addEventListener("change", previewFeaturedAudio);
-
-
-    // Fechar clicando fora
-    modal.addEventListener("click", event => {
-
-        if (event.target === modal) {
-            closeFeaturedModal();
-        }
-
-    });
+.admin-brand span {
+    opacity: 0.55;
 }
 
 
-// ============================================================
-// 6. PREVIEW DA IMAGEM
-// ============================================================
+.admin-topbar-right {
+    display: flex;
 
-function previewFeaturedImage(event) {
+    align-items: center;
 
-    const file = event.target.files[0];
-
-    const preview =
-        document.getElementById("featured-image-preview");
-
-    if (!preview) return;
-
-    preview.innerHTML = "";
-
-    if (!file) return;
-
-    const image =
-        document.createElement("img");
-
-    image.src =
-        URL.createObjectURL(file);
-
-    image.alt = "Pré-visualização";
-
-    preview.appendChild(image);
+    gap: 16px;
 }
 
 
-// ============================================================
-// 7. PREVIEW DO ÁUDIO
-// ============================================================
+.admin-label {
+    font-size: 10px;
 
-function previewFeaturedAudio(event) {
+    font-weight: 800;
 
-    const file = event.target.files[0];
+    letter-spacing: 1.5px;
 
-    const preview =
-        document.getElementById("featured-audio-preview");
-
-    if (!preview) return;
-
-    preview.innerHTML = "";
-
-    if (!file) return;
-
-    const audio =
-        document.createElement("audio");
-
-    audio.controls = true;
-    audio.src =
-        URL.createObjectURL(file);
-
-    preview.appendChild(audio);
+    color: var(--admin-muted);
 }
 
 
-// ============================================================
-// 8. FECHAR MODAL
-// ============================================================
+.admin-profile-button {
+    width: 38px;
+    height: 38px;
 
-function closeFeaturedModal() {
+    border: 0;
 
-    const modal =
-        document.getElementById("featured-modal");
+    border-radius: 50%;
 
-    if (modal) {
-        modal.remove();
-    }
+    background:
+        linear-gradient(
+            135deg,
+            var(--admin-primary),
+            var(--admin-secondary)
+        );
+
+    color: white;
+
+    font-size: 13px;
+
+    font-weight: 900;
+
+    cursor: pointer;
 }
 
 
-// ============================================================
-// 9. UPLOAD DE FICHEIRO
-// ============================================================
+/* ============================================================
+   LAYOUT
+   ============================================================ */
 
-async function uploadContentFile(file, folder) {
+.admin-layout {
+    min-height:
+        calc(100vh - 72px);
 
-    if (!file) return null;
-
-    const extension =
-        file.name.split(".").pop().toLowerCase();
-
-    const safeName =
-        `${Date.now()}-${crypto.randomUUID()}.${extension}`;
-
-    const filePath =
-        `${folder}/${safeName}`;
+    display: flex;
+}
 
 
-    const {
-        error
-    } = await supabaseClient.storage
-        .from("content-media")
-        .upload(filePath, file, {
-            cacheControl: "3600",
-            upsert: false
-        });
+/* ============================================================
+   SIDEBAR
+   ============================================================ */
 
-    if (error) {
-        console.error("Storage upload error:", error);
-        throw error;
+.admin-sidebar {
+    width: 250px;
+
+    flex-shrink: 0;
+
+    padding: 28px 16px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    border-right:
+        1px solid var(--admin-border);
+
+    background: #0d1015;
+}
+
+
+.admin-sidebar-title {
+    padding: 0 12px 14px;
+
+    font-size: 9px;
+
+    font-weight: 800;
+
+    letter-spacing: 1.5px;
+
+    color: var(--admin-muted);
+}
+
+
+.admin-navigation {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 5px;
+}
+
+
+.admin-nav-item {
+    width: 100%;
+
+    padding: 12px;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+    border: 0;
+
+    border-radius: 10px;
+
+    background: transparent;
+
+    color: #9ca3af;
+
+    font-size: 13px;
+
+    font-weight: 600;
+
+    text-align: left;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s ease,
+        color 0.2s ease;
+}
+
+
+.admin-nav-item:hover {
+    background:
+        rgba(255,255,255,0.04);
+
+    color: white;
+}
+
+
+.admin-nav-item.active {
+    background:
+        linear-gradient(
+            90deg,
+            rgba(165,0,68,0.18),
+            rgba(0,77,152,0.12)
+        );
+
+    color: white;
+}
+
+
+.admin-nav-icon {
+    width: 20px;
+
+    text-align: center;
+
+    font-size: 15px;
+}
+
+
+.admin-logout {
+    margin-top: auto;
+
+    width: 100%;
+
+    padding: 12px;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+    border: 0;
+
+    border-radius: 10px;
+
+    background: transparent;
+
+    color: #8e96a3;
+
+    font-size: 13px;
+
+    cursor: pointer;
+}
+
+
+.admin-logout:hover {
+    background:
+        rgba(255,255,255,0.04);
+
+    color: white;
+}
+
+
+/* ============================================================
+   MAIN CONTENT
+   ============================================================ */
+
+.admin-content {
+    flex: 1;
+
+    min-width: 0;
+
+    padding: 38px;
+
+    overflow-x: hidden;
+}
+
+
+.admin-section {
+    display: none;
+
+    max-width: 1200px;
+
+    margin: 0 auto;
+}
+
+
+.admin-section.active {
+    display: block;
+}
+
+
+/* ============================================================
+   SECTION HEADER
+   ============================================================ */
+
+.admin-section-header {
+    margin-bottom: 30px;
+
+    display: flex;
+
+    align-items: flex-end;
+
+    justify-content: space-between;
+
+    gap: 24px;
+}
+
+
+.admin-eyebrow {
+    margin-bottom: 8px;
+
+    font-size: 9px;
+
+    font-weight: 800;
+
+    letter-spacing: 1.6px;
+
+    color: var(--admin-muted);
+}
+
+
+.admin-section-header h1 {
+    margin: 0;
+
+    font-size: 32px;
+
+    line-height: 1;
+
+    font-weight: 900;
+
+    letter-spacing: -1.2px;
+}
+
+
+.admin-section-header p {
+    margin-top: 10px;
+
+    color: var(--admin-muted);
+
+    font-size: 13px;
+
+    line-height: 1.5;
+}
+
+
+/* ============================================================
+   BUTTON
+   ============================================================ */
+
+.admin-primary-button {
+    padding: 11px 16px;
+
+    border: 0;
+
+    border-radius: 9px;
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--admin-primary),
+            var(--admin-secondary)
+        );
+
+    color: white;
+
+    font-size: 12px;
+
+    font-weight: 800;
+
+    cursor: pointer;
+
+    white-space: nowrap;
+}
+
+
+.admin-primary-button:hover {
+    opacity: 0.9;
+}
+
+
+/* ============================================================
+   STATISTICS
+   ============================================================ */
+
+.admin-stat-grid {
+    margin-bottom: 26px;
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, 1fr);
+
+    gap: 14px;
+}
+
+
+.admin-stat-card {
+    padding: 20px;
+
+    border:
+        1px solid var(--admin-border);
+
+    border-radius: 14px;
+
+    background: var(--admin-panel);
+}
+
+
+.admin-stat-label {
+    font-size: 9px;
+
+    font-weight: 800;
+
+    letter-spacing: 1.2px;
+
+    color: var(--admin-muted);
+}
+
+
+.admin-stat-value {
+    margin-top: 10px;
+
+    font-size: 28px;
+
+    font-weight: 900;
+}
+
+
+/* ============================================================
+   PANELS
+   ============================================================ */
+
+.admin-panel {
+    border:
+        1px solid var(--admin-border);
+
+    border-radius: 14px;
+
+    background: var(--admin-panel);
+
+    overflow: hidden;
+}
+
+
+.admin-panel-header {
+    padding: 18px 20px;
+
+    border-bottom:
+        1px solid var(--admin-border);
+}
+
+
+.admin-panel-header h2 {
+    margin: 0;
+
+    font-size: 14px;
+
+    font-weight: 800;
+}
+
+
+.admin-empty-state {
+    padding: 45px 20px;
+
+    text-align: center;
+
+    color: var(--admin-muted);
+
+    font-size: 13px;
+}
+
+
+/* ============================================================
+   CONTENT LIST
+   ============================================================ */
+
+.admin-content-list {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 10px;
+}
+
+
+.admin-content-list .admin-empty-state {
+    border:
+        1px solid var(--admin-border);
+
+    border-radius: 14px;
+
+    background: var(--admin-panel);
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 900px) {
+
+    .admin-sidebar {
+        width: 210px;
     }
 
 
-    const {
-        data
-    } = supabaseClient.storage
-        .from("content-media")
-        .getPublicUrl(filePath);
-
-    return data.publicUrl;
-}
-
-
-// ============================================================
-// 10. CRIAR DESTAQUE
-// ============================================================
-
-async function createFeatured(event) {
-
-    event.preventDefault();
-
-
-    const imageFile =
-        document.getElementById("featured-image").files[0];
-
-    const audioFile =
-        document.getElementById("featured-audio").files[0];
-
-    const title =
-        document.getElementById("featured-title")
-            .value
-            .trim();
-
-    const description =
-        document.getElementById("featured-description")
-            .value
-            .trim();
-
-    const teamSlug =
-        document.getElementById("featured-team").value;
-
-    const status =
-        document.getElementById("featured-status").value;
-
-    const message =
-        document.getElementById("featured-form-message");
-
-    const submitButton =
-        document.getElementById("submit-featured");
-
-
-    // ========================================================
-    // VALIDAR IMAGEM
-    // ========================================================
-
-    if (!imageFile) {
-
-        message.textContent =
-            "É necessário carregar uma imagem.";
-
-        return;
+    .admin-content {
+        padding: 28px;
     }
 
 
-    // ========================================================
-    // BLOQUEAR BOTÃO
-    // ========================================================
-
-    submitButton.disabled = true;
-    submitButton.textContent = "A publicar...";
-    message.textContent = "A preparar os ficheiros...";
-
-
-    try {
-
-        // ======================================================
-        // CLUBE
-        // ======================================================
-
-        let teamId = null;
-
-        if (teamSlug) {
-
-            const {
-                data: team,
-                error: teamError
-            } = await supabaseClient
-                .from("teams")
-                .select("id")
-                .eq("slug", teamSlug)
-                .single();
-
-            if (teamError || !team) {
-                throw new Error(
-                    "Não foi possível encontrar o clube."
-                );
-            }
-
-            teamId = team.id;
-        }
-
-
-        // ======================================================
-        // UPLOAD IMAGEM
-        // ======================================================
-
-        message.textContent =
-            "A carregar a imagem...";
-
-        const imageUrl =
-            await uploadContentFile(
-                imageFile,
-                "images"
-            );
-
-
-        // ======================================================
-        // UPLOAD ÁUDIO
-        // ======================================================
-
-        let audioUrl = null;
-
-        if (audioFile) {
-
-            message.textContent =
-                "A carregar o áudio...";
-
-            audioUrl =
-                await uploadContentFile(
-                    audioFile,
-                    "audio"
-                );
-        }
-
-
-        // ======================================================
-        // GUARDAR CONTEÚDO
-        // ======================================================
-
-        message.textContent =
-            "A guardar o destaque...";
-
-
-        const {
-            error: contentError
-        } = await supabaseClient
-            .from("content")
-            .insert({
-
-                title:
-                    title || null,
-
-                description:
-                    description || null,
-
-                content_type:
-                    "news",
-
-                area:
-                    "featured",
-
-                team_id:
-                    teamId,
-
-                image_url:
-                    imageUrl,
-
-                audio_url:
-                    audioUrl,
-
-                status:
-                    status,
-
-                created_by:
-                    currentAdmin.user.id
-            });
-
-
-        if (contentError) {
-            throw contentError;
-        }
-
-
-        // ======================================================
-        // SUCESSO
-        // ======================================================
-
-        message.textContent =
-            "Destaque criado com sucesso.";
-
-        submitButton.textContent =
-            "Publicado";
-
-
-        setTimeout(() => {
-
-            closeFeaturedModal();
-
-            loadFeaturedCount();
-
-        }, 800);
-
-
-    } catch (error) {
-
-        console.error(error);
-
-        message.textContent =
-            error.message ||
-            "Não foi possível criar o destaque.";
-
-        submitButton.disabled = false;
-        submitButton.textContent =
-            "Criar destaque";
+    .admin-stat-grid {
+        grid-template-columns:
+            repeat(2, 1fr);
     }
+
 }
 
 
-// ============================================================
-// 11. TOTAL DE DESTAQUES
-// ============================================================
+@media (max-width: 700px) {
 
-async function loadFeaturedCount() {
-
-    const stat =
-        document.getElementById("stat-featured");
-
-    if (!stat) return;
-
-
-    const {
-        count,
-        error
-    } = await supabaseClient
-        .from("content")
-        .select("id", {
-            count: "exact",
-            head: true
-        })
-        .eq("area", "featured");
-
-
-    if (error) {
-
-        console.error(error);
-
-        stat.textContent = "—";
-
-        return;
+    .admin-topbar {
+        padding: 0 18px;
     }
 
 
-    stat.textContent =
-        count ?? 0;
+    .admin-label {
+        display: none;
+    }
+
+
+    .admin-layout {
+        display: block;
+    }
+
+
+    .admin-sidebar {
+        width: 100%;
+
+        padding: 10px;
+
+        border-right: 0;
+
+        border-bottom:
+            1px solid var(--admin-border);
+    }
+
+
+    .admin-sidebar-title,
+    .admin-logout {
+        display: none;
+    }
+
+
+    .admin-navigation {
+        display: grid;
+
+        grid-template-columns:
+            repeat(4, 1fr);
+    }
+
+
+    .admin-nav-item {
+        padding: 10px 5px;
+
+        justify-content: center;
+
+        flex-direction: column;
+
+        gap: 4px;
+
+        font-size: 9px;
+
+        text-align: center;
+    }
+
+
+    .admin-nav-icon {
+        font-size: 14px;
+    }
+
+
+    .admin-content {
+        padding: 22px 16px 40px;
+    }
+
+
+    .admin-section-header {
+        align-items: flex-start;
+
+        flex-direction: column;
+    }
+
+
+    .admin-section-header h1 {
+        font-size: 27px;
+    }
+
+
+    .admin-stat-grid {
+        grid-template-columns:
+            repeat(2, 1fr);
+    }
+
 }
 
 
-// ============================================================
-// 12. INICIALIZAÇÃO
-// ============================================================
+@media (max-width: 400px) {
 
-async function initAdmin() {
+    .admin-stat-grid {
+        grid-template-columns: 1fr;
+    }
 
-    const authorized =
-        await verifyAdministrator();
+}
+/* ============================================================
+   MODAL — CONTEÚDO
+   ============================================================ */
 
-    if (!authorized) return;
+.admin-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(0,0,0,0.78);
+    backdrop-filter: blur(10px);
+}
 
-    setupNavigation();
+.admin-modal {
+    width: 100%;
+    max-width: 650px;
+    max-height: 90vh;
+    overflow-y: auto;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 22px;
+    background: var(--admin-panel);
+    box-shadow: 0 30px 100px rgba(0,0,0,0.55);
+}
 
-    setupLogout();
+.admin-modal-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 28px 30px 22px;
+    border-bottom: 1px solid var(--admin-border);
+}
 
-    setupFeaturedCreation();
+.admin-modal-eyebrow {
+    display: block;
+    margin-bottom: 7px;
+    color: var(--admin-secondary);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.6px;
+}
 
-    await loadFeaturedCount();
+.admin-modal-header h2 {
+    margin: 0;
+    font-size: 25px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+}
+
+.admin-modal-subtitle {
+    margin: 8px 0 0;
+    max-width: 500px;
+    color: var(--admin-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.admin-modal-close {
+    flex: 0 0 auto;
+    width: 38px;
+    height: 38px;
+    border: 1px solid var(--admin-border);
+    border-radius: 11px;
+    background: transparent;
+    color: var(--admin-muted);
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.admin-modal-close:hover {
+    border-color: rgba(255,255,255,0.2);
+    background: var(--admin-panel-2);
+    color: var(--admin-text);
+}
+
+#featured-form {
+    padding: 26px 30px 30px;
+}
+
+.admin-form-group {
+    margin-bottom: 22px;
+}
+
+.admin-form-group label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 9px;
+    color: var(--admin-text);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.required-mark {
+    color: #e5484d;
+}
+
+.optional-mark {
+    color: var(--admin-muted);
+    font-size: 10px;
+    font-weight: 500;
+}
+
+.admin-form-group input,
+.admin-form-group textarea,
+.admin-form-group select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 13px 14px;
+    border: 1px solid var(--admin-border);
+    border-radius: 11px;
+    outline: none;
+    background: var(--admin-panel-2);
+    color: var(--admin-text);
+    font: inherit;
+    font-size: 13px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.admin-form-group input::placeholder,
+.admin-form-group textarea::placeholder {
+    color: #626a76;
+}
+
+.admin-form-group input:focus,
+.admin-form-group textarea:focus,
+.admin-form-group select:focus {
+    border-color: var(--admin-secondary);
+    box-shadow: 0 0 0 3px rgba(0,77,152,0.12);
+}
+
+.admin-form-group textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.admin-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
 }
 
 
-// ============================================================
-// 13. INICIAR
-// ============================================================
+/* ============================================================
+   UPLOAD
+   ============================================================ */
 
-document.addEventListener(
-    "DOMContentLoaded",
-    initAdmin
-);
+.media-upload {
+    display: flex !important;
+    align-items: center;
+    gap: 14px;
+    min-height: 76px;
+    margin: 0 !important;
+    padding: 14px 16px;
+    border: 1px dashed rgba(255,255,255,0.18);
+    border-radius: 13px;
+    background: rgba(255,255,255,0.02);
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.media-upload:hover {
+    border-color: var(--admin-secondary);
+    background: rgba(0,77,152,0.06);
+}
+
+.media-upload input {
+    display: none;
+}
+
+.media-upload-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    border-radius: 11px;
+    background: rgba(255,255,255,0.06);
+    color: var(--admin-text);
+    font-size: 20px;
+}
+
+.media-upload-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.media-upload-text strong {
+    color: var(--admin-text);
+    font-size: 12px;
+}
+
+.media-upload-text span {
+    color: var(--admin-muted);
+    font-size: 10px;
+}
+
+
+/* ============================================================
+   IMAGEM PREVIEW
+   ============================================================ */
+
+.media-preview {
+    margin-top: 12px;
+}
+
+.media-preview img {
+    display: block;
+    width: 100%;
+    max-height: 260px;
+    object-fit: cover;
+    border: 1px solid var(--admin-border);
+    border-radius: 13px;
+}
+
+
+/* ============================================================
+   ÁUDIO PREVIEW
+   ============================================================ */
+
+.audio-preview {
+    margin-top: 12px;
+}
+
+.audio-preview audio {
+    display: block;
+    width: 100%;
+}
+
+
+/* ============================================================
+   MENSAGEM
+   ============================================================ */
+
+.admin-form-message {
+    min-height: 18px;
+    margin: 4px 0 18px;
+    color: var(--admin-muted);
+    font-size: 11px;
+}
+
+
+/* ============================================================
+   BOTÕES DO MODAL
+   ============================================================ */
+
+.admin-modal-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    padding-top: 4px;
+}
+
+.admin-modal-actions .admin-button {
+    min-width: 140px;
+    height: 42px;
+    padding: 0 18px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.admin-modal-actions .admin-button.secondary {
+    border: 1px solid var(--admin-border);
+    background: transparent;
+    color: var(--admin-muted);
+}
+
+.admin-modal-actions .admin-button.secondary:hover {
+    border-color: rgba(255,255,255,0.18);
+    background: var(--admin-panel-2);
+    color: var(--admin-text);
+}
+
+.admin-modal-actions .admin-button.primary {
+    border: 1px solid transparent;
+    background: linear-gradient(
+        135deg,
+        var(--admin-primary),
+        var(--admin-secondary)
+    );
+    color: #fff;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.22);
+}
+
+.admin-modal-actions .admin-button.primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 28px rgba(0,0,0,0.3);
+}
+
+.admin-modal-actions .admin-button.primary:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+}
+
+
+/* ============================================================
+   MOBILE
+   ============================================================ */
+
+@media (max-width: 600px) {
+
+    .admin-modal-overlay {
+        padding: 10px;
+    }
+
+    .admin-modal-header {
+        padding: 22px 20px 18px;
+    }
+
+    #featured-form {
+        padding: 22px 20px 24px;
+    }
+
+    .admin-form-row {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+
+    .admin-modal-actions {
+        flex-direction: column-reverse;
+    }
+
+    .admin-modal-actions .admin-button {
+        width: 100%;
+    }
+}
