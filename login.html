@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Login | Barça Real</title>
+
+    <link rel="stylesheet" href="css/global.css">
+
+    <style>
+
+        /* =====================================================
+           LOGIN PAGE
+           ===================================================== */
+
+        body {
+            min-height: 100vh;
+            background:
+                radial-gradient(
+                    circle at top left,
+                    rgba(165, 0, 68, 0.22),
+                    transparent 38%
+                ),
+                radial-gradient(
+                    circle at bottom right,
+                    rgba(0, 77, 152, 0.20),
+                    transparent 38%
+                ),
+                #09090b;
+        }
+
+        .auth-page {
+            min-height: 100vh;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            padding: 24px;
+        }
+
+        .auth-container {
+            width: 100%;
+            max-width: 430px;
+        }
+
+        .brand {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .brand-mark {
+            width: 72px;
+            height: 72px;
+
+            margin: 0 auto 18px;
+
+            border: 2px solid rgba(255,255,255,0.9);
+            border-radius: 20px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            font-size: 22px;
+            font-weight: 900;
+
+            letter-spacing: -1px;
+        }
+
+        .brand h1 {
+            font-size: 30px;
+            font-weight: 900;
+            letter-spacing: -1px;
+        }
+
+        .brand p {
+            margin-top: 8px;
+
+            color: #a1a1aa;
+
+            font-size: 14px;
+        }
+
+        .auth-card {
+            background: rgba(24, 24, 27, 0.88);
+
+            border: 1px solid rgba(255,255,255,0.08);
+
+            border-radius: 24px;
+
+            padding: 30px;
+
+            box-shadow:
+                0 25px 70px rgba(0,0,0,0.45);
+        }
+
+        .auth-card h2 {
+            font-size: 22px;
+            margin-bottom: 7px;
+        }
+
+        .auth-description {
+            color: #a1a1aa;
+            font-size: 14px;
+            line-height: 1.5;
+
+            margin-bottom: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 17px;
+        }
+
+        .form-group label {
+            display: block;
+
+            margin-bottom: 8px;
+
+            font-size: 13px;
+            font-weight: 700;
+
+            color: #d4d4d8;
+        }
+
+        .form-group input {
+            width: 100%;
+
+            height: 50px;
+
+            padding: 0 15px;
+
+            border: 1px solid #27272a;
+            border-radius: 12px;
+
+            background: #111113;
+
+            color: #ffffff;
+
+            outline: none;
+
+            transition:
+                border-color 0.2s,
+                box-shadow 0.2s;
+        }
+
+        .form-group input:focus {
+            border-color: #71717a;
+
+            box-shadow:
+                0 0 0 3px rgba(255,255,255,0.05);
+        }
+
+        .auth-button {
+            width: 100%;
+
+            height: 52px;
+
+            margin-top: 8px;
+
+            border: 0;
+            border-radius: 13px;
+
+            background: linear-gradient(
+                135deg,
+                #a50044,
+                #004d98
+            );
+
+            color: #ffffff;
+
+            font-size: 15px;
+            font-weight: 800;
+
+            transition:
+                transform 0.2s,
+                opacity 0.2s;
+        }
+
+        .auth-button:hover {
+            transform: translateY(-1px);
+        }
+
+        .auth-button:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .switch-auth {
+            text-align: center;
+
+            margin-top: 22px;
+
+            font-size: 13px;
+
+            color: #a1a1aa;
+        }
+
+        .switch-auth button {
+            border: 0;
+            background: none;
+
+            color: #ffffff;
+
+            font-weight: 700;
+
+            margin-left: 4px;
+        }
+
+        .message {
+            display: none;
+
+            margin-bottom: 18px;
+
+            padding: 12px 14px;
+
+            border-radius: 10px;
+
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .message.error {
+            background: rgba(220,38,38,0.12);
+            border: 1px solid rgba(220,38,38,0.25);
+            color: #fca5a5;
+        }
+
+        .message.success {
+            background: rgba(34,197,94,0.10);
+            border: 1px solid rgba(34,197,94,0.22);
+            color: #86efac;
+        }
+
+        .forgot-password {
+            display: block;
+
+            margin-top: 10px;
+
+            text-align: right;
+
+            color: #a1a1aa;
+
+            font-size: 12px;
+
+            text-decoration: none;
+        }
+
+        .forgot-password:hover {
+            color: #ffffff;
+        }
+
+        @media (max-width: 480px) {
+
+            .auth-page {
+                padding: 16px;
+            }
+
+            .auth-card {
+                padding: 23px;
+                border-radius: 20px;
+            }
+
+            .brand {
+                margin-bottom: 25px;
+            }
+
+            .brand h1 {
+                font-size: 26px;
+            }
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <main class="auth-page">
+
+        <div class="auth-container">
+
+            <!-- =================================================
+                 BRAND
+                 ================================================= -->
+
+            <div class="brand">
+
+                <div class="brand-mark">
+                    BR
+                </div>
+
+                <h1>BARÇA REAL</h1>
+
+                <p>
+                    Your football. Your side. Your community.
+                </p>
+
+            </div>
+
+
+            <!-- =================================================
+                 AUTH CARD
+                 ================================================= -->
+
+            <section class="auth-card">
+
+                <h2 id="auth-title">
+                    Welcome back
+                </h2>
+
+                <p class="auth-description" id="auth-description">
+                    Sign in to continue to your football experience.
+                </p>
+
+
+                <!-- =================================================
+                     MESSAGE
+                     ================================================= -->
+
+                <div
+                    id="auth-message"
+                    class="message"
+                ></div>
+
+
+                <!-- =================================================
+                     FORM
+                     ================================================= -->
+
+                <form id="auth-form">
+
+                    <div
+                        class="form-group"
+                        id="name-group"
+                        style="display: none;"
+                    >
+
+                        <label for="display-name">
+                            Name
+                        </label>
+
+                        <input
+                            type="text"
+                            id="display-name"
+                            placeholder="Your name"
+                            autocomplete="name"
+                        >
+
+                    </div>
+
+
+                    <div class="form-group">
+
+                        <label for="email">
+                            Email
+                        </label>
+
+                        <input
+                            type="email"
+                            id="email"
+                            placeholder="you@example.com"
+                            autocomplete="email"
+                            required
+                        >
+
+                    </div>
+
+
+                    <div class="form-group">
+
+                        <label for="password">
+                            Password
+                        </label>
+
+                        <input
+                            type="password"
+                            id="password"
+                            placeholder="••••••••"
+                            autocomplete="current-password"
+                            minlength="6"
+                            required
+                        >
+
+                        <a
+                            href="#"
+                            class="forgot-password"
+                            id="forgot-password"
+                        >
+                            Forgot password?
+                        </a>
+
+                    </div>
+
+
+                    <button
+                        type="submit"
+                        class="auth-button"
+                        id="auth-button"
+                    >
+                        Sign In
+                    </button>
+
+                </form>
+
+
+                <!-- =================================================
+                     SWITCH LOGIN / SIGNUP
+                     ================================================= -->
+
+                <div class="switch-auth">
+
+                    <span id="switch-text">
+                        Don't have an account?
+                    </span>
+
+                    <button
+                        type="button"
+                        id="switch-button"
+                    >
+                        Create account
+                    </button>
+
+                </div>
+
+            </section>
+
+        </div>
+
+    </main>
+
+
+    <!-- =========================================================
+         SUPABASE
+         ========================================================= -->
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script src="js/supabase.js"></script>
+
+
+    <!-- =========================================================
+         AUTHENTICATION
+         ========================================================= -->
+
+    <script>
+
+        let isSignup = false;
+
+
+        const form = document.getElementById("auth-form");
+        const title = document.getElementById("auth-title");
+        const description = document.getElementById("auth-description");
+        const button = document.getElementById("auth-button");
+
+        const nameGroup = document.getElementById("name-group");
+        const displayName = document.getElementById("display-name");
+
+        const switchText = document.getElementById("switch-text");
+        const switchButton = document.getElementById("switch-button");
+
+        const message = document.getElementById("auth-message");
+
+        const forgotPassword =
+            document.getElementById("forgot-password");
+
+
+        // ======================================================
+        // MESSAGE
+        // ======================================================
+
+        function showMessage(text, type) {
+
+            message.textContent = text;
+
+            message.className =
+                "message show " + type;
+        }
+
+
+        function clearMessage() {
+
+            message.textContent = "";
+
+            message.className = "message";
+        }
+
+
+        // ======================================================
+        // SWITCH LOGIN / SIGNUP
+        // ======================================================
+
+        switchButton.addEventListener("click", function () {
+
+            isSignup = !isSignup;
+
+            clearMessage();
+
+
+            if (isSignup) {
+
+                title.textContent = "Join Barça Real";
+
+                description.textContent =
+                    "Create your account and choose your football side.";
+
+                button.textContent = "Create Account";
+
+                nameGroup.style.display = "block";
+
+                displayName.required = true;
+
+                switchText.textContent =
+                    "Already have an account?";
+
+                switchButton.textContent =
+                    "Sign in";
+
+                forgotPassword.style.display = "none";
+
+            } else {
+
+                title.textContent = "Welcome back";
+
+                description.textContent =
+                    "Sign in to continue to your football experience.";
+
+                button.textContent = "Sign In";
+
+                nameGroup.style.display = "none";
+
+                displayName.required = false;
+
+                switchText.textContent =
+                    "Don't have an account?";
+
+                switchButton.textContent =
+                    "Create account";
+
+                forgotPassword.style.display = "block";
+            }
+
+        });
+
+
+        // ======================================================
+        // SIGN IN / SIGN UP
+        // ======================================================
+
+        form.addEventListener("submit", async function (event) {
+
+            event.preventDefault();
+
+            clearMessage();
+
+            button.disabled = true;
+
+            button.textContent =
+                isSignup ? "Creating account..." : "Signing in...";
+
+
+            const email =
+                document.getElementById("email").value.trim();
+
+            const password =
+                document.getElementById("password").value;
+
+
+            try {
+
+                // =================================================
+                // SIGN UP
+                // =================================================
+
+                if (isSignup) {
+
+                    const name =
+                        displayName.value.trim();
+
+
+                    const { data, error } =
+                        await supabaseClient.auth.signUp({
+
+                            email: email,
+
+                            password: password,
+
+                            options: {
+
+                                data: {
+                                    display_name: name
+                                }
+
+                            }
+
+                        });
+
+
+                    if (error) {
+                        throw error;
+                    }
+
+
+                    if (data.session) {
+
+                        window.location.href =
+                            "choose-team.html";
+
+                        return;
+
+                    }
+
+
+                    showMessage(
+                        "Account created. Check your email to confirm your account.",
+                        "success"
+                    );
+
+                }
+
+
+                // =================================================
+                // SIGN IN
+                // =================================================
+
+                else {
+
+                    const { data, error } =
+                        await supabaseClient.auth.signInWithPassword({
+
+                            email: email,
+
+                            password: password
+
+                        });
+
+
+                    if (error) {
+                        throw error;
+                    }
+
+
+                    if (!data.session) {
+                        throw new Error("Unable to create a session.");
+                    }
+
+
+                    // ---------------------------------------------
+                    // Check profile
+                    // ---------------------------------------------
+
+                    const { data: profile } =
+                        await supabaseClient
+                            .from("profiles")
+                            .select("supported_team_id")
+                            .eq("id", data.user.id)
+                            .single();
+
+
+                    if (!profile || !profile.supported_team_id) {
+
+                        window.location.href =
+                            "choose-team.html";
+
+                        return;
+
+                    }
+
+
+                    window.location.href =
+                        "home.html";
+
+                }
+
+            } catch (error) {
+
+                console.error(error);
+
+                showMessage(
+                    error.message ||
+                    "Something went wrong. Please try again.",
+                    "error"
+                );
+
+            } finally {
+
+                button.disabled = false;
+
+                button.textContent =
+                    isSignup ? "Create Account" : "Sign In";
+
+            }
+
+        });
+
+
+        // ======================================================
+        // FORGOT PASSWORD
+        // ======================================================
+
+        forgotPassword.addEventListener("click", async function (event) {
+
+            event.preventDefault();
+
+            const email =
+                document.getElementById("email").value.trim();
+
+
+            if (!email) {
+
+                showMessage(
+                    "Enter your email address first.",
+                    "error"
+                );
+
+                return;
+            }
+
+
+            try {
+
+                const { error } =
+                    await supabaseClient.auth.resetPasswordForEmail(
+                        email,
+                        {
+                            redirectTo:
+                                window.location.origin +
+                                "/reset-password.html"
+                        }
+                    );
+
+
+                if (error) {
+                    throw error;
+                }
+
+
+                showMessage(
+                    "Password reset instructions have been sent to your email.",
+                    "success"
+                );
+
+            } catch (error) {
+
+                showMessage(
+                    error.message ||
+                    "Unable to send password reset email.",
+                    "error"
+                );
+
+            }
+
+        });
+
+    </script>
+
+</body>
+</html>
