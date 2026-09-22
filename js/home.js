@@ -495,23 +495,28 @@ function renderFeaturedSlides(items) {
                 );
 
 
-            if (audioButton) {
+           if (audioButton) {
 
-                audioButton.addEventListener(
-                    "click",
-                    event => {
+    audioButton.addEventListener(
+        "click",
+        event => {
 
-                        event.stopPropagation();
+            event.stopPropagation();
 
-                        playFeaturedAudio(
-                            item.audio_url,
-                            audioButton
-                        );
+            console.log(
+                "FEATURED AUDIO URL:",
+                item.audio_url
+            );
 
-                    }
-                );
+            playFeaturedAudio(
+                item.audio_url,
+                audioButton
+            );
 
-            }
+        }
+    );
+
+}
 
 
             track.appendChild(
