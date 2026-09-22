@@ -266,11 +266,11 @@ body {
 
 
 /* ============================================================
-   DESTAQUE
+   DESTAQUE / CAROUSEL
    ============================================================ */
 
-.featured {
-    min-height: 310px;
+.featured-carousel {
+    height: 310px;
 
     position: relative;
 
@@ -281,6 +281,52 @@ body {
     border:
         1px solid rgba(255,255,255,0.08);
 
+    background: #111318;
+}
+
+
+/* ============================================================
+   CAROUSEL TRACK
+   ============================================================ */
+
+.featured-track {
+    width: 100%;
+    height: 100%;
+
+    display: flex;
+
+    overflow-x: auto;
+
+    scroll-snap-type: x mandatory;
+
+    scroll-behavior: smooth;
+
+    scrollbar-width: none;
+
+    -webkit-overflow-scrolling: touch;
+}
+
+.featured-track::-webkit-scrollbar {
+    display: none;
+}
+
+
+/* ============================================================
+   SLIDE
+   ============================================================ */
+
+.featured-slide {
+    min-width: 100%;
+    height: 100%;
+
+    position: relative;
+
+    overflow: hidden;
+
+    scroll-snap-align: start;
+
+    flex-shrink: 0;
+
     background:
         linear-gradient(
             135deg,
@@ -289,10 +335,14 @@ body {
         );
 }
 
-.featured::before {
-    content: "";
 
+/* ============================================================
+   SLIDE BACKGROUND
+   ============================================================ */
+
+.featured-slide-background {
     position: absolute;
+
     inset: 0;
 
     background:
@@ -303,7 +353,12 @@ body {
         );
 }
 
-.featured-content {
+
+/* ============================================================
+   SLIDE CONTENT
+   ============================================================ */
+
+.featured-slide .featured-content {
     position: absolute;
 
     left: 24px;
@@ -331,7 +386,7 @@ body {
     margin-bottom: 12px;
 }
 
-.featured h2 {
+.featured-slide h2 {
     font-size:
         clamp(24px, 6vw, 38px);
 
@@ -344,7 +399,7 @@ body {
     max-width: 650px;
 }
 
-.featured p {
+.featured-slide p {
     margin-top: 10px;
 
     font-size: 13px;
@@ -353,6 +408,57 @@ body {
         rgba(255,255,255,0.7);
 
     max-width: 560px;
+}
+
+
+/* ============================================================
+   CAROUSEL DOTS
+   ============================================================ */
+
+.featured-dots {
+    position: absolute;
+
+    right: 20px;
+    bottom: 18px;
+
+    z-index: 10;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 6px;
+}
+
+.featured-dot {
+    width: 7px;
+    height: 7px;
+
+    padding: 0;
+
+    border: 0;
+
+    border-radius: 50%;
+
+    background:
+        rgba(255,255,255,0.45);
+
+    opacity: 0.65;
+
+    transition:
+        width 0.2s ease,
+        opacity 0.2s ease,
+        background 0.2s ease;
+}
+
+.featured-dot.active {
+    width: 18px;
+
+    border-radius: 10px;
+
+    background: #ffffff;
+
+    opacity: 1;
 }
 
 
