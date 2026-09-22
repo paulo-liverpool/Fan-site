@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt">
+
 <head>
+
     <meta charset="UTF-8">
 
     <meta
@@ -10,589 +12,13 @@
 
     <title>Início | Barça Real</title>
 
-    <link rel="stylesheet" href="css/global.css">
+    <link
+        rel="stylesheet"
+        href="css/global.css"
+    >
 
-    <style>
-        /* ========================================================
-           HOME
-           ======================================================== */
-
-        :root {
-            --team-primary: #a50044;
-            --team-secondary: #004d98;
-            --team-glow: rgba(165, 0, 68, 0.18);
-        }
-
-        body {
-            background: #08090c;
-            padding-bottom: 80px;
-        }
-
-        .home {
-            min-height: 100vh;
-        }
-
-
-        /* ========================================================
-           BARRA SUPERIOR
-           ======================================================== */
-
-        .topbar {
-            height: 70px;
-
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-
-            padding: 0 22px;
-
-            border-bottom:
-                1px solid rgba(255,255,255,0.07);
-
-            background:
-                rgba(8,9,12,0.92);
-
-            position: sticky;
-            top: 0;
-            z-index: 20;
-
-            backdrop-filter: blur(15px);
-        }
-
-        .brand {
-            font-size: 16px;
-            font-weight: 900;
-            letter-spacing: 2px;
-        }
-
-        .brand span {
-            opacity: 0.45;
-        }
-
-        .profile-button {
-            width: 38px;
-            height: 38px;
-
-            border-radius: 50%;
-
-            border:
-                1px solid rgba(255,255,255,0.15);
-
-            background:
-                rgba(255,255,255,0.07);
-
-            color: white;
-
-            display: flex;
-            align-items: center;
-            justify-content: center;
-
-            font-size: 13px;
-            font-weight: 800;
-        }
-
-
-        /* ========================================================
-           CABEÇALHO DO CLUBE
-           ======================================================== */
-
-        .team-header {
-            position: relative;
-
-            padding: 34px 22px 38px;
-
-            overflow: hidden;
-
-            background:
-                radial-gradient(
-                    circle at 90% 20%,
-                    var(--team-glow),
-                    transparent 45%
-                );
-        }
-
-        .team-header::after {
-            content: "";
-
-            position: absolute;
-
-            width: 180px;
-            height: 180px;
-
-            right: -70px;
-            top: -70px;
-
-            border-radius: 50%;
-
-            background: var(--team-glow);
-
-            filter: blur(40px);
-        }
-
-        .eyebrow {
-            position: relative;
-            z-index: 2;
-
-            font-size: 10px;
-            font-weight: 800;
-
-            letter-spacing: 3px;
-
-            opacity: 0.45;
-
-            margin-bottom: 12px;
-        }
-
-        .team-title {
-            position: relative;
-            z-index: 2;
-
-            font-size:
-                clamp(32px, 8vw, 56px);
-
-            line-height: 0.95;
-
-            font-weight: 900;
-
-            letter-spacing: -2px;
-
-            max-width: 700px;
-        }
-
-        .team-subtitle {
-            position: relative;
-            z-index: 2;
-
-            margin-top: 15px;
-
-            color:
-                rgba(255,255,255,0.55);
-
-            font-size: 14px;
-        }
-
-
-        /* ========================================================
-           CONTEÚDO
-           ======================================================== */
-
-        .content {
-            width: min(100% - 32px, 1000px);
-
-            margin: 0 auto;
-        }
-
-        .section {
-            margin-bottom: 34px;
-        }
-
-        .section-heading {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-
-            margin-bottom: 14px;
-        }
-
-        .section-heading h2 {
-            font-size: 18px;
-            font-weight: 800;
-        }
-
-        .section-heading span {
-            font-size: 10px;
-            color:
-                rgba(255,255,255,0.4);
-        }
-
-
-        /* ========================================================
-           DESTAQUE
-           ======================================================== */
-
-        .featured {
-            min-height: 310px;
-
-            position: relative;
-
-            overflow: hidden;
-
-            border-radius: 22px;
-
-            border:
-                1px solid rgba(255,255,255,0.08);
-
-            background:
-                linear-gradient(
-                    135deg,
-                    var(--team-secondary),
-                    var(--team-primary)
-                );
-        }
-
-        .featured::before {
-            content: "";
-
-            position: absolute;
-            inset: 0;
-
-            background:
-                radial-gradient(
-                    circle at 80% 30%,
-                    rgba(255,255,255,0.18),
-                    transparent 30%
-                );
-        }
-
-        .featured-content {
-            position: absolute;
-
-            left: 24px;
-            right: 24px;
-            bottom: 24px;
-
-            z-index: 2;
-        }
-
-        .featured-tag {
-            display: inline-block;
-
-            padding: 6px 9px;
-
-            border-radius: 6px;
-
-            background:
-                rgba(0,0,0,0.35);
-
-            font-size: 9px;
-            font-weight: 800;
-
-            letter-spacing: 1.5px;
-
-            margin-bottom: 12px;
-        }
-
-        .featured h2 {
-            font-size:
-                clamp(24px, 6vw, 38px);
-
-            line-height: 1.05;
-
-            font-weight: 900;
-
-            letter-spacing: -1px;
-
-            max-width: 650px;
-        }
-
-        .featured p {
-            margin-top: 10px;
-
-            font-size: 13px;
-
-            color:
-                rgba(255,255,255,0.7);
-
-            max-width: 560px;
-        }
-
-
-        /* ========================================================
-           NOTÍCIAS
-           ======================================================== */
-
-        .news-list {
-            display: grid;
-
-            grid-template-columns:
-                repeat(3, 1fr);
-
-            gap: 14px;
-        }
-
-        .news-card {
-            overflow: hidden;
-
-            border-radius: 16px;
-
-            border:
-                1px solid rgba(255,255,255,0.07);
-
-            background: #111318;
-        }
-
-        .news-image {
-            height: 130px;
-
-            display: flex;
-            align-items: center;
-            justify-content: center;
-
-            background:
-                linear-gradient(
-                    135deg,
-                    var(--team-secondary),
-                    #15161b
-                );
-
-            font-size: 30px;
-            font-weight: 900;
-
-            opacity: 0.8;
-        }
-
-        .news-body {
-            padding: 14px;
-        }
-
-        .news-type {
-            font-size: 9px;
-
-            letter-spacing: 1.5px;
-
-            color:
-                var(--team-primary);
-
-            font-weight: 900;
-
-            margin-bottom: 7px;
-        }
-
-        .news-title {
-            font-size: 14px;
-
-            line-height: 1.3;
-
-            font-weight: 700;
-        }
-
-        .news-time {
-            margin-top: 10px;
-
-            font-size: 10px;
-
-            color:
-                rgba(255,255,255,0.35);
-        }
-
-
-        /* ========================================================
-           CARTÃO DO PRÓXIMO JOGO
-           ======================================================== */
-
-        .match-card {
-            padding: 22px;
-
-            border-radius: 18px;
-
-            border:
-                1px solid rgba(255,255,255,0.08);
-
-            background: #111318;
-
-            text-align: center;
-        }
-
-        .match-status {
-            font-size: 9px;
-
-            letter-spacing: 2px;
-
-            font-weight: 900;
-
-            color: #62d88f;
-
-            margin-bottom: 18px;
-        }
-
-        .teams {
-            display: flex;
-
-            align-items: center;
-            justify-content: center;
-
-            gap: 30px;
-        }
-
-        .match-team {
-            display: flex;
-
-            flex-direction: column;
-
-            align-items: center;
-
-            gap: 9px;
-        }
-
-        .team-badge {
-            width: 55px;
-            height: 55px;
-
-            border-radius: 50%;
-
-            display: flex;
-            align-items: center;
-            justify-content: center;
-
-            background:
-                rgba(255,255,255,0.07);
-
-            border:
-                1px solid rgba(255,255,255,0.1);
-
-            font-size: 12px;
-            font-weight: 900;
-        }
-
-        .match-team strong {
-            font-size: 12px;
-        }
-
-        .vs {
-            font-size: 11px;
-
-            color:
-                rgba(255,255,255,0.35);
-
-            font-weight: 800;
-        }
-
-
-        /* ========================================================
-           NAVEGAÇÃO INFERIOR
-           ======================================================== */
-
-        .bottom-nav {
-            position: fixed;
-
-            bottom: 0;
-            left: 0;
-            right: 0;
-
-            height: 70px;
-
-            display: grid;
-
-            grid-template-columns:
-                repeat(4, 1fr);
-
-            background:
-                rgba(10,11,14,0.96);
-
-            border-top:
-                1px solid rgba(255,255,255,0.08);
-
-            backdrop-filter: blur(18px);
-
-            z-index: 50;
-        }
-
-        .nav-item {
-            border: 0;
-
-            background: transparent;
-
-            color:
-                rgba(255,255,255,0.4);
-
-            display: flex;
-
-            flex-direction: column;
-
-            align-items: center;
-            justify-content: center;
-
-            gap: 5px;
-
-            font-size: 9px;
-
-            font-weight: 800;
-
-            letter-spacing: 0.5px;
-        }
-
-        .nav-icon {
-            font-size: 18px;
-        }
-
-        .nav-item.active {
-            color: white;
-        }
-
-
-        /* ========================================================
-           DESKTOP
-           ======================================================== */
-
-        @media (min-width: 800px) {
-
-            .topbar {
-                padding-left: 40px;
-                padding-right: 40px;
-            }
-
-            .team-header {
-                padding:
-                    55px 40px 60px;
-            }
-
-            .content {
-                width:
-                    min(100% - 80px, 1100px);
-            }
-
-            .bottom-nav {
-                left: 50%;
-
-                width:
-                    min(600px, 100%);
-
-                transform:
-                    translateX(-50%);
-
-                border:
-                    1px solid rgba(255,255,255,0.08);
-
-                border-bottom: 0;
-
-                border-radius:
-                    18px 18px 0 0;
-            }
-        }
-
-
-        /* ========================================================
-           MOBILE
-           ======================================================== */
-
-        @media (max-width: 650px) {
-
-            .news-list {
-                grid-template-columns: 1fr;
-            }
-
-            .news-card {
-                display: grid;
-
-                grid-template-columns:
-                    110px 1fr;
-            }
-
-            .news-image {
-                height: 100%;
-                min-height: 110px;
-            }
-
-            .news-body {
-                display: flex;
-
-                flex-direction: column;
-
-                justify-content: center;
-            }
-        }
-    </style>
 </head>
+
 
 <body>
 
@@ -609,6 +35,7 @@
             BARÇA <span>REAL</span>
         </div>
 
+
         <button
             class="profile-button"
             onclick="window.location.href='profile.html'"
@@ -617,6 +44,7 @@
         </button>
 
     </header>
+
 
 
     <!-- ========================================================
@@ -629,12 +57,14 @@
             O TEU FUTEBOL. O TEU LADO.
         </div>
 
+
         <h1
             class="team-title"
             id="team-title"
         >
             A carregar...
         </h1>
+
 
         <p
             class="team-subtitle"
@@ -644,6 +74,7 @@
         </p>
 
     </section>
+
 
 
     <!-- ========================================================
@@ -671,6 +102,7 @@
 
             </div>
 
+
             <article class="featured">
 
                 <div class="featured-content">
@@ -679,9 +111,11 @@
                         HISTÓRIA EM DESTAQUE
                     </div>
 
+
                     <h2 id="featured-title">
                         O teu mundo do futebol começa aqui.
                     </h2>
+
 
                     <p>
                         Notícias, jogos, histórias e a tua
@@ -693,6 +127,7 @@
             </article>
 
         </section>
+
 
 
         <!-- ====================================================
@@ -723,15 +158,18 @@
                         NOTÍCIAS
                     </div>
 
+
                     <div class="news-body">
 
                         <div class="news-type">
                             CLUBE
                         </div>
 
+
                         <div class="news-title">
                             As últimas novidades do teu clube.
                         </div>
+
 
                         <div class="news-time">
                             Barça Real
@@ -742,11 +180,13 @@
                 </article>
 
 
+
                 <article class="news-card">
 
                     <div class="news-image">
                         ⚽
                     </div>
+
 
                     <div class="news-body">
 
@@ -754,10 +194,12 @@
                             JOGO
                         </div>
 
+
                         <div class="news-title">
                             Tudo o que precisas de saber antes do
                             próximo jogo.
                         </div>
+
 
                         <div class="news-time">
                             Central de Jogos
@@ -768,11 +210,13 @@
                 </article>
 
 
+
                 <article class="news-card">
 
                     <div class="news-image">
                         ADEPTOS
                     </div>
+
 
                     <div class="news-body">
 
@@ -780,9 +224,11 @@
                             COMUNIDADE
                         </div>
 
+
                         <div class="news-title">
                             Vê o que os adeptos estão a comentar.
                         </div>
+
 
                         <div class="news-time">
                             Conversa de Adeptos
@@ -796,6 +242,7 @@
             </div>
 
         </section>
+
 
 
         <!-- ====================================================
@@ -836,6 +283,7 @@
                             FC
                         </div>
 
+
                         <strong
                             id="selected-team-name"
                         >
@@ -856,6 +304,7 @@
                             ?
                         </div>
 
+
                         <strong>
                             Adversário
                         </strong>
@@ -871,6 +320,7 @@
 
 
     </main>
+
 
 
     <!-- ========================================================
@@ -894,6 +344,7 @@
         </button>
 
 
+
         <button
             class="nav-item"
             onclick="alert('A Comunidade estará disponível em breve.')"
@@ -908,6 +359,7 @@
         </button>
 
 
+
         <button
             class="nav-item"
             onclick="alert('A Central de Jogos estará disponível em breve.')"
@@ -920,6 +372,7 @@
             JOGOS
 
         </button>
+
 
 
         <button
@@ -938,170 +391,31 @@
 
     </nav>
 
+
 </div>
+
 
 
 <!-- ============================================================
      SUPABASE
      ============================================================ -->
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script
+    src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
+></script>
+
 
 <script src="js/supabase.js"></script>
 
 
-<script>
+<!-- ============================================================
+     HOME JAVASCRIPT
+     ============================================================ -->
 
-    // ============================================================
-    // CARREGAR UTILIZADOR + CLUBE
-    // ============================================================
+<script src="js/home.js"></script>
 
-    async function loadHome() {
-
-        const {
-            data: {
-                user
-            }
-        } = await supabaseClient.auth.getUser();
-
-
-        if (!user) {
-
-            window.location.href =
-                "login.html";
-
-            return;
-        }
-
-
-        // --------------------------------------------------------
-        // Perfil
-        // --------------------------------------------------------
-
-        const {
-            data: profile,
-            error: profileError
-        } = await supabaseClient
-            .from("profiles")
-            .select(`
-                supported_team_id
-            `)
-            .eq("id", user.id)
-            .single();
-
-
-        if (
-            profileError ||
-            !profile ||
-            !profile.supported_team_id
-        ) {
-
-            window.location.href =
-                "choose-team.html";
-
-            return;
-        }
-
-
-        // --------------------------------------------------------
-        // Clube
-        // --------------------------------------------------------
-
-        const {
-            data: team,
-            error: teamError
-        } = await supabaseClient
-            .from("teams")
-            .select(`
-                id,
-                name,
-                slug,
-                short_name,
-                primary_color,
-                secondary_color,
-                loading_player
-            `)
-            .eq("id", profile.supported_team_id)
-            .single();
-
-
-        if (teamError || !team) {
-
-            window.location.href =
-                "choose-team.html";
-
-            return;
-        }
-
-
-        // --------------------------------------------------------
-        // Identidade visual
-        // --------------------------------------------------------
-
-        document.documentElement.style.setProperty(
-            "--team-primary",
-            team.primary_color || "#a50044"
-        );
-
-
-        document.documentElement.style.setProperty(
-            "--team-secondary",
-            team.secondary_color || "#004d98"
-        );
-
-
-        if (team.slug === "barcelona") {
-
-            document.documentElement.style.setProperty(
-                "--team-glow",
-                "rgba(165, 0, 68, 0.18)"
-            );
-
-        } else {
-
-            document.documentElement.style.setProperty(
-                "--team-glow",
-                "rgba(255, 190, 0, 0.18)"
-            );
-        }
-
-
-        // --------------------------------------------------------
-        // Conteúdo personalizado
-        // --------------------------------------------------------
-
-        document.getElementById(
-            "team-title"
-        ).textContent =
-            team.short_name;
-
-
-        document.getElementById(
-    "team-subtitle"
-).textContent =
-    team.slug === "barcelona"
-        ? "VISCA BARÇA"
-        : "HALA MADRID";
-
-
-        document.getElementById(
-            "selected-team-name"
-        ).textContent =
-            team.short_name;
-
-
-        document.getElementById(
-            "selected-team-badge"
-        ).textContent =
-            team.slug === "barcelona"
-                ? "FCB"
-                : "RMA";
-    }
-
-
-    loadHome();
-
-</script>
 
 </body>
+
 </html>
+
