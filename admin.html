@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="pt">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Administração | Barça Real</title>
+
+    <link
+        rel="stylesheet"
+        href="css/global.css"
+    >
+
+</head>
+
+
+<body>
+
+<div class="admin-page">
+
+
+    <!-- ========================================================
+         BARRA SUPERIOR
+         ======================================================== -->
+
+    <header class="admin-topbar">
+
+        <div class="admin-brand">
+            BARÇA <span>REAL</span>
+        </div>
+
+
+        <div class="admin-topbar-right">
+
+            <span class="admin-label">
+                ADMINISTRAÇÃO
+            </span>
+
+
+            <button
+                class="admin-profile-button"
+                id="admin-profile-button"
+            >
+                A
+            </button>
+
+        </div>
+
+    </header>
+
+
+
+    <!-- ========================================================
+         ESTRUTURA PRINCIPAL
+         ======================================================== -->
+
+    <div class="admin-layout">
+
+
+        <!-- ====================================================
+             SIDEBAR
+             ==================================================== -->
+
+        <aside class="admin-sidebar">
+
+
+            <div class="admin-sidebar-title">
+                PAINEL
+            </div>
+
+
+            <nav class="admin-navigation">
+
+
+                <button
+                    class="admin-nav-item active"
+                    data-section="dashboard"
+                >
+
+                    <span class="admin-nav-icon">
+                        ▦
+                    </span>
+
+                    <span>
+                        Dashboard
+                    </span>
+
+                </button>
+
+
+
+                <button
+                    class="admin-nav-item"
+                    data-section="featured"
+                >
+
+                    <span class="admin-nav-icon">
+                        ★
+                    </span>
+
+                    <span>
+                        Destaques
+                    </span>
+
+                </button>
+
+
+
+                <button
+                    class="admin-nav-item"
+                    data-section="news"
+                >
+
+                    <span class="admin-nav-icon">
+                        ◫
+                    </span>
+
+                    <span>
+                        Notícias
+                    </span>
+
+                </button>
+
+
+
+                <button
+                    class="admin-nav-item"
+                    data-section="matches"
+                >
+
+                    <span class="admin-nav-icon">
+                        ⚽
+                    </span>
+
+                    <span>
+                        Jogos
+                    </span>
+
+                </button>
+
+
+
+                <button
+                    class="admin-nav-item"
+                    data-section="community"
+                >
+
+                    <span class="admin-nav-icon">
+                        ◉
+                    </span>
+
+                    <span>
+                        Comunidade
+                    </span>
+
+                </button>
+
+
+
+                <button
+                    class="admin-nav-item"
+                    data-section="users"
+                >
+
+                    <span class="admin-nav-icon">
+                        ●
+                    </span>
+
+                    <span>
+                        Utilizadores
+                    </span>
+
+                </button>
+
+
+
+                <button
+                    class="admin-nav-item"
+                    data-section="settings"
+                >
+
+                    <span class="admin-nav-icon">
+                        ⚙
+                    </span>
+
+                    <span>
+                        Definições
+                    </span>
+
+                </button>
+
+
+            </nav>
+
+
+
+            <!-- ==================================================
+                 SAIR
+                 ================================================== -->
+
+            <button
+                class="admin-logout"
+                id="admin-logout"
+            >
+
+                <span>
+                    ↪
+                </span>
+
+                Terminar sessão
+
+            </button>
+
+
+        </aside>
+
+
+
+        <!-- ====================================================
+             CONTEÚDO
+             ==================================================== -->
+
+        <main class="admin-content">
+
+
+            <!-- ==================================================
+                 DASHBOARD
+                 ================================================== -->
+
+            <section
+                class="admin-section active"
+                id="section-dashboard"
+            >
+
+                <div class="admin-section-header">
+
+                    <div>
+
+                        <div class="admin-eyebrow">
+                            VISÃO GERAL
+                        </div>
+
+                        <h1>
+                            Dashboard
+                        </h1>
+
+                        <p>
+                            Bem-vindo ao painel de administração
+                            do Barça Real.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- ==============================================
+                     ESTATÍSTICAS
+                     ============================================== -->
+
+                <div class="admin-stat-grid">
+
+
+                    <div class="admin-stat-card">
+
+                        <div class="admin-stat-label">
+                            DESTAQUES
+                        </div>
+
+                        <div
+                            class="admin-stat-value"
+                            id="stat-featured"
+                        >
+                            0
+                        </div>
+
+                    </div>
+
+
+
+                    <div class="admin-stat-card">
+
+                        <div class="admin-stat-label">
+                            NOTÍCIAS
+                        </div>
+
+                        <div
+                            class="admin-stat-value"
+                            id="stat-news"
+                        >
+                            0
+                        </div>
+
+                    </div>
+
+
+
+                    <div class="admin-stat-card">
+
+                        <div class="admin-stat-label">
+                            JOGOS
+                        </div>
+
+                        <div
+                            class="admin-stat-value"
+                            id="stat-matches"
+                        >
+                            0
+                        </div>
+
+                    </div>
+
+
+
+                    <div class="admin-stat-card">
+
+                        <div class="admin-stat-label">
+                            UTILIZADORES
+                        </div>
+
+                        <div
+                            class="admin-stat-value"
+                            id="stat-users"
+                        >
+                            0
+                        </div>
+
+                    </div>
+
+
+                </div>
+
+
+
+                <!-- ==============================================
+                     ATIVIDADE
+                     ============================================== -->
+
+                <div class="admin-panel">
+
+                    <div class="admin-panel-header">
+
+                        <h2>
+                            Atividade recente
+                        </h2>
+
+                    </div>
+
+
+                    <div
+                        class="admin-empty-state"
+                        id="dashboard-activity"
+                    >
+
+                        Ainda não existem atividades.
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+
+            <!-- ==================================================
+                 DESTAQUES
+                 ================================================== -->
+
+            <section
+                class="admin-section"
+                id="section-featured"
+            >
+
+                <div class="admin-section-header">
+
+                    <div>
+
+                        <div class="admin-eyebrow">
+                            CONTEÚDO
+                        </div>
+
+                        <h1>
+                            Destaques
+                        </h1>
+
+                        <p>
+                            Gere o conteúdo apresentado no
+                            destaque da página inicial.
+                        </p>
+
+                    </div>
+
+
+                    <button
+                        class="admin-primary-button"
+                        id="create-featured"
+                    >
+                        + Criar Destaque
+                    </button>
+
+                </div>
+
+
+
+                <div
+                    class="admin-content-list"
+                    id="featured-list"
+                >
+
+                    <div class="admin-empty-state">
+
+                        Ainda não existem destaques.
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+
+            <!-- ==================================================
+                 NOTÍCIAS
+                 ================================================== -->
+
+            <section
+                class="admin-section"
+                id="section-news"
+            >
+
+                <div class="admin-section-header">
+
+                    <div>
+
+                        <div class="admin-eyebrow">
+                            CONTEÚDO
+                        </div>
+
+                        <h1>
+                            Notícias
+                        </h1>
+
+                        <p>
+                            Gere as notícias da plataforma.
+                        </p>
+
+                    </div>
+
+
+                    <button
+                        class="admin-primary-button"
+                        id="create-news"
+                    >
+                        + Criar Notícia
+                    </button>
+
+                </div>
+
+
+                <div
+                    class="admin-content-list"
+                    id="news-list"
+                >
+
+                    <div class="admin-empty-state">
+
+                        Ainda não existem notícias.
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+
+            <!-- ==================================================
+                 JOGOS
+                 ================================================== -->
+
+            <section
+                class="admin-section"
+                id="section-matches"
+            >
+
+                <div class="admin-section-header">
+
+                    <div>
+
+                        <div class="admin-eyebrow">
+                            FUTEBOL
+                        </div>
+
+                        <h1>
+                            Jogos
+                        </h1>
+
+                        <p>
+                            Gere os jogos e a Central de Jogos.
+                        </p>
+
+                    </div>
+
+
+                    <button
+                        class="admin-primary-button"
+                        id="create-match"
+                    >
+                        + Criar Jogo
+                    </button>
+
+                </div>
+
+
+                <div
+                    class="admin-content-list"
+                    id="matches-list"
+                >
+
+                    <div class="admin-empty-state">
+
+                        Ainda não existem jogos.
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+
+            <!-- ==================================================
+                 COMUNIDADE
+                 ================================================== -->
+
+            <section
+                class="admin-section"
+                id="section-community"
+            >
+
+                <div class="admin-section-header">
+
+                    <div>
+
+                        <div class="admin-eyebrow">
+                            ADEPTOS
+                        </div>
+
+                        <h1>
+                            Comunidade
+                        </h1>
+
+                        <p>
+                            Gere a atividade e o conteúdo
+                            da comunidade.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <div class="admin-panel">
+
+                    <div class="admin-empty-state">
+
+                        A gestão da comunidade será adicionada
+                        nesta área.
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+
+            <!-- ==================================================
+                 UTILIZADORES
+                 ================================================== -->
+
+            <section
+                class="admin-section"
+                id="section-users"
+            >
+
+                <div class="admin-section-header">
+
+                    <div>
+
+                        <div class="admin-eyebrow">
+                            CONTAS
+                        </div>
+
+                        <h1>
+                            Utilizadores
+                        </h1>
+
+                        <p>
+                            Gere os utilizadores e respetivas
+                            permissões.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <div class="admin-panel">
+
+                    <div class="admin-empty-state">
+
+                        A gestão de utilizadores será adicionada
+                        nesta área.
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+
+            <!-- ==================================================
+                 DEFINIÇÕES
+                 ================================================== -->
+
+            <section
+                class="admin-section"
+                id="section-settings"
+            >
+
+                <div class="admin-section-header">
+
+                    <div>
+
+                        <div class="admin-eyebrow">
+                            SISTEMA
+                        </div>
+
+                        <h1>
+                            Definições
+                        </h1>
+
+                        <p>
+                            Configurações gerais da plataforma.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <div class="admin-panel">
+
+                    <div class="admin-empty-state">
+
+                        As definições da plataforma serão
+                        adicionadas nesta área.
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+        </main>
+
+    </div>
+
+</div>
+
+
+
+<!-- ============================================================
+     SUPABASE
+     ============================================================ -->
+
+<script
+    src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
+></script>
+
+
+<script src="js/supabase.js"></script>
+
+
+<!-- ============================================================
+     ADMIN JAVASCRIPT
+     ============================================================ -->
+
+<script src="js/admin.js"></script>
+
+
+</body>
+
+</html>
+
