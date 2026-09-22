@@ -154,18 +154,29 @@ async function loadHome() {
     // HEADER
     // ========================================================
 
-    document.getElementById(
-        "team-title"
-    ).textContent =
-        team.slug === "barcelona"
-            ? "VISCA BARÇA"
-            : "HALA MADRID";
+    const teamTitle =
+        document.getElementById("team-title");
+
+    const teamSubtitle =
+        document.getElementById("team-subtitle");
 
 
-    document.getElementById(
-        "team-subtitle"
-    ).textContent =
-        "Bem-vindo à tua experiência de futebol personalizada.";
+    if (teamTitle) {
+
+        teamTitle.textContent =
+            team.slug === "barcelona"
+                ? "VISCA BARÇA"
+                : "HALA MADRID";
+
+    }
+
+
+    if (teamSubtitle) {
+
+        teamSubtitle.textContent =
+            "Bem-vindo à tua experiência de futebol personalizada.";
+
+    }
 
 
     // ========================================================
@@ -191,14 +202,17 @@ async function loadHome() {
     ]);
 
 
+    // ========================================================
+    // START FEATURED CAROUSEL
+    // ========================================================
+
     setupFeaturedCarousel();
 
 }
 
 
 // ============================================================
-// FEATURED CONTENT
-// Existing functionality preserved
+// FEATURED / DESTAQUES
 // ============================================================
 
 async function loadFeaturedContent(teamId) {
@@ -212,14 +226,1086 @@ async function loadFeaturedContent(teamId) {
         return;
     }
 
-    /*
-        The old featured carousel is no longer part of the
-        homepage visual structure.
 
-        We deliberately keep this function available so the
-        existing featured system does not break when other
-        pages/scripts still depend on it.
-    */
+    const dots =
+        document.getElementById(
+            "featured-dots"
+        );
+
+
+    // --------------------------------------------------------
+    // LOAD PUBLISHED FEATURED CONTENT
+    // --------------------------------------------------------
+
+    const {
+        data,
+        error
+    } = await supabaseClient
+        .from("content")
+        .select("*")
+        .eq(
+            "area",
+            "featured"
+        )
+        .eq(
+            "status",
+            "published"
+        )
+        .or(
+            `team_id.eq.${teamId},team_id.is.null`
+        )
+        .order(
+            "sort_order",
+            {
+                ascending: true
+            }
+        )
+        .order(
+            "created_at",
+            {
+                ascending: false
+            }
+        );
+
+
+    if (error) {
+
+        console.error(
+            "Erro ao carregar destaques:",
+            error
+        );
+
+        renderEmptyFeatured();
+
+        return;
+    }
+
+
+    // --------------------------------------------------------
+    // FILTER ACTIVE DATES
+    // --------------------------------------------------------
+
+    const activeItems =
+        filterActiveContent(
+            data || []
+        );
+
+
+    // --------------------------------------------------------
+    // RENDER
+    // --------------------------------------------------------
+
+    if (!activeItems.length) {
+
+        renderEmptyFeatured();
+
+        return;
+    }
+
+
+    renderFeaturedSlides(
+        activeItems
+    );
+
+}
+
+
+// ============================================================
+// RENDER FEATURED SLIDES
+// ============================================================
+
+function renderFeaturedSlides(items) {
+
+    const track =
+        document.getElementById(
+            "featured-track"
+        );
+
+    const dots =
+        document.getElementById(
+            "featured-dots"
+        );
+
+
+    if (!track) {
+        return;
+    }
+
+
+    track.innerHTML = "";
+
+
+    if (dots) {
+        dots.innerHTML = "";
+    }
+
+
+    items.forEach(
+        (item, index) => {
+
+            const slide =
+                document.createElement(
+                    "article"
+                );
+
+
+            slide.className =
+                "featured-slide";
+
+
+            slide.dataset.index =
+                index;
+
+
+            slide.innerHTML = `
+
+                <div class="featured-slide-image">
+
+                    ${
+                        item.image_url
+                            ? `
+                                <img
+                                    src="${escapeAttribute(
+                                        item.image_url
+                                    )}"
+                                    alt="${escapeAttribute(
+                                        item.title ||
+                                        "Destaque"
+                                    )}"
+                                    loading="${
+                                        index === 0
+                                            ? "eager"
+                                            : "lazy"
+                                    }"
+                                >
+                            `
+                            : `
+                                <div class="featured-placeholder">
+                                    DESTAQUE
+                                </div>
+                            `
+                    }
+
+                </div>
+
+                <div class="featured-slide-overlay"></div>
+
+                <div class="featured-content">
+
+                    <div class="featured-tag">
+                        ${getFeaturedLabel(item)}
+                    </div>
+
+                    <h2>
+                        ${escapeHTML(
+                            item.title ||
+                            "Sem título"
+                        )}
+                    </h2>
+
+                    ${
+                        item.description
+                            ? `
+                                <p>
+                                    ${escapeHTML(
+                                        item.description
+                                    )}
+                                </p>
+                            `
+                            : ""
+                    }
+
+                </div>
+
+                ${
+                    item.audio_url
+                        ? `
+                            <button
+                                type="button"
+                                class="featured-audio-button"
+                                aria-label="Ouvir destaque"
+                            >
+                                🔊
+                            </button>
+                        `
+                        : ""
+                }
+
+            `;
+
+
+            // ------------------------------------------------
+            // OPEN FEATURED CONTENT
+            // ------------------------------------------------
+
+            let slideMoved = false;
+
+
+            slide.addEventListener(
+                "mousedown",
+                () => {
+
+                    slideMoved = false;
+
+                }
+            );
+
+
+            slide.addEventListener(
+                "mousemove",
+                () => {
+
+                    slideMoved = true;
+
+                }
+            );
+
+
+            slide.addEventListener(
+                "click",
+                event => {
+
+                    if (slideMoved) {
+
+                        slideMoved = false;
+
+                        return;
+                    }
+
+
+                    if (
+                        event.target.closest(
+                            ".featured-audio-button"
+                        )
+                    ) {
+
+                        return;
+                    }
+
+
+                    openContent(
+                        item
+                    );
+
+                }
+            );
+
+
+            // ------------------------------------------------
+            // AUDIO
+            // ------------------------------------------------
+
+            const audioButton =
+                slide.querySelector(
+                    ".featured-audio-button"
+                );
+
+
+            if (audioButton) {
+
+                audioButton.addEventListener(
+                    "click",
+                    event => {
+
+                        event.stopPropagation();
+
+                        playFeaturedAudio(
+                            item.audio_url,
+                            audioButton
+                        );
+
+                    }
+                );
+
+            }
+
+
+            track.appendChild(
+                slide
+            );
+
+
+            // ------------------------------------------------
+            // DOT
+            // ------------------------------------------------
+
+            if (dots) {
+
+                const dot =
+                    document.createElement(
+                        "button"
+                    );
+
+
+                dot.type =
+                    "button";
+
+
+                dot.className =
+                    "featured-dot";
+
+
+                if (index === 0) {
+
+                    dot.classList.add(
+                        "active"
+                    );
+
+                }
+
+
+                dot.dataset.index =
+                    index;
+
+
+                dot.setAttribute(
+                    "aria-label",
+                    `Destaque ${index + 1}`
+                );
+
+
+                dots.appendChild(
+                    dot
+                );
+
+            }
+
+        }
+    );
+
+}
+
+
+// ============================================================
+// FEATURED LABEL
+// ============================================================
+
+function getFeaturedLabel(item) {
+
+    if (
+        item.content_type ===
+        "community"
+    ) {
+
+        return "COMUNIDADE";
+
+    }
+
+
+    if (
+        item.content_type ===
+        "story"
+    ) {
+
+        return "HISTÓRIA";
+
+    }
+
+
+    if (
+        item.area ===
+        "opinion"
+    ) {
+
+        return "OPINIÃO";
+
+    }
+
+
+    if (
+        item.area ===
+        "analysis"
+    ) {
+
+        return "ANÁLISE";
+
+    }
+
+
+    return "DESTAQUE";
+
+}
+
+
+// ============================================================
+// EMPTY FEATURED
+// ============================================================
+
+function renderEmptyFeatured() {
+
+    const track =
+        document.getElementById(
+            "featured-track"
+        );
+
+    const dots =
+        document.getElementById(
+            "featured-dots"
+        );
+
+
+    if (track) {
+
+        track.innerHTML = `
+
+            <article class="featured-slide">
+
+                <div class="featured-slide-image">
+
+                    <div class="featured-placeholder">
+                        DESTAQUES
+                    </div>
+
+                </div>
+
+                <div class="featured-content">
+
+                    <div class="featured-tag">
+                        DESTAQUES
+                    </div>
+
+                    <h2>
+                        Ainda não existem destaques publicados.
+                    </h2>
+
+                </div>
+
+            </article>
+
+        `;
+
+    }
+
+
+    if (dots) {
+
+        dots.innerHTML = "";
+
+    }
+
+}
+
+
+// ============================================================
+// FEATURED AUDIO
+// ============================================================
+
+let featuredAudio = null;
+
+function playFeaturedAudio(
+    url,
+    button
+) {
+
+    if (!url) {
+        return;
+    }
+
+
+    if (
+        featuredAudio &&
+        !featuredAudio.paused
+    ) {
+
+        featuredAudio.pause();
+
+        if (
+            featuredAudio.currentSrc ===
+            url
+        ) {
+
+            featuredAudio = null;
+
+            if (button) {
+                button.textContent = "🔊";
+            }
+
+            return;
+        }
+
+    }
+
+
+    featuredAudio =
+        new Audio(url);
+
+
+    featuredAudio.play()
+        .then(
+            () => {
+
+                if (button) {
+                    button.textContent = "⏸";
+                }
+
+            }
+        )
+        .catch(
+            error => {
+
+                console.error(
+                    "Erro ao reproduzir áudio:",
+                    error
+                );
+
+            }
+        );
+
+
+    featuredAudio.addEventListener(
+        "ended",
+        () => {
+
+            if (button) {
+                button.textContent = "🔊";
+            }
+
+            featuredAudio = null;
+
+        }
+    );
+
+}
+
+
+// ============================================================
+// FEATURED CAROUSEL
+// ============================================================
+
+function setupFeaturedCarousel() {
+
+    const track =
+        document.getElementById(
+            "featured-track"
+        );
+
+
+    const dots =
+        document.getElementById(
+            "featured-dots"
+        );
+
+
+    if (!track) {
+        return;
+    }
+
+
+    const getSlides =
+        () =>
+            track.querySelectorAll(
+                ".featured-slide"
+            );
+
+
+    const getDots =
+        () =>
+            dots
+                ? dots.querySelectorAll(
+                    ".featured-dot"
+                )
+                : [];
+
+
+    let currentIndex = 0;
+
+    let autoPlay = null;
+
+    let isDragging = false;
+
+    let startX = 0;
+
+    let startScrollLeft = 0;
+
+    let moved = false;
+
+
+    // --------------------------------------------------------
+    // UPDATE DOTS
+    // --------------------------------------------------------
+
+    function updateDots(index) {
+
+        getDots()
+            .forEach(
+                (dot, dotIndex) => {
+
+                    dot.classList.toggle(
+                        "active",
+                        dotIndex === index
+                    );
+
+                }
+            );
+
+    }
+
+
+    // --------------------------------------------------------
+    // GO TO SLIDE
+    // --------------------------------------------------------
+
+    function goToSlide(
+        index,
+        smooth = true
+    ) {
+
+        const slides =
+            getSlides();
+
+
+        if (!slides.length) {
+            return;
+        }
+
+
+        if (index < 0) {
+
+            index =
+                slides.length - 1;
+
+        }
+
+
+        if (
+            index >=
+            slides.length
+        ) {
+
+            index = 0;
+
+        }
+
+
+        currentIndex =
+            index;
+
+
+        const slide =
+            slides[index];
+
+
+        track.scrollTo({
+            left: slide.offsetLeft,
+            behavior:
+                smooth
+                    ? "smooth"
+                    : "auto"
+        });
+
+
+        updateDots(
+            currentIndex
+        );
+
+    }
+
+
+    // --------------------------------------------------------
+    // DETECT CURRENT SLIDE FROM SCROLL
+    // --------------------------------------------------------
+
+    function detectCurrentSlide() {
+
+        const slides =
+            getSlides();
+
+
+        if (!slides.length) {
+            return;
+        }
+
+
+        const scrollPosition =
+            track.scrollLeft;
+
+
+        let closestIndex = 0;
+
+        let closestDistance =
+            Infinity;
+
+
+        slides.forEach(
+            (slide, index) => {
+
+                const distance =
+                    Math.abs(
+                        slide.offsetLeft -
+                        scrollPosition
+                    );
+
+
+                if (
+                    distance <
+                    closestDistance
+                ) {
+
+                    closestDistance =
+                        distance;
+
+                    closestIndex =
+                        index;
+
+                }
+
+            }
+        );
+
+
+        currentIndex =
+            closestIndex;
+
+
+        updateDots(
+            currentIndex
+        );
+
+    }
+
+
+    // --------------------------------------------------------
+    // AUTOPLAY
+    // --------------------------------------------------------
+
+    function stopAutoPlay() {
+
+        if (autoPlay) {
+
+            clearInterval(
+                autoPlay
+            );
+
+            autoPlay = null;
+
+        }
+
+    }
+
+
+    function startAutoPlay() {
+
+        stopAutoPlay();
+
+
+        if (
+            getSlides().length <=
+            1
+        ) {
+
+            return;
+
+        }
+
+
+        autoPlay =
+            setInterval(
+                () => {
+
+                    goToSlide(
+                        currentIndex + 1
+                    );
+
+                },
+                5000
+            );
+
+    }
+
+
+    // --------------------------------------------------------
+    // DOT CLICKS
+    // --------------------------------------------------------
+
+    getDots()
+        .forEach(
+            dot => {
+
+                dot.addEventListener(
+                    "click",
+                    event => {
+
+                        event.stopPropagation();
+
+
+                        const index =
+                            Number(
+                                dot.dataset.index
+                            );
+
+
+                        if (
+                            Number.isNaN(
+                                index
+                            )
+                        ) {
+
+                            return;
+
+                        }
+
+
+                        goToSlide(
+                            index
+                        );
+
+
+                        startAutoPlay();
+
+                    }
+                );
+
+            }
+        );
+
+
+    // --------------------------------------------------------
+    // SCROLL
+    // --------------------------------------------------------
+
+    track.addEventListener(
+        "scroll",
+        () => {
+
+            detectCurrentSlide();
+
+        },
+        {
+            passive: true
+        }
+    );
+
+
+    // --------------------------------------------------------
+    // MOUSE DRAG
+    // --------------------------------------------------------
+
+    track.addEventListener(
+        "mousedown",
+        event => {
+
+            isDragging = true;
+
+            moved = false;
+
+            startX =
+                event.pageX;
+
+            startScrollLeft =
+                track.scrollLeft;
+
+            stopAutoPlay();
+
+            track.classList.add(
+                "dragging"
+            );
+
+        }
+    );
+
+
+    track.addEventListener(
+        "mousemove",
+        event => {
+
+            if (!isDragging) {
+                return;
+            }
+
+
+            const distance =
+                event.pageX -
+                startX;
+
+
+            if (
+                Math.abs(distance) >
+                5
+            ) {
+
+                moved = true;
+
+            }
+
+
+            track.scrollLeft =
+                startScrollLeft -
+                distance;
+
+        }
+    );
+
+
+    function stopDragging() {
+
+        if (!isDragging) {
+            return;
+        }
+
+
+        isDragging = false;
+
+        track.classList.remove(
+            "dragging"
+        );
+
+
+        if (moved) {
+
+            detectCurrentSlide();
+
+        }
+
+
+        startAutoPlay();
+
+    }
+
+
+    track.addEventListener(
+        "mouseup",
+        stopDragging
+    );
+
+
+    track.addEventListener(
+        "mouseleave",
+        stopDragging
+    );
+
+
+    // --------------------------------------------------------
+    // TOUCH / MOBILE SWIPE
+    // --------------------------------------------------------
+
+    track.addEventListener(
+        "touchstart",
+        event => {
+
+            if (
+                !event.touches ||
+                !event.touches.length
+            ) {
+
+                return;
+
+            }
+
+
+            startX =
+                event.touches[0].pageX;
+
+            startScrollLeft =
+                track.scrollLeft;
+
+            stopAutoPlay();
+
+        },
+        {
+            passive: true
+        }
+    );
+
+
+    track.addEventListener(
+        "touchend",
+        event => {
+
+            if (
+                !event.changedTouches ||
+                !event.changedTouches.length
+            ) {
+
+                startAutoPlay();
+
+                return;
+
+            }
+
+
+            const endX =
+                event.changedTouches[0].pageX;
+
+
+            const distance =
+                endX -
+                startX;
+
+
+            if (
+                Math.abs(distance) >
+                50
+            ) {
+
+                if (distance < 0) {
+
+                    goToSlide(
+                        currentIndex + 1
+                    );
+
+                } else {
+
+                    goToSlide(
+                        currentIndex - 1
+                    );
+
+                }
+
+            } else {
+
+                detectCurrentSlide();
+
+            }
+
+
+            startAutoPlay();
+
+        },
+        {
+            passive: true
+        }
+    );
+
+
+    // --------------------------------------------------------
+    // PAUSE WHEN MOUSE IS OVER CAROUSEL
+    // --------------------------------------------------------
+
+    track.addEventListener(
+        "mouseenter",
+        () => {
+
+            stopAutoPlay();
+
+        }
+    );
+
+
+    track.addEventListener(
+        "mouseleave",
+        () => {
+
+            if (!isDragging) {
+
+                startAutoPlay();
+
+            }
+
+        }
+    );
+
+
+    // --------------------------------------------------------
+    // INITIAL POSITION
+    // --------------------------------------------------------
+
+    goToSlide(
+        0,
+        false
+    );
+
+
+    startAutoPlay();
 
 }
 
@@ -339,10 +1425,6 @@ function renderNews(items) {
     container.innerHTML = "";
 
 
-    // ========================================================
-    // BIG STORY
-    // ========================================================
-
     const main =
         items[0];
 
@@ -351,6 +1433,7 @@ function renderNews(items) {
         document.createElement(
             "article"
         );
+
 
     mainStory.className =
         "br-main-story";
@@ -404,14 +1487,11 @@ function renderNews(items) {
     );
 
 
-    // ========================================================
-    // SMALL STORIES
-    // ========================================================
-
     const smallWrapper =
         document.createElement(
             "div"
         );
+
 
     smallWrapper.className =
         "br-small-news";
@@ -429,6 +1509,7 @@ function renderNews(items) {
                     document.createElement(
                         "article"
                     );
+
 
                 card.className =
                     "br-small-story";
@@ -615,6 +1696,7 @@ function renderOpinion(items) {
             "article"
         );
 
+
     feature.className =
         "br-opinion-card";
 
@@ -672,6 +1754,7 @@ function renderOpinion(items) {
             "div"
         );
 
+
     list.className =
         "br-opinion-list";
 
@@ -688,6 +1771,7 @@ function renderOpinion(items) {
                     document.createElement(
                         "article"
                     );
+
 
                 card.className =
                     "br-opinion-small";
@@ -768,16 +1852,6 @@ async function loadFixtures(team) {
     }
 
 
-    /*
-        Fixture provider adapter.
-
-        We intentionally do NOT hardcode fixtures here.
-
-        The homepage is ready to consume a fixture provider.
-        Replace getExternalFixtures() with the actual provider
-        when the API/source is connected.
-    */
-
     const fixtures =
         await getExternalFixtures(
             team
@@ -795,6 +1869,7 @@ async function loadFixtures(team) {
                 estiver ligada.
 
             </div>
+
         `;
 
         return;
@@ -814,30 +1889,16 @@ async function loadFixtures(team) {
 
 async function getExternalFixtures(team) {
 
-    /*
-        IMPORTANT:
+    if (
+        Array.isArray(
+            window.BARCA_REAL_FIXTURES
+        )
+    ) {
 
-        This function is deliberately separated from the
-        homepage UI.
+        return window.BARCA_REAL_FIXTURES;
 
-        When we connect the real football data source, only
-        this function needs to change.
+    }
 
-        Expected object:
-
-        {
-            competition: "La Liga",
-            date: "2026-09-25T19:00:00",
-            home: {
-                name: "...",
-                logo: "..."
-            },
-            away: {
-                name: "...",
-                logo: "..."
-            }
-        }
-    */
 
     return [];
 
@@ -922,11 +1983,15 @@ function renderFixtures(fixtures) {
     `;
 
 
-    document
-        .getElementById(
+    const predictionButton =
+        document.getElementById(
             "prediction-button"
-        )
-        .addEventListener(
+        );
+
+
+    if (predictionButton) {
+
+        predictionButton.addEventListener(
             "click",
             () => {
 
@@ -936,6 +2001,8 @@ function renderFixtures(fixtures) {
 
             }
         );
+
+    }
 
 
     const upcomingContainer =
@@ -951,6 +2018,7 @@ function renderFixtures(fixtures) {
                 document.createElement(
                     "div"
                 );
+
 
             card.className =
                 "br-upcoming-card";
@@ -1108,9 +2176,11 @@ async function renderLeagueTable(
         container.innerHTML = `
 
             <div class="br-empty">
+
                 A classificação será carregada
                 automaticamente a partir da fonte
                 oficial de dados.
+
             </div>
 
         `;
@@ -1257,14 +2327,37 @@ async function getExternalLeagueTable(
     type
 ) {
 
-    /*
-        Connect the same external football provider
-        used by getExternalFixtures().
+    if (
+        typeof window.BARCA_REAL_TABLE ===
+        "function"
+    ) {
 
-        type:
-        - league
-        - champions
-    */
+        try {
+
+            const result =
+                await window.BARCA_REAL_TABLE(
+                    team,
+                    type
+                );
+
+
+            return Array.isArray(result)
+                ? result
+                : [];
+
+        } catch (error) {
+
+            console.error(
+                "Erro na fonte da classificação:",
+                error
+            );
+
+            return [];
+
+        }
+
+    }
+
 
     return [];
 
@@ -1287,14 +2380,6 @@ async function loadPlayerRatings(team) {
         return;
     }
 
-
-    /*
-        We first try the existing Supabase structure.
-
-        If the table has not been created yet, the section
-        safely displays the empty state rather than breaking
-        the homepage.
-    */
 
     const {
         data,
@@ -1324,8 +2409,10 @@ async function loadPlayerRatings(team) {
         container.innerHTML = `
 
             <div class="br-empty">
+
                 As avaliações dos adeptos aparecerão aqui
                 depois dos jogos.
+
             </div>
 
         `;
@@ -1344,6 +2431,7 @@ async function loadPlayerRatings(team) {
                 document.createElement(
                     "div"
                 );
+
 
             row.className =
                 "br-rating-row";
@@ -1534,16 +2622,22 @@ function renderVideos(items) {
     `;
 
 
-    document
-        .getElementById(
+    const mainVideo =
+        document.getElementById(
             "main-video"
-        )
-        .addEventListener(
+        );
+
+
+    if (mainVideo) {
+
+        mainVideo.addEventListener(
             "click",
             () => openContent(
                 main
             )
         );
+
+    }
 
 
     const list =
@@ -1564,6 +2658,7 @@ function renderVideos(items) {
                     document.createElement(
                         "article"
                     );
+
 
                 card.className =
                     "br-video-small";
@@ -1614,15 +2709,15 @@ function renderVideos(items) {
 
 function setupHomepageInteractions() {
 
-    // --------------------------------------------------------
-    // MORE NEWS
-    // --------------------------------------------------------
-
-    document
-        .getElementById(
+    const moreNewsButton =
+        document.getElementById(
             "more-news-button"
-        )
-        .addEventListener(
+        );
+
+
+    if (moreNewsButton) {
+
+        moreNewsButton.addEventListener(
             "click",
             () => {
 
@@ -1635,16 +2730,18 @@ function setupHomepageInteractions() {
             }
         );
 
+    }
 
-    // --------------------------------------------------------
-    // MORE OPINION
-    // --------------------------------------------------------
 
-    document
-        .getElementById(
+    const moreOpinionButton =
+        document.getElementById(
             "more-opinion-button"
-        )
-        .addEventListener(
+        );
+
+
+    if (moreOpinionButton) {
+
+        moreOpinionButton.addEventListener(
             "click",
             () => {
 
@@ -1657,37 +2754,39 @@ function setupHomepageInteractions() {
             }
         );
 
+    }
 
-    // --------------------------------------------------------
-    // RATINGS
-    // --------------------------------------------------------
 
-    document
-        .getElementById(
+    const ratingsButton =
+        document.getElementById(
             "submit-ratings-button"
-        )
-        .addEventListener(
-            "click",
-            () => {
-
-                openRatingsView();
-
-            }
         );
 
 
-    // --------------------------------------------------------
-    // BACK
-    // --------------------------------------------------------
+    if (ratingsButton) {
 
-    document
-        .getElementById(
+        ratingsButton.addEventListener(
+            "click",
+            openRatingsView
+        );
+
+    }
+
+
+    const backButton =
+        document.getElementById(
             "content-back-button"
-        )
-        .addEventListener(
+        );
+
+
+    if (backButton) {
+
+        backButton.addEventListener(
             "click",
             closeFocusedView
         );
+
+    }
 
 }
 
@@ -1703,10 +2802,16 @@ function openContent(item) {
             "content-view"
         );
 
+
     const body =
         document.getElementById(
             "content-view-body"
         );
+
+
+    if (!view || !body) {
+        return;
+    }
 
 
     hideHomepage();
@@ -1726,13 +2831,20 @@ function openContent(item) {
         </h1>
 
         <div class="br-view-meta">
-            ${getAuthor(item)}
-            ${item.created_at
-                ? " • " +
-                  formatDate(
-                      item.created_at
-                  )
-                : ""}
+
+            ${escapeHTML(
+                getAuthor(item)
+            )}
+
+            ${
+                item.created_at
+                    ? " • " +
+                      formatDate(
+                          item.created_at
+                      )
+                    : ""
+            }
+
         </div>
 
         ${
@@ -1801,28 +2913,35 @@ function openListView(
             "content-view"
         );
 
+
     const body =
         document.getElementById(
             "content-view-body"
         );
 
 
+    if (!view || !body) {
+        return;
+    }
+
+
     body.innerHTML = `
 
         <div class="br-view-type">
+
             ${escapeHTML(
                 type === "news"
                     ? "NOTÍCIAS"
                     : "OPINIÃO & ANÁLISE"
             )}
+
         </div>
 
         <h1 class="br-view-title">
             ${escapeHTML(title)}
         </h1>
 
-        <div class="br-list-view">
-        </div>
+        <div class="br-list-view"></div>
 
     `;
 
@@ -1840,6 +2959,7 @@ function openListView(
                 document.createElement(
                     "article"
                 );
+
 
             card.className =
                 "br-list-view-card";
@@ -1884,6 +3004,7 @@ function openListView(
                     </div>
 
                 </div>
+
             `;
 
 
@@ -1932,10 +3053,16 @@ function openPrediction(
             "content-view"
         );
 
+
     const body =
         document.getElementById(
             "content-view-body"
         );
+
+
+    if (!view || !body) {
+        return;
+    }
 
 
     body.innerHTML = `
@@ -2046,10 +3173,16 @@ function openFixture(
             "content-view"
         );
 
+
     const body =
         document.getElementById(
             "content-view-body"
         );
+
+
+    if (!view || !body) {
+        return;
+    }
 
 
     body.innerHTML = `
@@ -2062,13 +3195,17 @@ function openFixture(
         </div>
 
         <h1 class="br-view-title">
+
             ${escapeHTML(
                 fixture.home.name
             )}
+
             vs
+
             ${escapeHTML(
                 fixture.away.name
             )}
+
         </h1>
 
         <div class="br-view-meta">
@@ -2130,10 +3267,16 @@ function openRatingsView() {
             "content-view"
         );
 
+
     const body =
         document.getElementById(
             "content-view-body"
         );
+
+
+    if (!view || !body) {
+        return;
+    }
 
 
     body.innerHTML = `
@@ -2147,13 +3290,17 @@ function openRatingsView() {
         </h1>
 
         <div class="br-view-description">
+
             Depois de cada jogo poderás dar a tua nota
             aos jogadores do teu clube.
+
         </div>
 
         <div class="br-empty">
+
             O sistema completo de avaliação será aberto
             quando houver um jogo disponível para avaliação.
+
         </div>
 
     `;
@@ -2178,29 +3325,48 @@ function openRatingsView() {
 
 function hideHomepage() {
 
-    document
-        .getElementById(
+    const homepage =
+        document.getElementById(
             "homepage-content"
-        )
-        .classList.add(
+        );
+
+
+    const header =
+        document.querySelector(
+            ".team-header"
+        );
+
+
+    const view =
+        document.getElementById(
+            "content-view"
+        );
+
+
+    if (homepage) {
+
+        homepage.classList.add(
             "hidden-home"
         );
 
-
-    document
-        .querySelector(
-            ".team-header"
-        )
-        .style.display = "none";
+    }
 
 
-    document
-        .getElementById(
-            "content-view"
-        )
-        .classList.add(
+    if (header) {
+
+        header.style.display =
+            "none";
+
+    }
+
+
+    if (view) {
+
+        view.classList.add(
             "active"
         );
+
+    }
 
 }
 
@@ -2211,36 +3377,62 @@ function hideHomepage() {
 
 function closeFocusedView() {
 
-    document
-        .getElementById(
+    const view =
+        document.getElementById(
             "content-view"
-        )
-        .classList.remove(
+        );
+
+
+    const homepage =
+        document.getElementById(
+            "homepage-content"
+        );
+
+
+    const header =
+        document.querySelector(
+            ".team-header"
+        );
+
+
+    const body =
+        document.getElementById(
+            "content-view-body"
+        );
+
+
+    if (view) {
+
+        view.classList.remove(
             "active"
         );
 
+    }
 
-    document
-        .getElementById(
-            "homepage-content"
-        )
-        .classList.remove(
+
+    if (homepage) {
+
+        homepage.classList.remove(
             "hidden-home"
         );
 
-
-    document
-        .querySelector(
-            ".team-header"
-        )
-        .style.display = "";
+    }
 
 
-    document
-        .getElementById(
-            "content-view-body"
-        )
-        .innerHTML = "";
+    if (header) {
+
+        header.style.display =
+            "";
+
+    }
+
+
+    if (body) {
+
+        body.innerHTML =
+            "";
+
+    }
 
 
     window.scrollTo({
@@ -2310,26 +3502,24 @@ function imageHTML(
     if (!url) {
 
         return `
+
             <div class="br-story-placeholder">
-                ${escapeHTML(
-                    label
-                )}
+                ${escapeHTML(label)}
             </div>
+
         `;
 
     }
 
 
     return `
+
         <img
-            src="${escapeAttribute(
-                url
-            )}"
-            alt="${escapeAttribute(
-                label
-            )}"
+            src="${escapeAttribute(url)}"
+            alt="${escapeAttribute(label)}"
             loading="lazy"
         >
+
     `;
 
 }
@@ -2342,6 +3532,11 @@ function imageHTML(
 function teamHTML(
     team
 ) {
+
+    if (!team) {
+        return "";
+    }
+
 
     return `
 
@@ -2370,10 +3565,12 @@ function teamHTML(
             }
 
             <div class="br-team-name">
+
                 ${escapeHTML(
                     team.name ||
                     ""
                 )}
+
             </div>
 
         </div>
@@ -2616,22 +3813,5 @@ function escapeAttribute(
     return escapeHTML(
         value
     );
-
-}
-
-
-// ============================================================
-// EXISTING CAROUSEL FUNCTION
-// Kept so existing featured functionality is not destroyed.
-// ============================================================
-
-function setupFeaturedCarousel() {
-
-    /*
-        Kept intentionally.
-
-        The previous homepage featured carousel can continue
-        to be used elsewhere without breaking home.js.
-    */
 
 }
