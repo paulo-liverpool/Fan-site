@@ -123,11 +123,11 @@ async function loadHome() {
     // ========================================================
 
     document.getElementById(
-    "team-title"
-).textContent =
-    team.slug === "barcelona"
-        ? "VISCA BARÇA"
-        : "HALA MADRID";
+        "team-title"
+    ).textContent =
+        team.slug === "barcelona"
+            ? "VISCA BARÇA"
+            : "HALA MADRID";
 
 
     document.getElementById(
@@ -151,8 +151,192 @@ async function loadHome() {
 }
 
 
+
+// ============================================================
+// CAROUSEL
+// ============================================================
+
+function setupFeaturedCarousel() {
+
+    const track =
+        document.getElementById(
+            "featured-track"
+        );
+
+    const dots =
+        document.querySelectorAll(
+            ".featured-dot"
+        );
+
+
+    if (!track || !dots.length) {
+        return;
+    }
+
+
+    // --------------------------------------------------------
+    // ACTUALIZAR DOTS
+    // --------------------------------------------------------
+
+    function updateDots() {
+
+        const slideWidth =
+            track.clientWidth;
+
+        if (!slideWidth) {
+            return;
+        }
+
+
+        const currentSlide =
+            Math.round(
+                track.scrollLeft /
+                slideWidth
+            );
+
+
+        dots.forEach(
+            (dot, index) => {
+
+                dot.classList.toggle(
+                    "active",
+                    index === currentSlide
+                );
+
+            }
+        );
+    }
+
+
+    // --------------------------------------------------------
+    // SCROLL
+    // --------------------------------------------------------
+
+    track.addEventListener(
+        "scroll",
+        updateDots,
+        {
+            passive: true
+        }
+    );
+
+
+    // --------------------------------------------------------
+    // DOTS
+    // --------------------------------------------------------
+
+    dots.forEach(
+        (dot) => {
+
+            dot.addEventListener(
+                "click",
+                () => {
+
+                    const slide =
+                        Number(
+                            dot.dataset.slide
+                        );
+
+
+                    track.scrollTo({
+                        left:
+                            track.clientWidth *
+                            slide,
+
+                        behavior:
+                            "smooth"
+                    });
+
+                }
+            );
+
+        }
+    );
+
+
+    // --------------------------------------------------------
+    // MOUSE DRAG
+    // --------------------------------------------------------
+
+    let isDragging = false;
+    let startX = 0;
+    let startScroll = 0;
+
+
+    track.addEventListener(
+        "mousedown",
+        (event) => {
+
+            isDragging = true;
+
+            startX =
+                event.pageX;
+
+            startScroll =
+                track.scrollLeft;
+
+            track.classList.add(
+                "dragging"
+            );
+
+        }
+    );
+
+
+    track.addEventListener(
+        "mousemove",
+        (event) => {
+
+            if (!isDragging) {
+                return;
+            }
+
+
+            const distance =
+                event.pageX -
+                startX;
+
+
+            track.scrollLeft =
+                startScroll -
+                distance;
+
+        }
+    );
+
+
+    window.addEventListener(
+        "mouseup",
+        () => {
+
+            if (!isDragging) {
+                return;
+            }
+
+
+            isDragging = false;
+
+            track.classList.remove(
+                "dragging"
+            );
+
+        }
+    );
+
+
+    // --------------------------------------------------------
+    // INICIALIZAR
+    // --------------------------------------------------------
+
+    updateDots();
+}
+
+
+
 // ============================================================
 // INICIAR HOME
 // ============================================================
+
+setupFeaturedCarousel();
 
 loadHome();
