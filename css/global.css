@@ -110,20 +110,29 @@ button {
 }
 
 .team-brand {
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
+    overflow: visible;
+    flex-shrink: 0;
 }
 
-.team-brand-logo {
-    width: 100%;
-    height: 100%;
-    display: block;
-    object-fit: contain;
-    padding: 6px;
+.topbar .team-brand-logo {
+    display: block !important;
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
+    max-width: 32px !important;
+    max-height: 32px !important;
+    object-fit: contain !important;
+    object-position: center !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    border: 0 !important;
 }
 
 .brand span {
