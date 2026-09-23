@@ -4827,8 +4827,8 @@ async function saveNewsEdit(
             title,
 
             translated_title:
-                title,
-
+                title
+            
             description,
 
             translated_description:
@@ -4854,7 +4854,7 @@ async function saveNewsEdit(
             category,
 
             status,
-
+            editorial_locked: true,
             is_featured:
                 isFeatured
         };
