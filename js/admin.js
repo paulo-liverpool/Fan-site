@@ -3287,7 +3287,7 @@ function renderNewsCardsHTML(items, teamMap = {}) {
 
 async function loadNewsTeams() {
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
         .from("teams")
         .select("id,name,short_name,slug");
 
@@ -3304,7 +3304,6 @@ async function loadNewsTeams() {
 
     return teamMap;
 }
-
 
 // ============================================================
 // 15A. NEWS CARDS — HOMEPAGE STYLE
