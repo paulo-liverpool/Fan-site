@@ -2714,26 +2714,27 @@ async function loadNewsLibrary() {
         } = await supabaseClient
             .from("news")
             .select(`
-                id,
-                team_id,
-                title,
-                description,
-                image_url,
-                article_url,
-                source_name,
-                source_url,
-                author,
-                published_at,
-                imported_at,
-                external_id,
-                category,
-                status,
-                is_featured,
-                sort_order,
-                created_at,
-                article_body,
-                translated_title,
-                translated_description
+                      id,
+        team_id,
+        title,
+        description,
+        image_url,
+        article_url,
+        source_name,
+        source_url,
+        author,
+        published_at,
+        imported_at,
+        external_id,
+        category,
+        status,
+        editorial_locked,
+        is_featured,
+        sort_order,
+        created_at,
+        article_body,
+        translated_title,
+        translated_description
             `)
             .order(
                 "created_at",
@@ -3382,26 +3383,27 @@ async function getNewsById(
     } = await supabaseClient
         .from("news")
         .select(`
-            id,
-            team_id,
-            title,
-            description,
-            image_url,
-            article_url,
-            source_name,
-            source_url,
-            author,
-            published_at,
-            imported_at,
-            external_id,
-            category,
-            status,
-            is_featured,
-            sort_order,
-            created_at,
-            article_body,
-            translated_title,
-            translated_description
+                   id,
+        team_id,
+        title,
+        description,
+        image_url,
+        article_url,
+        source_name,
+        source_url,
+        author,
+        published_at,
+        imported_at,
+        external_id,
+        category,
+        status,
+        editorial_locked,
+        is_featured,
+        sort_order,
+        created_at,
+        article_body,
+        translated_title,
+        translated_description
         `)
         .eq(
             "id",
@@ -4134,15 +4136,11 @@ async function createNews(
                 imported_at:
                     now,
 
-                category,
-
-                status,
-
-                is_featured:
-                    false,
-
-                sort_order:
-                    0
+               category,
+status,
+editorial_locked: true,
+is_featured: false,
+sort_order: 0
             });
 
         if (error) throw error;
@@ -4819,45 +4817,22 @@ async function saveNewsEdit(
                 "A guardar as alterações...";
         }
 
-        const updateData = {
-
-            team_id:
-                teamId,
-
-            title,
-
-            translated_title:
-                title
-            
-            description,
-
-            translated_description:
-                description,
-
-            article_body:
-                articleBody,
-
-            image_url:
-                imageUrl,
-
-            source_name:
-                sourceName,
-
-            source_url:
-                sourceUrl,
-
-            article_url:
-                item.article_url ||
-                sourceUrl ||
-                `br://${item.id}`,
-
-            category,
-
-            status,
-            editorial_locked: true,
-            is_featured:
-                isFeatured
-        };
+       const updateData = {
+    team_id: teamId,
+    title,
+    translated_title: title,
+    description,
+    translated_description: description,
+    article_body: articleBody,
+    image_url: imageUrl,
+    source_name: sourceName,
+    source_url: sourceUrl,
+    article_url: item.article_url || sourceUrl || `br://${item.id}`,
+    category,
+    status,
+    editorial_locked: true,
+    is_featured: isFeatured
+};
 
         if (
             status === "published" &&
