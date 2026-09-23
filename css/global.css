@@ -110,8 +110,8 @@ button {
 }
 
 .team-brand {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -119,14 +119,11 @@ button {
 }
 
 .team-brand-logo {
-    width: 18px !important;
-    height: 18px !important;
-    max-width: 18px !important;
-    max-height: 18px !important;
-    min-width: 18px !important;
-    min-height: 18px !important;
+    width: 100%;
+    height: 100%;
     display: block;
     object-fit: contain;
+    padding: 6px;
 }
 
 .brand span {
