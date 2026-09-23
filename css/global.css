@@ -109,34 +109,40 @@ button {
     height: 32px;
 }
 
-.team-brand {
-    width: 40px;
-    height: 40px;
+/* =========================================================
+   TOPBAR TEAM CREST
+   ========================================================= */
+
+.topbar .team-brand {
+    width: 70px;
+    height: 70px;
     display: flex;
     align-items: center;
-    justify-content: center;
-    overflow: visible;
+    justify-content: flex-start;
     flex-shrink: 0;
+    overflow: visible;
+    padding: 0;
+    margin: 0;
 }
 
-.topbar .team-brand-logo {
+.topbar #team-brand-logo {
+    width: 50px !important;
+    height: 50px !important;
+    min-width: 50px !important;
+    min-height: 50px !important;
+    max-width: 50px !important;
+    max-height: 50px !important;
+
     display: block !important;
-    width: 32px !important;
-    height: 32px !important;
-    min-width: 32px !important;
-    min-height: 32px !important;
-    max-width: 32px !important;
-    max-height: 32px !important;
     object-fit: contain !important;
     object-position: center !important;
+
     padding: 0 !important;
     margin: 0 !important;
-    overflow: visible !important;
     border: 0 !important;
-}
+    border-radius: 0 !important;
 
-.brand span {
-    opacity: 0.45;
+    overflow: visible !important;
 }
 
 .profile-button {
@@ -1716,7 +1722,23 @@ button {
         gap: 12px;
     }
 }
+@media (max-width: 650px) {
 
+    .topbar .team-brand {
+        width: 58px;
+        height: 58px;
+    }
+
+    .topbar #team-brand-logo {
+        width: 42px !important;
+        height: 42px !important;
+        min-width: 42px !important;
+        min-height: 42px !important;
+        max-width: 42px !important;
+        max-height: 42px !important;
+    }
+
+}
 
 /* ============================================================
    VERY SMALL PHONES
