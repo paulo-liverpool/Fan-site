@@ -2780,449 +2780,762 @@ async function loadNewsLibrary() {
 // 14. RENDER NEWS LIBRARY
 // ============================================================
 
-async function renderNewsLibrary(
-    items
-) {
+function renderNewsLibrary(items) {
+    const container = document.getElementById("news-list");
 
-    const list =
-        document.getElementById(
-            "news-list"
-        );
+    if (!container) return;
 
-    if (!list) return;
+    const total = items.length;
+    const published = items.filter(item => item.status === "published").length;
+    const pending = items.filter(item => item.status === "draft").length;
+    const unpublished = items.filter(item => item.status === "unpublished").length;
 
-    const counts = {
-
-        all:
-            items.length,
-
-        draft:
-            items.filter(
-                item =>
-                    item.status === "draft"
-            ).length,
-
-        published:
-            items.filter(
-                item =>
-                    item.status === "published"
-            ).length,
-
-        unpublished:
-            items.filter(
-                item =>
-                    item.status === "unpublished"
-            ).length
-    };
-
-    let teams = [];
-
-    const {
-        data: teamData,
-        error: teamError
-    } = await supabaseClient
-        .from("teams")
-        .select(
-            "id,name,short_name,slug"
-        )
-        .order(
-            "name",
-            {
-                ascending: true
-            }
-        );
-
-    if (!teamError) {
-        teams = teamData || [];
-    }
-
-    const teamMap =
-        Object.fromEntries(
-            teams.map(
-                team => [
-                    team.id,
-                    team
-                ]
-            )
-        );
-
-    list.innerHTML = `
-
+    container.innerHTML = `
         <div class="news-library-shell">
 
+            <!-- NEWS TOOLBAR -->
             <div class="news-library-toolbar">
 
-                <div class="news-library-summary">
+                <div class="news-library-toolbar-left">
 
-                    <strong>
-                        ${counts.all}
-                    </strong>
+                    <div class="news-library-stat">
+                        <span>TODAS</span>
+                        <strong>${total}</strong>
+                    </div>
 
-                    <span>
-                        ${
-                            counts.all === 1
-                                ? "notícia"
-                                : "notícias"
-                        }
-                    </span>
+                    <div class="news-library-stat">
+                        <span>PENDENTES</span>
+                        <strong>${pending}</strong>
+                    </div>
+
+                    <div class="news-library-stat">
+                        <span>PUBLICADAS</span>
+                        <strong>${published}</strong>
+                    </div>
+
+                    <div class="news-library-stat">
+                        <span>NÃO PUBLICADAS</span>
+                        <strong>${unpublished}</strong>
+                    </div>
 
                 </div>
 
-                <div class="news-library-controls">
+                <div class="news-library-toolbar-right">
 
-                    <label class="news-filter-wrap">
+                    <select id="news-status-filter" class="admin-select">
+                        <option value="all">Todas</option>
+                        <option value="draft">Pendentes</option>
+                        <option value="published">Publicadas</option>
+                        <option value="unpublished">Não publicadas</option>
+                    </select>
 
-                        <span>
-                            Estado
-                        </span>
-
-                        <select id="news-status-filter">
-
-                            <option value="all">
-                                Todas (${counts.all})
-                            </option>
-
-                            <option value="draft">
-                                Pendentes (${counts.draft})
-                            </option>
-
-                            <option value="published">
-                                Publicadas (${counts.published})
-                            </option>
-
-                            <option value="unpublished">
-                                Não publicadas (${counts.unpublished})
-                            </option>
-
-                        </select>
-
-                    </label>
-
-                    <label class="news-filter-wrap">
-
-                        <span>
-                            Clube
-                        </span>
-
-                        <select id="news-team-filter">
-
-                            <option value="all">
-                                Todos
-                            </option>
-
-                            ${teams.map(
-                                team => `
-                                    <option
-                                        value="${escapeAttribute(
-                                            team.id
-                                        )}"
-                                    >
-                                        ${escapeHTML(
-                                            team.short_name ||
-                                            team.name
-                                        )}
-                                    </option>
-                                `
-                            ).join("")}
-
-                        </select>
-
-                    </label>
+                    <select id="news-team-filter" class="admin-select">
+                        <option value="all">Todos os clubes</option>
+                        <option value="barcelona">Barcelona</option>
+                        <option value="real-madrid">Real Madrid</option>
+                        <option value="both">Ambos</option>
+                    </select>
 
                 </div>
 
             </div>
 
-            <div
-                class="news-library-results"
-                id="news-library-results"
-            >
-                ${renderNewsCards(
-                    items,
-                    teamMap
-                )}
-            </div>
+            <!-- NEWS CONTENT -->
+            <div id="news-library-results" class="news-library-results"></div>
 
         </div>
     `;
 
-    const applyFilters = () => {
+    const teamSelect = document.getElementById("news-team-filter");
 
-        const statusFilter =
-            document
-                .getElementById(
-                    "news-status-filter"
-                )
-                ?.value ||
-            "all";
+    loadNewsTeams().then(teamMap => {
 
-        const teamFilter =
-            document
-                .getElementById(
-                    "news-team-filter"
-                )
-                ?.value ||
-            "all";
+        const renderFiltered = () => {
 
-        const filtered =
-            items.filter(
-                item => {
+            const statusFilter =
+                document.getElementById("news-status-filter")?.value || "all";
 
-                    const statusMatch =
-                        statusFilter === "all" ||
-                        item.status ===
-                        statusFilter;
+            const teamFilter =
+                document.getElementById("news-team-filter")?.value || "all";
 
-                    const teamMatch =
-                        teamFilter === "all" ||
-                        item.team_id ===
-                        teamFilter;
+            let filtered = [...items];
 
-                    return (
-                        statusMatch &&
-                        teamMatch
-                    );
-                }
-            );
-
-        const results =
-            document.getElementById(
-                "news-library-results"
-            );
-
-        if (results) {
-
-            results.innerHTML =
-                renderNewsCards(
-                    filtered,
-                    teamMap
+            if (statusFilter !== "all") {
+                filtered = filtered.filter(
+                    item => item.status === statusFilter
                 );
+            }
+
+            if (teamFilter !== "all") {
+
+                filtered = filtered.filter(item => {
+
+                    const team = teamMap[item.team_id];
+
+                    if (teamFilter === "both") {
+                        return !item.team_id;
+                    }
+
+                    return team?.slug === teamFilter;
+                });
+            }
+
+            renderNewsCards(filtered, teamMap);
+        };
+
+        document
+            .getElementById("news-status-filter")
+            ?.addEventListener("change", renderFiltered);
+
+        teamSelect?.addEventListener("change", renderFiltered);
+
+        renderFiltered();
+    });
+}
+
+
+// ============================================================
+// 15. NEWS TEAMS
+// ============================================================
+
+async function loadNewsTeams() {
+
+    const { data, error } = await supabase
+        .from("teams")
+        .select("id,name,short_name,slug");
+
+    if (error) {
+        console.error("Erro ao carregar clubes das notícias:", error);
+        return {};
+    }
+
+    const teamMap = {};
+
+    (data || []).forEach(team => {
+        teamMap[team.id] = team;
+    });
+
+    return teamMap;
+}
+
+
+// ============================================================
+// 15A. NEWS CARDS — HOMEPAGE STYLE
+// ============================================================
+
+function renderNewsCards(items, teamMap = {}) {
+
+    const container = document.getElementById("news-library-results");
+
+    if (!container) return;
+
+    if (!items.length) {
+
+        container.innerHTML = `
+            <div class="news-library-empty">
+                <div class="news-library-empty-icon">N</div>
+                <h3>Nenhuma notícia encontrada</h3>
+                <p>
+                    Não existem notícias que correspondam aos filtros seleccionados.
+                </p>
+                <button
+                    type="button"
+                    class="admin-primary-button"
+                    id="news-empty-create"
+                >
+                    + Criar Notícia
+                </button>
+            </div>
+        `;
+
+        document
+            .getElementById("news-empty-create")
+            ?.addEventListener("click", openNewsCreateModal);
+
+        return;
+    }
+
+    const lead = items[0];
+    const secondary = items.slice(1);
+
+    const renderImage = (item, large = false) => {
+
+        const title =
+            item.translated_title ||
+            item.title ||
+            "Notícia";
+
+        if (!item.image_url) {
+
+            return `
+                <div class="${large
+                    ? "news-admin-lead-media"
+                    : "news-admin-small-media"
+                } image-missing">
+
+                    <div class="news-image-fallback">
+                        <span>IMAGEM</span>
+                        <strong>Indisponível</strong>
+                    </div>
+
+                </div>
+            `;
         }
 
-        bindNewsActions();
+        return `
+            <div class="${large
+                ? "news-admin-lead-media"
+                : "news-admin-small-media"
+            }">
+
+                <img
+                    src="${escapeAttribute(item.image_url)}"
+                    alt="${escapeAttribute(title)}"
+                    class="news-admin-card-image"
+                    loading="lazy"
+                    onerror="
+                        this.onerror=null;
+                        this.style.display='none';
+                        this.parentElement.classList.add('image-missing');
+                        this.parentElement.querySelector('.news-image-fallback').style.display='flex';
+                    "
+                >
+
+                <div
+                    class="news-image-fallback"
+                    style="display:none;"
+                >
+                    <span>IMAGEM</span>
+                    <strong>Indisponível</strong>
+                </div>
+
+                <div class="news-image-overlay"></div>
+
+                <div class="news-card-status">
+                    ${renderNewsStatusBadge(item)}
+                </div>
+
+            </div>
+        `;
     };
 
-    document
-        .getElementById(
-            "news-status-filter"
-        )
-        ?.addEventListener(
-            "change",
-            applyFilters
-        );
 
-    document
-        .getElementById(
-            "news-team-filter"
-        )
-        ?.addEventListener(
-            "change",
-            applyFilters
-        );
+    const renderMeta = item => {
+
+        const team = teamMap[item.team_id];
+
+        const teamName =
+            team?.short_name ||
+            team?.name ||
+            (!item.team_id ? "BARÇA REAL" : "BR");
+
+        const category =
+            item.category ||
+            "news";
+
+        const date =
+            item.published_at ||
+            item.created_at ||
+            item.imported_at;
+
+        return `
+            <div class="news-card-meta">
+
+                <span class="news-card-team">
+                    ${escapeHTML(teamName)}
+                </span>
+
+                <span class="news-card-separator">•</span>
+
+                <span>
+                    ${escapeHTML(category)}
+                </span>
+
+                <span class="news-card-separator">•</span>
+
+                <span>
+                    ${formatDate(date)}
+                </span>
+
+            </div>
+        `;
+    };
+
+
+    const renderEditorialInfo = item => {
+
+        const badges = [];
+
+        if (item.editorial_locked) {
+
+            badges.push(`
+                <span class="news-editorial-badge">
+                    EDITORIAL
+                </span>
+            `);
+        }
+
+        if (item.source_name) {
+
+            badges.push(`
+                <span class="news-source-badge">
+                    ${escapeHTML(item.source_name)}
+                </span>
+            `);
+        }
+
+        return badges.length
+            ? `<div class="news-editorial-info">${badges.join("")}</div>`
+            : "";
+    };
+
+
+    const renderActions = item => {
+
+        const statusAction =
+            getNewsStatusAction(item);
+
+        return `
+            <div class="news-card-actions">
+
+                <button
+                    type="button"
+                    class="admin-secondary-button"
+                    data-news-action="preview"
+                    data-id="${escapeAttribute(item.id)}"
+                >
+                    Pré-visualizar
+                </button>
+
+                <button
+                    type="button"
+                    class="admin-secondary-button"
+                    data-news-action="edit"
+                    data-id="${escapeAttribute(item.id)}"
+                >
+                    Editar
+                </button>
+
+                <button
+                    type="button"
+                    class="admin-secondary-button"
+                    data-news-action="${statusAction.action}"
+                    data-id="${escapeAttribute(item.id)}"
+                >
+                    ${statusAction.label}
+                </button>
+
+                <button
+                    type="button"
+                    class="admin-danger-button"
+                    data-news-action="delete"
+                    data-id="${escapeAttribute(item.id)}"
+                >
+                    Eliminar
+                </button>
+
+            </div>
+        `;
+    };
+
+
+    // --------------------------------------------------------
+    // LEAD NEWS
+    // --------------------------------------------------------
+
+    const leadTitle =
+        lead.translated_title ||
+        lead.title ||
+        "Sem título";
+
+    const leadDescription =
+        lead.translated_description ||
+        lead.description ||
+        "";
+
+    const leadHTML = `
+        <article
+            class="news-admin-lead-card"
+            data-news-id="${escapeAttribute(lead.id)}"
+        >
+
+            ${renderImage(lead, true)}
+
+            <div class="news-admin-lead-content">
+
+                ${renderMeta(lead)}
+
+                ${renderEditorialInfo(lead)}
+
+                <h2>
+                    ${escapeHTML(leadTitle)}
+                </h2>
+
+                <p>
+                    ${escapeHTML(leadDescription)}
+                </p>
+
+                ${renderActions(lead)}
+
+            </div>
+
+        </article>
+    `;
+
+
+    // --------------------------------------------------------
+    // SMALL NEWS
+    // --------------------------------------------------------
+
+    const secondaryHTML = secondary
+        .map(item => {
+
+            const title =
+                item.translated_title ||
+                item.title ||
+                "Sem título";
+
+            const description =
+                item.translated_description ||
+                item.description ||
+                "";
+
+            return `
+                <article
+                    class="news-admin-small-card"
+                    data-news-id="${escapeAttribute(item.id)}"
+                >
+
+                    ${renderImage(item, false)}
+
+                    <div class="news-admin-small-content">
+
+                        ${renderMeta(item)}
+
+                        ${renderEditorialInfo(item)}
+
+                        <h3>
+                            ${escapeHTML(title)}
+                        </h3>
+
+                        <p>
+                            ${escapeHTML(description)}
+                        </p>
+
+                        ${renderActions(item)}
+
+                    </div>
+
+                </article>
+            `;
+        })
+        .join("");
+
+
+    container.innerHTML = `
+
+        <div class="news-admin-lead">
+            ${leadHTML}
+        </div>
+
+        ${
+            secondary.length
+                ? `
+                    <div class="news-admin-small-grid">
+                        ${secondaryHTML}
+                    </div>
+                `
+                : ""
+        }
+
+    `;
 
     bindNewsActions();
 }
 
 
 // ============================================================
-// 15. NEWS CARDS
+// 15B. NEWS STATUS BADGE
 // ============================================================
 
-function renderNewsCards(
-    items,
-    teamMap
-) {
+function renderNewsStatusBadge(item) {
 
-    if (!items.length) {
+    const status = normalizeNewsStatus(item.status);
 
-        return `
-            <div class="news-library-empty">
-
-                <div class="news-library-empty-icon">
-                    N
-                </div>
-
-                <strong>
-                    Nenhuma notícia encontrada.
-                </strong>
-
-                <span>
-                    Altera os filtros ou cria uma nova notícia.
-                </span>
-
-            </div>
-        `;
-    }
-
-    return items
-        .map(
-            item => {
-
-                const team =
-                    item.team_id
-                        ? teamMap[item.team_id]
-                        : null;
-
-                const title =
-                    item.translated_title ||
-                    item.title ||
-                    "Sem título";
-
-                const description =
-                    item.translated_description ||
-                    item.description ||
-                    "";
-
-                const status =
-                    normalizeNewsStatus(
-                        item.status
-                    );
-
-                const image =
-                    item.image_url
-                        ? `
-                            <img
-                                src="${escapeAttribute(
-                                    item.image_url
-                                )}"
-                                alt="${escapeAttribute(
-                                    title
-                                )}"
-                                loading="lazy"
-                                onerror="this.style.display='none';"
-                            >
-                        `
-                        : `
-                            <div class="news-card-placeholder">
-                                N
-                            </div>
-                        `;
-
-                const source =
-                    item.source_name ||
-                    "BR";
-
-                const teamName =
-                    team?.short_name ||
-                    team?.name ||
-                    "Ambos";
-
-                return `
-                    <article
-                        class="news-admin-card"
-                        data-news-id="${escapeAttribute(
-                            item.id
-                        )}"
-                    >
-
-                        <div class="news-admin-card-media">
-
-                            ${image}
-
-                            <span
-                                class="news-status-badge ${escapeAttribute(
-                                    status.className
-                                )}"
-                            >
-                                ${escapeHTML(
-                                    status.label
-                                )}
-                            </span>
-
-                        </div>
-
-                        <div class="news-admin-card-body">
-
-                            <div class="news-admin-card-topline">
-
-                                <span>
-                                    ${escapeHTML(
-                                        teamName
-                                    )}
-                                </span>
-
-                                <span>
-                                    ${escapeHTML(
-                                        item.category ||
-                                        "news"
-                                    )}
-                                </span>
-
-                            </div>
-
-                            <h3>
-                                ${escapeHTML(
-                                    title
-                                )}
-                            </h3>
-
-                            <p>
-                                ${escapeHTML(
-                                    description ||
-                                    "Sem descrição."
-                                )}
-                            </p>
-
-                            <div class="news-admin-card-meta">
-
-                                <span>
-                                    Fonte:
-                                    ${escapeHTML(
-                                        source
-                                    )}
-                                </span>
-
-                                <span>
-                                    ${escapeHTML(
-                                        formatDate(
-                                            item.published_at ||
-                                            item.created_at
-                                        )
-                                    )}
-                                </span>
-
-                            </div>
-
-                            <div class="news-admin-card-actions">
-
-                                <button
-                                    type="button"
-                                    class="news-action-button secondary"
-                                    data-news-action="edit"
-                                    data-news-id="${escapeAttribute(
-                                        item.id
-                                    )}"
-                                >
-                                    Editar
-                                </button>
-
-                                ${getNewsStatusAction(
-                                    item
-                                )}
-
-                                <button
-                                    type="button"
-                                    class="news-action-button danger"
-                                    data-news-action="delete"
-                                    data-news-id="${escapeAttribute(
-                                        item.id
-                                    )}"
-                                >
-                                    Eliminar
-                                </button>
-
-                            </div>
-
-                        </div>
-
-                    </article>
-                `;
-            }
-        )
-        .join("");
+    return `
+        <span class="news-status-badge ${status.className}">
+            ${escapeHTML(status.label)}
+        </span>
+    `;
 }
 
 
+// ============================================================
+// 15C. NEWS PREVIEW
+// ============================================================
+
+async function previewNews(id) {
+
+    const item = await getNewsById(id);
+
+    if (!item) {
+
+        alert("Não foi possível carregar esta notícia.");
+
+        return;
+    }
+
+    closeModalById("news-preview-modal");
+
+    const title =
+        item.translated_title ||
+        item.title ||
+        "Sem título";
+
+    const description =
+        item.translated_description ||
+        item.description ||
+        "";
+
+    const articleBody =
+        String(item.article_body || "").trim();
+
+    const sourceUrl =
+        item.source_url ||
+        item.article_url ||
+        "";
+
+    const validSourceUrl =
+        /^https?:\/\//i.test(sourceUrl)
+            ? sourceUrl
+            : "";
+
+    const bodyHTML = articleBody
+        ? articleBody
+            .split(/\n\s*\n/)
+            .filter(paragraph => paragraph.trim())
+            .map(paragraph => `
+                <p>
+                    ${escapeHTML(paragraph).replace(/\n/g, "<br>")}
+                </p>
+            `)
+            .join("")
+        : `
+            <p class="news-preview-empty-body">
+                Esta notícia ainda não possui conteúdo completo.
+            </p>
+        `;
+
+    const imageHTML = item.image_url
+        ? `
+            <div class="news-preview-hero">
+
+                <img
+                    src="${escapeAttribute(item.image_url)}"
+                    alt="${escapeAttribute(title)}"
+                    onerror="
+                        this.onerror=null;
+                        this.style.display='none';
+                        this.parentElement.classList.add('image-missing');
+                        this.parentElement.querySelector('.news-image-fallback').style.display='flex';
+                    "
+                >
+
+                <div
+                    class="news-image-fallback"
+                    style="display:none;"
+                >
+                    <span>IMAGEM</span>
+                    <strong>Indisponível</strong>
+                </div>
+
+            </div>
+        `
+        : `
+            <div class="news-preview-hero image-missing">
+
+                <div class="news-image-fallback">
+                    <span>IMAGEM</span>
+                    <strong>Indisponível</strong>
+                </div>
+
+            </div>
+        `;
+
+    const modal = document.createElement("div");
+
+    modal.className = "admin-modal news-preview-modal";
+    modal.id = "news-preview-modal";
+
+    modal.innerHTML = `
+        <div class="admin-modal-overlay"></div>
+
+        <div class="admin-modal-content news-preview-modal-content">
+
+            <div class="admin-modal-header">
+
+                <div>
+                    <div class="admin-eyebrow">
+                        PRÉ-VISUALIZAÇÃO
+                    </div>
+
+                    <h2>
+                        Como a notícia aparece no BR
+                    </h2>
+                </div>
+
+                <button
+                    type="button"
+                    class="admin-modal-close"
+                    id="news-preview-close"
+                >
+                    ×
+                </button>
+
+            </div>
+
+            <div class="news-preview-page">
+
+                ${imageHTML}
+
+                <div class="news-preview-article">
+
+                    <div class="news-preview-topline">
+
+                        <span class="news-status-badge ${normalizeNewsStatus(item.status).className}">
+                            ${escapeHTML(normalizeNewsStatus(item.status).label)}
+                        </span>
+
+                        ${
+                            item.editorial_locked
+                                ? `
+                                    <span class="news-editorial-badge">
+                                        EDITORIAL
+                                    </span>
+                                `
+                                : ""
+                        }
+
+                    </div>
+
+                    <div class="news-preview-meta">
+
+                        <span>
+                            ${escapeHTML(item.category || "news")}
+                        </span>
+
+                        <span>•</span>
+
+                        <span>
+                            ${formatDate(
+                                item.published_at ||
+                                item.created_at ||
+                                item.imported_at
+                            )}
+                        </span>
+
+                        ${
+                            item.source_name
+                                ? `
+                                    <span>•</span>
+                                    <span>
+                                        ${escapeHTML(item.source_name)}
+                                    </span>
+                                `
+                                : ""
+                        }
+
+                    </div>
+
+                    <h1>
+                        ${escapeHTML(title)}
+                    </h1>
+
+                    ${
+                        description
+                            ? `
+                                <div class="news-preview-description">
+                                    ${escapeHTML(description)}
+                                </div>
+                            `
+                            : ""
+                    }
+
+                    <div class="news-preview-body">
+                        ${bodyHTML}
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="news-preview-footer">
+
+                <button
+                    type="button"
+                    class="admin-secondary-button"
+                    id="news-preview-edit"
+                >
+                    Editar notícia
+                </button>
+
+                ${
+                    validSourceUrl
+                        ? `
+                            <a
+                                href="${escapeAttribute(validSourceUrl)}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="admin-secondary-button"
+                            >
+                                Abrir fonte
+                            </a>
+                        `
+                        : ""
+                }
+
+                <button
+                    type="button"
+                    class="admin-primary-button"
+                    id="news-preview-done"
+                >
+                    Fechar
+                </button>
+
+            </div>
+
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const close = () => {
+        modal.remove();
+    };
+
+    document
+        .getElementById("news-preview-close")
+        ?.addEventListener("click", close);
+
+    document
+        .getElementById("news-preview-done")
+        ?.addEventListener("click", close);
+
+    modal
+        .querySelector(".admin-modal-overlay")
+        ?.addEventListener("click", close);
+
+    document
+        .getElementById("news-preview-edit")
+        ?.addEventListener("click", () => {
+
+            close();
+
+            setTimeout(() => {
+                editNews(id);
+            }, 50);
+        });
+}
 // ============================================================
 // 16. NEWS STATUS
 // ============================================================
@@ -3294,80 +3607,60 @@ function getNewsStatusAction(
 function bindNewsActions() {
 
     document
-        .querySelectorAll(
-            "[data-news-action]"
-        )
-        .forEach(
-            button => {
+        .querySelectorAll("[data-news-action]")
+        .forEach(button => {
 
-                if (
-                    button.dataset.bound ===
-                    "true"
-                ) {
+            if (button.dataset.bound === "true") {
+                return;
+            }
+
+            button.dataset.bound = "true";
+
+            button.addEventListener("click", async () => {
+
+                const action = button.dataset.newsAction;
+                const id = button.dataset.id;
+
+                if (!id || !action) {
                     return;
                 }
 
-                button.dataset.bound =
-                    "true";
+                button.disabled = true;
 
-                button.addEventListener(
-                    "click",
-                    async () => {
+                try {
 
-                        const id =
-                            button.dataset.newsId;
-
-                        const action =
-                            button.dataset.newsAction;
-
-                        if (!id || !action) {
-                            return;
-                        }
-
-                        if (
-                            action === "edit"
-                        ) {
-
-                            await editNews(id);
-                            return;
-                        }
-
-                        if (
-                            action === "publish"
-                        ) {
-
-                            await changeNewsStatus(
-                                id,
-                                "published"
-                            );
-
-                            return;
-                        }
-
-                        if (
-                            action === "unpublish"
-                        ) {
-
-                            await changeNewsStatus(
-                                id,
-                                "unpublished"
-                            );
-
-                            return;
-                        }
-
-                        if (
-                            action === "delete"
-                        ) {
-
-                            await deleteNews(id);
-                        }
+                    if (action === "preview") {
+                        await previewNews(id);
+                        return;
                     }
-                );
-            }
-        );
-}
 
+                    if (action === "edit") {
+                        await editNews(id);
+                        return;
+                    }
+
+                    if (action === "publish") {
+                        await changeNewsStatus(id, "published");
+                        return;
+                    }
+
+                    if (action === "unpublish") {
+                        await changeNewsStatus(id, "unpublished");
+                        return;
+                    }
+
+                    if (action === "delete") {
+                        await deleteNews(id);
+                        return;
+                    }
+
+                } finally {
+
+                    button.disabled = false;
+                }
+            });
+        });
+}
 
 // ============================================================
 // 17. OBTER NOTÍCIA
