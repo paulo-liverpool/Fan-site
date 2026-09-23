@@ -1,6 +1,6 @@
 // ============================================================
 // BARÇA REAL — ADMINISTRAÇÃO
-// DASHBOARD + BIBLIOTECA DE DESTAQUES
+// DASHBOARD + DESTAQUES + NOTÍCIAS
 // ============================================================
 
 let currentAdmin = null;
@@ -52,7 +52,11 @@ async function verifyAdministrator() {
             return false;
         }
 
-        currentAdmin = { user, profile, role };
+        currentAdmin = {
+            user,
+            profile,
+            role
+        };
 
         const profileButton =
             document.getElementById("admin-profile-button");
@@ -129,6 +133,10 @@ function setupNavigation() {
 
                 if (target === "featured") {
                     await loadFeaturedLibrary();
+                }
+
+                if (target === "news") {
+                    await loadNewsLibrary();
                 }
 
                 if (target === "dashboard") {
@@ -284,7 +292,10 @@ async function loadFeaturedCount() {
                 count: "exact",
                 head: true
             })
-            .eq("area", "featured");
+            .eq(
+                "area",
+                "featured"
+            );
 
         if (error) throw error;
 
@@ -366,19 +377,11 @@ async function loadNewsCount() {
             count,
             error
         } = await supabaseClient
-            .from("content")
+            .from("news")
             .select("id", {
                 count: "exact",
                 head: true
-            })
-            .eq("content_type", "news")
-            .in(
-                "area",
-                [
-                    "news",
-                    "both"
-                ]
-            );
+            });
 
         if (error) throw error;
 
@@ -411,8 +414,33 @@ async function loadMatchCount() {
 
     if (!element) return;
 
-    element.textContent =
-        "0";
+    try {
+
+        const {
+            count,
+            error
+        } = await supabaseClient
+            .from("football_matches")
+            .select("id", {
+                count: "exact",
+                head: true
+            });
+
+        if (error) throw error;
+
+        element.textContent =
+            count ?? 0;
+
+    } catch (error) {
+
+        console.warn(
+            "Contador de Jogos:",
+            error
+        );
+
+        element.textContent =
+            "0";
+    }
 }
 
 
@@ -432,8 +460,8 @@ async function loadRecentActivity() {
     try {
 
         const {
-            data,
-            error
+            data: contentData,
+            error: contentError
         } = await supabaseClient
             .from("content")
             .select(
@@ -447,24 +475,70 @@ async function loadRecentActivity() {
             )
             .limit(6);
 
-        if (error) throw error;
+        if (contentError) throw contentError;
 
-        if (!data?.length) {
+        const {
+            data: newsData,
+            error: newsError
+        } = await supabaseClient
+            .from("news")
+            .select(
+                "id,title,translated_title,status,created_at"
+            )
+            .order(
+                "created_at",
+                {
+                    ascending: false
+                }
+            )
+            .limit(6);
+
+        if (newsError) throw newsError;
+
+        const activities = [
+
+            ...(contentData || []).map(
+                item => ({
+                    ...item,
+                    activity_type: "content"
+                })
+            ),
+
+            ...(newsData || []).map(
+                item => ({
+                    ...item,
+                    title:
+                        item.translated_title ||
+                        item.title,
+                    area: "news",
+                    activity_type: "news"
+                })
+            )
+
+        ]
+            .sort(
+                (a, b) =>
+                    new Date(b.created_at) -
+                    new Date(a.created_at)
+            )
+            .slice(0, 6);
+
+        if (!activities.length) {
 
             list.innerHTML =
-                "Ainda não existem atividades.";
+                "Ainda não existem actividades.";
 
             return;
         }
 
         list.innerHTML =
-            data
+            activities
                 .map(
                     item => `
                         <div class="activity-item">
 
                             <div class="activity-icon">
-                                ★
+                                ${item.area === "news" ? "N" : "★"}
                             </div>
 
                             <div class="activity-content">
@@ -514,41 +588,32 @@ function getActivityLabel(item) {
 
     if (item.area === "featured") {
 
-        if (
-            item.status ===
-            "published"
-        ) {
+        if (item.status === "published") {
             return "Destaque publicado";
         }
 
-        if (
-            item.status ===
-            "draft"
-        ) {
+        if (item.status === "draft") {
             return "Destaque criado";
         }
 
-        if (
-            item.status ===
-            "archived"
-        ) {
+        if (item.status === "archived") {
             return "Destaque arquivado";
         }
 
         return "Destaque actualizado";
     }
 
-    if (
-        item.area === "news" ||
-        item.area === "both"
-    ) {
+    if (item.area === "news") {
 
-        return item.status ===
-            "published"
+        if (item.status === "published") {
+            return "Notícia publicada";
+        }
 
-            ? "Notícia publicada"
+        if (item.status === "unpublished") {
+            return "Notícia despublicada";
+        }
 
-            : "Notícia criada";
+        return "Notícia criada";
     }
 
     return "Conteúdo criado";
@@ -632,11 +697,8 @@ async function loadFeaturedLibrary() {
 
         if (error) throw error;
 
-        const items =
-            data || [];
-
         await renderFeaturedLibrary(
-            items
+            data || []
         );
 
     } catch (error) {
@@ -648,6 +710,7 @@ async function loadFeaturedLibrary() {
 
         list.innerHTML = `
             <div class="featured-library-error">
+
                 <strong>
                     Não foi possível carregar os destaques.
                 </strong>
@@ -658,6 +721,7 @@ async function loadFeaturedLibrary() {
                         "Erro desconhecido."
                     )}
                 </span>
+
             </div>
         `;
     }
@@ -683,22 +747,19 @@ async function renderFeaturedLibrary(
         published:
             items.filter(
                 item =>
-                    item.status ===
-                    "published"
+                    item.status === "published"
             ).length,
 
         draft:
             items.filter(
                 item =>
-                    item.status ===
-                    "draft"
+                    item.status === "draft"
             ).length,
 
         archived:
             items.filter(
                 item =>
-                    item.status ===
-                    "archived"
+                    item.status === "archived"
             ).length
     };
 
@@ -720,8 +781,7 @@ async function renderFeaturedLibrary(
         );
 
     if (!teamError) {
-        teams =
-            teamData || [];
+        teams = teamData || [];
     }
 
     const teamMap =
@@ -814,9 +874,7 @@ async function renderFeaturedLibrary(
 
                 const filteredItems =
                     filter === "all"
-
                         ? items
-
                         : items.filter(
                             item =>
                                 item.status ===
@@ -877,9 +935,7 @@ function renderFeaturedCards(
 
                 const team =
                     item.team_id
-                        ? teamMap[
-                            item.team_id
-                        ]
+                        ? teamMap[item.team_id]
                         : null;
 
                 const status =
@@ -889,7 +945,6 @@ function renderFeaturedCards(
 
                 const media =
                     item.image_url
-
                         ? `
                             <img
                                 src="${escapeAttribute(
@@ -904,7 +959,6 @@ function renderFeaturedCards(
                                 onerror="this.style.display='none';"
                             >
                         `
-
                         : `
                             <div class="featured-card-placeholder">
                                 ★
@@ -1007,7 +1061,6 @@ function renderFeaturedCards(
                                                 )}
                                             </span>
                                         `
-
                                         : ""
                                 }
 
@@ -1065,10 +1118,7 @@ function getStatusAction(
     item
 ) {
 
-    if (
-        item.status ===
-        "published"
-    ) {
+    if (item.status === "published") {
 
         return `
             <button
@@ -1084,10 +1134,7 @@ function getStatusAction(
         `;
     }
 
-    if (
-        item.status ===
-        "archived"
-    ) {
+    if (item.status === "archived") {
 
         return `
             <button
@@ -1122,10 +1169,7 @@ function getArchiveAction(
     item
 ) {
 
-    if (
-        item.status ===
-        "archived"
-    ) {
+    if (item.status === "archived") {
         return "";
     }
 
@@ -1173,81 +1217,45 @@ function bindFeaturedActions() {
                         const action =
                             button.dataset.featuredAction;
 
-                        if (
-                            !id ||
-                            !action
-                        ) {
+                        if (!id || !action) {
                             return;
                         }
 
-                        if (
-                            action ===
-                            "edit"
-                        ) {
-
-                            await editFeatured(
-                                id
-                            );
-
+                        if (action === "edit") {
+                            await editFeatured(id);
                             return;
                         }
 
-                        if (
-                            action ===
-                            "delete"
-                        ) {
-
-                            await deleteFeatured(
-                                id
-                            );
-
+                        if (action === "delete") {
+                            await deleteFeatured(id);
                             return;
                         }
 
-                        if (
-                            action ===
-                            "publish"
-                        ) {
-
+                        if (action === "publish") {
                             await changeFeaturedStatus(
                                 id,
                                 "published"
                             );
-
                             return;
                         }
 
-                        if (
-                            action ===
-                            "unpublish"
-                        ) {
-
+                        if (action === "unpublish") {
                             await changeFeaturedStatus(
                                 id,
                                 "draft"
                             );
-
                             return;
                         }
 
-                        if (
-                            action ===
-                            "archive"
-                        ) {
-
+                        if (action === "archive") {
                             await changeFeaturedStatus(
                                 id,
                                 "archived"
                             );
-
                             return;
                         }
 
-                        if (
-                            action ===
-                            "restore"
-                        ) {
-
+                        if (action === "restore") {
                             await changeFeaturedStatus(
                                 id,
                                 "draft"
@@ -1270,9 +1278,7 @@ async function changeFeaturedStatus(
 ) {
 
     const item =
-        await getFeaturedById(
-            id
-        );
+        await getFeaturedById(id);
 
     if (!item) return;
 
@@ -1282,11 +1288,8 @@ async function changeFeaturedStatus(
             "Publicar este destaque?",
 
         draft:
-            item.status ===
-            "published"
-
+            item.status === "published"
                 ? "Despublicar este destaque?"
-
                 : "Restaurar este destaque como rascunho?",
 
         archived:
@@ -1325,14 +1328,11 @@ async function changeFeaturedStatus(
         if (error) throw error;
 
         await loadFeaturedLibrary();
-
         await loadDashboardCounts();
 
     } catch (error) {
 
-        console.error(
-            error
-        );
+        console.error(error);
 
         alert(
             error.message ||
@@ -1351,9 +1351,7 @@ async function deleteFeatured(
 ) {
 
     const item =
-        await getFeaturedById(
-            id
-        );
+        await getFeaturedById(id);
 
     if (!item) return;
 
@@ -1388,14 +1386,11 @@ async function deleteFeatured(
         if (error) throw error;
 
         await loadFeaturedLibrary();
-
         await loadDashboardCounts();
 
     } catch (error) {
 
-        console.error(
-            error
-        );
+        console.error(error);
 
         alert(
             error.message ||
@@ -1440,14 +1435,9 @@ async function getFeaturedById(
         )
         .single();
 
-    if (
-        error ||
-        !data
-    ) {
+    if (error || !data) {
 
-        console.error(
-            error
-        );
+        console.error(error);
 
         return null;
     }
@@ -1480,9 +1470,7 @@ function openFeaturedModal() {
     );
 
     const modal =
-        document.createElement(
-            "div"
-        );
+        document.createElement("div");
 
     modal.id =
         "featured-modal";
@@ -1730,50 +1718,38 @@ function openFeaturedModal() {
         </div>
     `;
 
-    document.body.appendChild(
-        modal
-    );
+    document.body.appendChild(modal);
 
     document
-        .getElementById(
-            "close-featured-modal"
-        )
+        .getElementById("close-featured-modal")
         ?.addEventListener(
             "click",
             closeFeaturedModal
         );
 
     document
-        .getElementById(
-            "cancel-featured"
-        )
+        .getElementById("cancel-featured")
         ?.addEventListener(
             "click",
             closeFeaturedModal
         );
 
     document
-        .getElementById(
-            "featured-form"
-        )
+        .getElementById("featured-form")
         ?.addEventListener(
             "submit",
             createFeatured
         );
 
     document
-        .getElementById(
-            "featured-image"
-        )
+        .getElementById("featured-image")
         ?.addEventListener(
             "change",
             previewFeaturedImage
         );
 
     document
-        .getElementById(
-            "featured-audio"
-        )
+        .getElementById("featured-audio")
         ?.addEventListener(
             "change",
             previewFeaturedAudio
@@ -1783,11 +1759,7 @@ function openFeaturedModal() {
         "click",
         event => {
 
-            if (
-                event.target ===
-                modal
-            ) {
-
+            if (event.target === modal) {
                 closeFeaturedModal();
             }
         }
@@ -1870,7 +1842,6 @@ async function createFeatured(
     if (!imageFile) {
 
         if (message) {
-
             message.textContent =
                 "É necessário carregar uma imagem.";
         }
@@ -1880,11 +1851,8 @@ async function createFeatured(
 
     if (submitButton) {
 
-        submitButton.disabled =
-            true;
-
-        submitButton.textContent =
-            "A guardar...";
+        submitButton.disabled = true;
+        submitButton.textContent = "A guardar...";
     }
 
     try {
@@ -1905,21 +1873,16 @@ async function createFeatured(
                 )
                 .single();
 
-            if (
-                teamError ||
-                !team
-            ) {
+            if (teamError || !team) {
                 throw new Error(
                     "Não foi possível encontrar o clube."
                 );
             }
 
-            teamId =
-                team.id;
+            teamId = team.id;
         }
 
         if (message) {
-
             message.textContent =
                 "A carregar a imagem...";
         }
@@ -1930,13 +1893,11 @@ async function createFeatured(
                 "images"
             );
 
-        let audioUrl =
-            null;
+        let audioUrl = null;
 
         if (audioFile) {
 
             if (message) {
-
                 message.textContent =
                     "A carregar o áudio...";
             }
@@ -1949,7 +1910,6 @@ async function createFeatured(
         }
 
         if (message) {
-
             message.textContent =
                 "A guardar o destaque...";
         }
@@ -1989,14 +1949,7 @@ async function createFeatured(
 
         if (error) throw error;
 
-        if (message) {
-
-            message.textContent =
-                "Destaque criado com sucesso.";
-        }
-
         await loadFeaturedLibrary();
-
         await loadDashboardCounts();
 
         setTimeout(
@@ -2006,22 +1959,16 @@ async function createFeatured(
 
     } catch (error) {
 
-        console.error(
-            error
-        );
+        console.error(error);
 
         if (message) {
-
             message.textContent =
                 error.message ||
                 "Não foi possível criar o destaque.";
         }
 
         if (submitButton) {
-
-            submitButton.disabled =
-                false;
-
+            submitButton.disabled = false;
             submitButton.textContent =
                 "Criar destaque";
         }
@@ -2038,9 +1985,7 @@ async function editFeatured(
 ) {
 
     const item =
-        await getFeaturedById(
-            id
-        );
+        await getFeaturedById(id);
 
     if (!item) return;
 
@@ -2049,9 +1994,7 @@ async function editFeatured(
     );
 
     const modal =
-        document.createElement(
-            "div"
-        );
+        document.createElement("div");
 
     modal.id =
         "featured-edit-modal";
@@ -2107,7 +2050,6 @@ async function editFeatured(
 
                         ${
                             item.image_url
-
                                 ? `
                                     <img
                                         src="${escapeAttribute(
@@ -2116,7 +2058,6 @@ async function editFeatured(
                                         alt="Imagem actual"
                                     >
                                 `
-
                                 : `
                                     <div class="featured-edit-no-media">
                                         Sem imagem
@@ -2134,7 +2075,6 @@ async function editFeatured(
 
                         ${
                             item.audio_url
-
                                 ? `
                                     <audio
                                         controls
@@ -2143,7 +2083,6 @@ async function editFeatured(
                                         )}"
                                     ></audio>
                                 `
-
                                 : `
                                     <div class="featured-edit-no-media">
                                         Sem áudio
@@ -2158,12 +2097,10 @@ async function editFeatured(
                 <div class="admin-form-group">
 
                     <label for="edit-featured-image">
-
                         Nova imagem
                         <span class="optional-mark">
                             Opcional
                         </span>
-
                     </label>
 
                     <label
@@ -2205,12 +2142,10 @@ async function editFeatured(
                 <div class="admin-form-group">
 
                     <label for="edit-featured-audio">
-
                         Novo áudio
                         <span class="optional-mark">
                             Opcional
                         </span>
-
                     </label>
 
                     <label
@@ -2249,7 +2184,6 @@ async function editFeatured(
 
                     ${
                         item.audio_url
-
                             ? `
                                 <label class="featured-remove-audio">
 
@@ -2262,7 +2196,6 @@ async function editFeatured(
 
                                 </label>
                             `
-
                             : ""
                     }
 
@@ -2279,8 +2212,7 @@ async function editFeatured(
                         type="text"
                         maxlength="150"
                         value="${escapeAttribute(
-                            item.title ||
-                            ""
+                            item.title || ""
                         )}"
                     >
 
@@ -2297,8 +2229,7 @@ async function editFeatured(
                         rows="4"
                         maxlength="500"
                     >${escapeHTML(
-                        item.description ||
-                        ""
+                        item.description || ""
                     )}</textarea>
 
                 </div>
@@ -2362,12 +2293,10 @@ async function editFeatured(
                 <div class="admin-form-group">
 
                     <label for="edit-featured-order">
-
                         Ordem
                         <span class="optional-mark">
                             Opcional
                         </span>
-
                     </label>
 
                     <input
@@ -2377,13 +2306,9 @@ async function editFeatured(
                         step="1"
                         value="${
                             Number.isFinite(
-                                Number(
-                                    item.sort_order
-                                )
+                                Number(item.sort_order)
                             )
-                                ? Number(
-                                    item.sort_order
-                                )
+                                ? Number(item.sort_order)
                                 : 0
                         }"
                     >
@@ -2420,15 +2345,12 @@ async function editFeatured(
         </div>
     `;
 
-    document.body.appendChild(
-        modal
-    );
+    document.body.appendChild(modal);
 
     document
         .getElementById(
             "edit-featured-team"
-        )
-        .value =
+        ).value =
         await getTeamSlugById(
             item.team_id
         );
@@ -2436,10 +2358,8 @@ async function editFeatured(
     document
         .getElementById(
             "edit-featured-status"
-        )
-        .value =
-        item.status ||
-        "draft";
+        ).value =
+        item.status || "draft";
 
     document
         .getElementById(
@@ -2494,11 +2414,7 @@ async function editFeatured(
         "click",
         event => {
 
-            if (
-                event.target ===
-                modal
-            ) {
-
+            if (event.target === modal) {
                 closeFeaturedEditModal();
             }
         }
@@ -2524,15 +2440,11 @@ async function getTeamSlugById(
         )
         .single();
 
-    if (
-        error ||
-        !data
-    ) {
+    if (error || !data) {
         return "";
     }
 
-    return data.slug ||
-        "";
+    return data.slug || "";
 }
 
 
@@ -2628,29 +2540,21 @@ async function saveFeaturedEdit(
 
     const sortOrder =
         orderValue === ""
-
             ? 0
-
             : Math.max(
                 0,
-                Number(
-                    orderValue
-                ) || 0
+                Number(orderValue) || 0
             );
 
     if (saveButton) {
 
-        saveButton.disabled =
-            true;
-
-        saveButton.textContent =
-            "A guardar...";
+        saveButton.disabled = true;
+        saveButton.textContent = "A guardar...";
     }
 
     try {
 
-        let teamId =
-            null;
+        let teamId = null;
 
         if (teamSlug) {
 
@@ -2666,31 +2570,24 @@ async function saveFeaturedEdit(
                 )
                 .single();
 
-            if (
-                teamError ||
-                !team
-            ) {
+            if (teamError || !team) {
                 throw new Error(
                     "Não foi possível encontrar o clube."
                 );
             }
 
-            teamId =
-                team.id;
+            teamId = team.id;
         }
 
         let imageUrl =
-            item.image_url ||
-            null;
+            item.image_url || null;
 
         let audioUrl =
-            item.audio_url ||
-            null;
+            item.audio_url || null;
 
         if (imageFile) {
 
             if (message) {
-
                 message.textContent =
                     "A carregar a nova imagem...";
             }
@@ -2705,7 +2602,6 @@ async function saveFeaturedEdit(
         if (audioFile) {
 
             if (message) {
-
                 message.textContent =
                     "A carregar o novo áudio...";
             }
@@ -2716,16 +2612,12 @@ async function saveFeaturedEdit(
                     "audio"
                 );
 
-        } else if (
-            removeAudio
-        ) {
+        } else if (removeAudio) {
 
-            audioUrl =
-                null;
+            audioUrl = null;
         }
 
         if (message) {
-
             message.textContent =
                 "A guardar as alterações...";
         }
@@ -2768,14 +2660,7 @@ async function saveFeaturedEdit(
 
         if (error) throw error;
 
-        if (message) {
-
-            message.textContent =
-                "Destaque actualizado com sucesso.";
-        }
-
         await loadFeaturedLibrary();
-
         await loadDashboardCounts();
 
         setTimeout(
@@ -2785,22 +2670,16 @@ async function saveFeaturedEdit(
 
     } catch (error) {
 
-        console.error(
-            error
-        );
+        console.error(error);
 
         if (message) {
-
             message.textContent =
                 error.message ||
                 "Não foi possível guardar as alterações.";
         }
 
         if (saveButton) {
-
-            saveButton.disabled =
-                false;
-
+            saveButton.disabled = false;
             saveButton.textContent =
                 "Guardar alterações";
         }
@@ -2809,7 +2688,2309 @@ async function saveFeaturedEdit(
 
 
 // ============================================================
-// 13. PREVIEWS
+// 13. NOTÍCIAS — BIBLIOTECA
+// ============================================================
+
+async function loadNewsLibrary() {
+
+    const list =
+        document.getElementById(
+            "news-list"
+        );
+
+    if (!list) return;
+
+    list.innerHTML = `
+        <div class="news-library-loading">
+            A carregar as notícias...
+        </div>
+    `;
+
+    try {
+
+        const {
+            data,
+            error
+        } = await supabaseClient
+            .from("news")
+            .select(`
+                id,
+                team_id,
+                title,
+                description,
+                image_url,
+                article_url,
+                source_name,
+                source_url,
+                author,
+                published_at,
+                imported_at,
+                external_id,
+                category,
+                status,
+                is_featured,
+                sort_order,
+                created_at,
+                article_body,
+                translated_title,
+                translated_description
+            `)
+            .order(
+                "created_at",
+                {
+                    ascending: false
+                }
+            );
+
+        if (error) throw error;
+
+        await renderNewsLibrary(
+            data || []
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Erro ao carregar Notícias:",
+            error
+        );
+
+        list.innerHTML = `
+            <div class="news-library-error">
+
+                <strong>
+                    Não foi possível carregar as notícias.
+                </strong>
+
+                <span>
+                    ${escapeHTML(
+                        error.message ||
+                        "Erro desconhecido."
+                    )}
+                </span>
+
+            </div>
+        `;
+    }
+}
+
+
+// ============================================================
+// 14. RENDER NEWS LIBRARY
+// ============================================================
+
+async function renderNewsLibrary(
+    items
+) {
+
+    const list =
+        document.getElementById(
+            "news-list"
+        );
+
+    if (!list) return;
+
+    const counts = {
+
+        all:
+            items.length,
+
+        draft:
+            items.filter(
+                item =>
+                    item.status === "draft"
+            ).length,
+
+        published:
+            items.filter(
+                item =>
+                    item.status === "published"
+            ).length,
+
+        unpublished:
+            items.filter(
+                item =>
+                    item.status === "unpublished"
+            ).length
+    };
+
+    let teams = [];
+
+    const {
+        data: teamData,
+        error: teamError
+    } = await supabaseClient
+        .from("teams")
+        .select(
+            "id,name,short_name,slug"
+        )
+        .order(
+            "name",
+            {
+                ascending: true
+            }
+        );
+
+    if (!teamError) {
+        teams = teamData || [];
+    }
+
+    const teamMap =
+        Object.fromEntries(
+            teams.map(
+                team => [
+                    team.id,
+                    team
+                ]
+            )
+        );
+
+    list.innerHTML = `
+
+        <div class="news-library-shell">
+
+            <div class="news-library-toolbar">
+
+                <div class="news-library-summary">
+
+                    <strong>
+                        ${counts.all}
+                    </strong>
+
+                    <span>
+                        ${
+                            counts.all === 1
+                                ? "notícia"
+                                : "notícias"
+                        }
+                    </span>
+
+                </div>
+
+                <div class="news-library-controls">
+
+                    <label class="news-filter-wrap">
+
+                        <span>
+                            Estado
+                        </span>
+
+                        <select id="news-status-filter">
+
+                            <option value="all">
+                                Todas (${counts.all})
+                            </option>
+
+                            <option value="draft">
+                                Pendentes (${counts.draft})
+                            </option>
+
+                            <option value="published">
+                                Publicadas (${counts.published})
+                            </option>
+
+                            <option value="unpublished">
+                                Não publicadas (${counts.unpublished})
+                            </option>
+
+                        </select>
+
+                    </label>
+
+                    <label class="news-filter-wrap">
+
+                        <span>
+                            Clube
+                        </span>
+
+                        <select id="news-team-filter">
+
+                            <option value="all">
+                                Todos
+                            </option>
+
+                            ${teams.map(
+                                team => `
+                                    <option
+                                        value="${escapeAttribute(
+                                            team.id
+                                        )}"
+                                    >
+                                        ${escapeHTML(
+                                            team.short_name ||
+                                            team.name
+                                        )}
+                                    </option>
+                                `
+                            ).join("")}
+
+                        </select>
+
+                    </label>
+
+                </div>
+
+            </div>
+
+            <div
+                class="news-library-results"
+                id="news-library-results"
+            >
+                ${renderNewsCards(
+                    items,
+                    teamMap
+                )}
+            </div>
+
+        </div>
+    `;
+
+    const applyFilters = () => {
+
+        const statusFilter =
+            document
+                .getElementById(
+                    "news-status-filter"
+                )
+                ?.value ||
+            "all";
+
+        const teamFilter =
+            document
+                .getElementById(
+                    "news-team-filter"
+                )
+                ?.value ||
+            "all";
+
+        const filtered =
+            items.filter(
+                item => {
+
+                    const statusMatch =
+                        statusFilter === "all" ||
+                        item.status ===
+                        statusFilter;
+
+                    const teamMatch =
+                        teamFilter === "all" ||
+                        item.team_id ===
+                        teamFilter;
+
+                    return (
+                        statusMatch &&
+                        teamMatch
+                    );
+                }
+            );
+
+        const results =
+            document.getElementById(
+                "news-library-results"
+            );
+
+        if (results) {
+
+            results.innerHTML =
+                renderNewsCards(
+                    filtered,
+                    teamMap
+                );
+        }
+
+        bindNewsActions();
+    };
+
+    document
+        .getElementById(
+            "news-status-filter"
+        )
+        ?.addEventListener(
+            "change",
+            applyFilters
+        );
+
+    document
+        .getElementById(
+            "news-team-filter"
+        )
+        ?.addEventListener(
+            "change",
+            applyFilters
+        );
+
+    bindNewsActions();
+}
+
+
+// ============================================================
+// 15. NEWS CARDS
+// ============================================================
+
+function renderNewsCards(
+    items,
+    teamMap
+) {
+
+    if (!items.length) {
+
+        return `
+            <div class="news-library-empty">
+
+                <div class="news-library-empty-icon">
+                    N
+                </div>
+
+                <strong>
+                    Nenhuma notícia encontrada.
+                </strong>
+
+                <span>
+                    Altera os filtros ou cria uma nova notícia.
+                </span>
+
+            </div>
+        `;
+    }
+
+    return items
+        .map(
+            item => {
+
+                const team =
+                    item.team_id
+                        ? teamMap[item.team_id]
+                        : null;
+
+                const title =
+                    item.translated_title ||
+                    item.title ||
+                    "Sem título";
+
+                const description =
+                    item.translated_description ||
+                    item.description ||
+                    "";
+
+                const status =
+                    normalizeNewsStatus(
+                        item.status
+                    );
+
+                const image =
+                    item.image_url
+                        ? `
+                            <img
+                                src="${escapeAttribute(
+                                    item.image_url
+                                )}"
+                                alt="${escapeAttribute(
+                                    title
+                                )}"
+                                loading="lazy"
+                                onerror="this.style.display='none';"
+                            >
+                        `
+                        : `
+                            <div class="news-card-placeholder">
+                                N
+                            </div>
+                        `;
+
+                const source =
+                    item.source_name ||
+                    "BR";
+
+                const teamName =
+                    team?.short_name ||
+                    team?.name ||
+                    "Ambos";
+
+                return `
+                    <article
+                        class="news-admin-card"
+                        data-news-id="${escapeAttribute(
+                            item.id
+                        )}"
+                    >
+
+                        <div class="news-admin-card-media">
+
+                            ${image}
+
+                            <span
+                                class="news-status-badge ${escapeAttribute(
+                                    status.className
+                                )}"
+                            >
+                                ${escapeHTML(
+                                    status.label
+                                )}
+                            </span>
+
+                        </div>
+
+                        <div class="news-admin-card-body">
+
+                            <div class="news-admin-card-topline">
+
+                                <span>
+                                    ${escapeHTML(
+                                        teamName
+                                    )}
+                                </span>
+
+                                <span>
+                                    ${escapeHTML(
+                                        item.category ||
+                                        "news"
+                                    )}
+                                </span>
+
+                            </div>
+
+                            <h3>
+                                ${escapeHTML(
+                                    title
+                                )}
+                            </h3>
+
+                            <p>
+                                ${escapeHTML(
+                                    description ||
+                                    "Sem descrição."
+                                )}
+                            </p>
+
+                            <div class="news-admin-card-meta">
+
+                                <span>
+                                    Fonte:
+                                    ${escapeHTML(
+                                        source
+                                    )}
+                                </span>
+
+                                <span>
+                                    ${escapeHTML(
+                                        formatDate(
+                                            item.published_at ||
+                                            item.created_at
+                                        )
+                                    )}
+                                </span>
+
+                            </div>
+
+                            <div class="news-admin-card-actions">
+
+                                <button
+                                    type="button"
+                                    class="news-action-button secondary"
+                                    data-news-action="edit"
+                                    data-news-id="${escapeAttribute(
+                                        item.id
+                                    )}"
+                                >
+                                    Editar
+                                </button>
+
+                                ${getNewsStatusAction(
+                                    item
+                                )}
+
+                                <button
+                                    type="button"
+                                    class="news-action-button danger"
+                                    data-news-action="delete"
+                                    data-news-id="${escapeAttribute(
+                                        item.id
+                                    )}"
+                                >
+                                    Eliminar
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                    </article>
+                `;
+            }
+        )
+        .join("");
+}
+
+
+// ============================================================
+// 16. NEWS STATUS
+// ============================================================
+
+function normalizeNewsStatus(
+    status
+) {
+
+    const statuses = {
+
+        draft: {
+            label: "Pendente",
+            className: "draft"
+        },
+
+        published: {
+            label: "Publicado",
+            className: "published"
+        },
+
+        unpublished: {
+            label: "Não publicado",
+            className: "unpublished"
+        }
+    };
+
+    return (
+        statuses[status] ||
+        statuses.draft
+    );
+}
+
+
+function getNewsStatusAction(
+    item
+) {
+
+    if (item.status === "published") {
+
+        return `
+            <button
+                type="button"
+                class="news-action-button"
+                data-news-action="unpublish"
+                data-news-id="${escapeAttribute(
+                    item.id
+                )}"
+            >
+                Despublicar
+            </button>
+        `;
+    }
+
+    return `
+        <button
+            type="button"
+            class="news-action-button primary"
+            data-news-action="publish"
+            data-news-id="${escapeAttribute(
+                item.id
+            )}"
+        >
+            Publicar
+        </button>
+    `;
+}
+
+
+function bindNewsActions() {
+
+    document
+        .querySelectorAll(
+            "[data-news-action]"
+        )
+        .forEach(
+            button => {
+
+                if (
+                    button.dataset.bound ===
+                    "true"
+                ) {
+                    return;
+                }
+
+                button.dataset.bound =
+                    "true";
+
+                button.addEventListener(
+                    "click",
+                    async () => {
+
+                        const id =
+                            button.dataset.newsId;
+
+                        const action =
+                            button.dataset.newsAction;
+
+                        if (!id || !action) {
+                            return;
+                        }
+
+                        if (
+                            action === "edit"
+                        ) {
+
+                            await editNews(id);
+                            return;
+                        }
+
+                        if (
+                            action === "publish"
+                        ) {
+
+                            await changeNewsStatus(
+                                id,
+                                "published"
+                            );
+
+                            return;
+                        }
+
+                        if (
+                            action === "unpublish"
+                        ) {
+
+                            await changeNewsStatus(
+                                id,
+                                "unpublished"
+                            );
+
+                            return;
+                        }
+
+                        if (
+                            action === "delete"
+                        ) {
+
+                            await deleteNews(id);
+                        }
+                    }
+                );
+            }
+        );
+}
+
+
+// ============================================================
+// 17. OBTER NOTÍCIA
+// ============================================================
+
+async function getNewsById(
+    id
+) {
+
+    const {
+        data,
+        error
+    } = await supabaseClient
+        .from("news")
+        .select(`
+            id,
+            team_id,
+            title,
+            description,
+            image_url,
+            article_url,
+            source_name,
+            source_url,
+            author,
+            published_at,
+            imported_at,
+            external_id,
+            category,
+            status,
+            is_featured,
+            sort_order,
+            created_at,
+            article_body,
+            translated_title,
+            translated_description
+        `)
+        .eq(
+            "id",
+            id
+        )
+        .single();
+
+    if (error || !data) {
+
+        console.error(
+            "Erro ao obter notícia:",
+            error
+        );
+
+        return null;
+    }
+
+    return data;
+}
+
+
+// ============================================================
+// 18. ALTERAR ESTADO DA NOTÍCIA
+// ============================================================
+
+async function changeNewsStatus(
+    id,
+    status
+) {
+
+    const item =
+        await getNewsById(id);
+
+    if (!item) return;
+
+    const title =
+        item.translated_title ||
+        item.title ||
+        "esta notícia";
+
+    const message =
+        status === "published"
+            ? `Publicar "${title}"?`
+            : `Despublicar "${title}"?`;
+
+    if (!confirm(message)) {
+        return;
+    }
+
+    try {
+
+        const updateData = {
+            status
+        };
+
+        if (status === "published") {
+
+            updateData.published_at =
+                item.published_at ||
+                new Date().toISOString();
+        }
+
+        const {
+            error
+        } = await supabaseClient
+            .from("news")
+            .update(updateData)
+            .eq(
+                "id",
+                id
+            );
+
+        if (error) throw error;
+
+        await loadNewsLibrary();
+        await loadDashboardCounts();
+        await loadRecentActivity();
+
+    } catch (error) {
+
+        console.error(
+            "Erro ao alterar estado da notícia:",
+            error
+        );
+
+        alert(
+            error.message ||
+            "Não foi possível alterar o estado da notícia."
+        );
+    }
+}
+
+
+// ============================================================
+// 19. ELIMINAR NOTÍCIA
+// ============================================================
+
+async function deleteNews(
+    id
+) {
+
+    const item =
+        await getNewsById(id);
+
+    if (!item) return;
+
+    const title =
+        item.translated_title ||
+        item.title ||
+        "esta notícia";
+
+    if (
+        !confirm(
+            `Eliminar "${title}"? Esta ação não pode ser anulada.`
+        )
+    ) {
+        return;
+    }
+
+    try {
+
+        const {
+            error
+        } = await supabaseClient
+            .from("news")
+            .delete()
+            .eq(
+                "id",
+                id
+            );
+
+        if (error) throw error;
+
+        await loadNewsLibrary();
+        await loadDashboardCounts();
+        await loadRecentActivity();
+
+    } catch (error) {
+
+        console.error(
+            "Erro ao eliminar notícia:",
+            error
+        );
+
+        alert(
+            error.message ||
+            "Não foi possível eliminar a notícia."
+        );
+    }
+}
+
+
+// ============================================================
+// 20. CRIAR NOTÍCIA
+// ============================================================
+
+function setupNewsCreation() {
+
+    document
+        .getElementById(
+            "create-news"
+        )
+        ?.addEventListener(
+            "click",
+            openNewsCreateModal
+        );
+}
+
+
+function openNewsCreateModal() {
+
+    closeModalById(
+        "news-create-modal"
+    );
+
+    const modal =
+        document.createElement(
+            "div"
+        );
+
+    modal.id =
+        "news-create-modal";
+
+    modal.className =
+        "admin-modal-overlay";
+
+    modal.innerHTML = `
+
+        <div class="admin-modal news-modal">
+
+            <div class="admin-modal-header">
+
+                <div>
+
+                    <span class="admin-modal-eyebrow">
+                        NOVA NOTÍCIA
+                    </span>
+
+                    <h2>
+                        Criar notícia
+                    </h2>
+
+                    <p class="admin-modal-subtitle">
+                        Cria uma notícia original
+                        directamente na plataforma.
+                    </p>
+
+                </div>
+
+                <button
+                    type="button"
+                    class="admin-modal-close"
+                    id="close-news-create-modal"
+                    aria-label="Fechar"
+                >
+                    ×
+                </button>
+
+            </div>
+
+            <form id="news-create-form">
+
+                <div class="admin-form-group">
+
+                    <label for="create-news-image">
+                        Imagem
+                        <span class="optional-mark">
+                            Opcional
+                        </span>
+                    </label>
+
+                    <label
+                        class="media-upload"
+                        for="create-news-image"
+                    >
+
+                        <div class="media-upload-icon">
+                            ↑
+                        </div>
+
+                        <div class="media-upload-text">
+
+                            <strong>
+                                Carregar imagem
+                            </strong>
+
+                            <span>
+                                JPG, PNG ou WEBP
+                            </span>
+
+                        </div>
+
+                        <input
+                            id="create-news-image"
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                        >
+
+                    </label>
+
+                    <div
+                        id="create-news-image-preview"
+                        class="media-preview"
+                    ></div>
+
+                </div>
+
+                <div class="admin-form-row">
+
+                    <div class="admin-form-group">
+
+                        <label for="create-news-team">
+                            Clube
+                        </label>
+
+                        <select id="create-news-team">
+
+                            <option value="">
+                                Ambos os clubes
+                            </option>
+
+                            <option value="barcelona">
+                                FC Barcelona
+                            </option>
+
+                            <option value="real-madrid">
+                                Real Madrid
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="admin-form-group">
+
+                        <label for="create-news-category">
+                            Categoria
+                        </label>
+
+                        <select id="create-news-category">
+
+                            <option value="news">
+                                Notícias
+                            </option>
+
+                            <option value="transfer">
+                                Transferências
+                            </option>
+
+                            <option value="match">
+                                Jogos
+                            </option>
+
+                            <option value="club">
+                                Clube
+                            </option>
+
+                            <option value="player">
+                                Jogadores
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+                <div class="admin-form-group">
+
+                    <label for="create-news-title">
+                        Título
+                    </label>
+
+                    <input
+                        id="create-news-title"
+                        type="text"
+                        maxlength="200"
+                        required
+                        placeholder="Título da notícia"
+                    >
+
+                </div>
+
+                <div class="admin-form-group">
+
+                    <label for="create-news-description">
+                        Descrição
+                    </label>
+
+                    <textarea
+                        id="create-news-description"
+                        rows="3"
+                        maxlength="600"
+                        placeholder="Resumo da notícia..."
+                    ></textarea>
+
+                </div>
+
+                <div class="admin-form-group">
+
+                    <label for="create-news-body">
+                        Artigo
+                    </label>
+
+                    <textarea
+                        id="create-news-body"
+                        rows="10"
+                        placeholder="Escreve aqui o conteúdo completo..."
+                    ></textarea>
+
+                </div>
+
+                <div class="admin-form-group">
+
+                    <label for="create-news-source">
+                        Fonte
+                        <span class="optional-mark">
+                            Opcional
+                        </span>
+                    </label>
+
+                    <input
+                        id="create-news-source"
+                        type="text"
+                        maxlength="150"
+                        placeholder="Ex.: Barça Real"
+                    >
+
+                </div>
+
+                <div class="admin-form-group">
+
+                    <label for="create-news-source-url">
+                        URL da fonte
+                        <span class="optional-mark">
+                            Opcional
+                        </span>
+                    </label>
+
+                    <input
+                        id="create-news-source-url"
+                        type="url"
+                        placeholder="https://..."
+                    >
+
+                </div>
+
+                <div class="admin-form-group">
+
+                    <label for="create-news-status">
+                        Estado
+                    </label>
+
+                    <select id="create-news-status">
+
+                        <option value="draft">
+                            Rascunho
+                        </option>
+
+                        <option value="published">
+                            Publicado
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <div
+                    id="create-news-message"
+                    class="admin-form-message"
+                ></div>
+
+                <div class="admin-modal-actions">
+
+                    <button
+                        type="button"
+                        class="admin-button secondary"
+                        id="cancel-news-create"
+                    >
+                        Cancelar
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="admin-button primary"
+                        id="submit-news-create"
+                    >
+                        Criar notícia
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+    `;
+
+    document.body.appendChild(
+        modal
+    );
+
+    document
+        .getElementById(
+            "close-news-create-modal"
+        )
+        ?.addEventListener(
+            "click",
+            closeNewsCreateModal
+        );
+
+    document
+        .getElementById(
+            "cancel-news-create"
+        )
+        ?.addEventListener(
+            "click",
+            closeNewsCreateModal
+        );
+
+    document
+        .getElementById(
+            "news-create-form"
+        )
+        ?.addEventListener(
+            "submit",
+            createNews
+        );
+
+    document
+        .getElementById(
+            "create-news-image"
+        )
+        ?.addEventListener(
+            "change",
+            previewCreateNewsImage
+        );
+
+    modal.addEventListener(
+        "click",
+        event => {
+
+            if (event.target === modal) {
+                closeNewsCreateModal();
+            }
+        }
+    );
+}
+
+
+function closeNewsCreateModal() {
+
+    closeModalById(
+        "news-create-modal"
+    );
+}
+
+
+// ============================================================
+// 21. GUARDAR NOVA NOTÍCIA
+// ============================================================
+
+async function createNews(
+    event
+) {
+
+    event.preventDefault();
+
+    const title =
+        document
+            .getElementById(
+                "create-news-title"
+            )
+            ?.value
+            .trim();
+
+    const description =
+        document
+            .getElementById(
+                "create-news-description"
+            )
+            ?.value
+            .trim() ||
+        null;
+
+    const articleBody =
+        document
+            .getElementById(
+                "create-news-body"
+            )
+            ?.value
+            .trim() ||
+        null;
+
+    const sourceName =
+        document
+            .getElementById(
+                "create-news-source"
+            )
+            ?.value
+            .trim() ||
+        "Barça Real";
+
+    const sourceUrl =
+        document
+            .getElementById(
+                "create-news-source-url"
+            )
+            ?.value
+            .trim() ||
+        null;
+
+    const category =
+        document
+            .getElementById(
+                "create-news-category"
+            )
+            ?.value ||
+        "news";
+
+    const teamSlug =
+        document
+            .getElementById(
+                "create-news-team"
+            )
+            ?.value ||
+        "";
+
+    const status =
+        document
+            .getElementById(
+                "create-news-status"
+            )
+            ?.value ||
+        "draft";
+
+    const imageFile =
+        document
+            .getElementById(
+                "create-news-image"
+            )
+            ?.files?.[0] ||
+        null;
+
+    const message =
+        document.getElementById(
+            "create-news-message"
+        );
+
+    const submit =
+        document.getElementById(
+            "submit-news-create"
+        );
+
+    if (!title) {
+
+        if (message) {
+            message.textContent =
+                "O título é obrigatório.";
+        }
+
+        return;
+    }
+
+    if (submit) {
+
+        submit.disabled = true;
+        submit.textContent = "A guardar...";
+    }
+
+    try {
+
+        let teamId = null;
+
+        if (teamSlug) {
+
+            const {
+                data: team,
+                error: teamError
+            } = await supabaseClient
+                .from("teams")
+                .select("id")
+                .eq(
+                    "slug",
+                    teamSlug
+                )
+                .single();
+
+            if (teamError || !team) {
+                throw new Error(
+                    "Não foi possível encontrar o clube."
+                );
+            }
+
+            teamId = team.id;
+        }
+
+        let imageUrl = null;
+
+        if (imageFile) {
+
+            if (message) {
+                message.textContent =
+                    "A carregar a imagem...";
+            }
+
+            imageUrl =
+                await uploadContentFile(
+                    imageFile,
+                    "images"
+                );
+        }
+
+        if (message) {
+            message.textContent =
+                "A criar a notícia...";
+        }
+
+        const now =
+            new Date().toISOString();
+
+        const {
+            error
+        } = await supabaseClient
+            .from("news")
+            .insert({
+
+                team_id:
+                    teamId,
+
+                title,
+
+                translated_title:
+                    title,
+
+                description,
+
+                translated_description:
+                    description,
+
+                article_body:
+                    articleBody,
+
+                image_url:
+                    imageUrl,
+
+                article_url:
+                    sourceUrl ||
+                    `br://${crypto.randomUUID()}`,
+
+                source_name:
+                    sourceName,
+
+                source_url:
+                    sourceUrl,
+
+                author:
+                    currentAdmin
+                        ?.profile
+                        ?.display_name ||
+                    currentAdmin
+                        ?.profile
+                        ?.username ||
+                    "Barça Real",
+
+                published_at:
+                    status === "published"
+                        ? now
+                        : null,
+
+                imported_at:
+                    now,
+
+                category,
+
+                status,
+
+                is_featured:
+                    false,
+
+                sort_order:
+                    0
+            });
+
+        if (error) throw error;
+
+        await loadNewsLibrary();
+        await loadDashboardCounts();
+        await loadRecentActivity();
+
+        setTimeout(
+            closeNewsCreateModal,
+            500
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Erro ao criar notícia:",
+            error
+        );
+
+        if (message) {
+            message.textContent =
+                error.message ||
+                "Não foi possível criar a notícia.";
+        }
+
+        if (submit) {
+            submit.disabled = false;
+            submit.textContent =
+                "Criar notícia";
+        }
+    }
+}
+
+
+// ============================================================
+// 22. EDITAR NOTÍCIA
+// ============================================================
+
+async function editNews(
+    id
+) {
+
+    const item =
+        await getNewsById(id);
+
+    if (!item) return;
+
+    closeModalById(
+        "news-edit-modal"
+    );
+
+    const title =
+        item.translated_title ||
+        item.title ||
+        "";
+
+    const description =
+        item.translated_description ||
+        item.description ||
+        "";
+
+    const modal =
+        document.createElement(
+            "div"
+        );
+
+    modal.id =
+        "news-edit-modal";
+
+    modal.className =
+        "admin-modal-overlay";
+
+    modal.innerHTML = `
+
+        <div class="admin-modal news-modal news-edit-modal">
+
+            <div class="admin-modal-header">
+
+                <div>
+
+                    <span class="admin-modal-eyebrow">
+                        EDITAR NOTÍCIA
+                    </span>
+
+                    <h2>
+                        Editar notícia
+                    </h2>
+
+                    <p class="admin-modal-subtitle">
+                        Revê e corrige o conteúdo
+                        antes de o publicar.
+                    </p>
+
+                </div>
+
+                <button
+                    type="button"
+                    class="admin-modal-close"
+                    id="close-news-edit-modal"
+                    aria-label="Fechar"
+                >
+                    ×
+                </button>
+
+            </div>
+
+            <form id="news-edit-form">
+
+                ${
+                    item.image_url
+                        ? `
+                            <div class="news-edit-current-image">
+
+                                <span>
+                                    Imagem actual
+                                </span>
+
+                                <img
+                                    src="${escapeAttribute(
+                                        item.image_url
+                                    )}"
+                                    alt="${escapeAttribute(
+                                        title
+                                    )}"
+                                >
+
+                            </div>
+                        `
+                        : ""
+                }
+
+                <div class="admin-form-group">
+
+                    <label for="edit-news-image">
+                        Nova imagem
+                        <span class="optional-mark">
+                            Opcional
+                        </span>
+                    </label>
+
+                    <label
+                        class="media-upload"
+                        for="edit-news-image"
+                    >
+
+                        <div class="media-upload-icon">
+                            ↑
+                        </div>
+
+                        <div class="media-upload-text">
+
+                            <strong>
+                                Substituir imagem
+                            </strong>
+
+                            <span>
+                                JPG, PNG ou WEBP
+                            </span>
+
+                        </div>
+
+                        <input
+                            id="edit-news-image"
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                        >
+
+                    </label>
+
+                    <div
+                        id="edit-news-image-preview"
+                        class="media-preview"
+                    ></div>
+
+                </div>
+
+                <div class="admin-form-row">
+
+                    <div class="admin-form-group">
+
+                        <label for="edit-news-team">
+                            Clube
+                        </label>
+
+                        <select id="edit-news-team">
+
+                            <option value="">
+                                Ambos os clubes
+                            </option>
+
+                            <option value="barcelona">
+                                FC Barcelona
+                            </option>
+
+                            <option value="real-madrid">
+                                Real Madrid
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="admin-form-group">
+
+                        <label for="edit-news-category">
+                            Categoria
+                        </label>
+
+                        <select id="edit-news-category">
+
+                            <option value="news">
+                                Notícias
+                            </option>
+
+                            <option value="transfer">
+                                Transferências
+                            </option>
+
+                            <option value="match">
+                                Jogos
+                            </option>
+
+                            <option value="club">
+                                Clube
+                            </option>
+
+                            <option value="player">
+                                Jogadores
+                            </option>
+
+                            <option value="opinion">
+                                Opinião
+                            </option>
+
+                            <option value="analysis">
+                                Análise
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+                <div class="admin-form-group">
+
+                    <label for="edit-news-title">
+                        Título
+                    </label>
+
+                    <input
+                        id="edit-news-title"
+                        type="text"
+                        maxlength="200"
+                        value="${escapeAttribute(
+                            title
+                        )}"
+                        required
+                    >
+
+                </div>
+
+                <div class="admin-form-group">
+
+                    <label for="edit-news-description">
+                        Descrição
+                    </label>
+
+                    <textarea
+                        id="edit-news-description"
+                        rows="4"
+                        maxlength="600"
+                    >${escapeHTML(
+                        description
+                    )}</textarea>
+
+                </div>
+
+                <div class="admin-form-group">
+
+                    <label for="edit-news-body">
+                        Artigo
+                    </label>
+
+                    <textarea
+                        id="edit-news-body"
+                        rows="12"
+                    >${escapeHTML(
+                        item.article_body ||
+                        ""
+                    )}</textarea>
+
+                </div>
+
+                <div class="admin-form-group">
+
+                    <label for="edit-news-source">
+                        Fonte
+                    </label>
+
+                    <input
+                        id="edit-news-source"
+                        type="text"
+                        maxlength="150"
+                        value="${escapeAttribute(
+                            item.source_name ||
+                            ""
+                        )}"
+                    >
+
+                </div>
+
+                <div class="admin-form-group">
+
+                    <label for="edit-news-source-url">
+                        URL da fonte
+                    </label>
+
+                    <input
+                        id="edit-news-source-url"
+                        type="url"
+                        value="${escapeAttribute(
+                            item.source_url ||
+                            item.article_url ||
+                            ""
+                        )}"
+                    >
+
+                </div>
+
+                <div class="admin-form-row">
+
+                    <div class="admin-form-group">
+
+                        <label for="edit-news-status">
+                            Estado
+                        </label>
+
+                        <select id="edit-news-status">
+
+                            <option value="draft">
+                                Pendente
+                            </option>
+
+                            <option value="published">
+                                Publicado
+                            </option>
+
+                            <option value="unpublished">
+                                Não publicado
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="admin-form-group">
+
+                        <label for="edit-news-featured">
+                            Destaque
+                        </label>
+
+                        <select id="edit-news-featured">
+
+                            <option value="false">
+                                Não
+                            </option>
+
+                            <option value="true">
+                                Sim
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+                <div
+                    id="edit-news-message"
+                    class="admin-form-message"
+                ></div>
+
+                <div class="admin-modal-actions">
+
+                    <button
+                        type="button"
+                        class="admin-button secondary"
+                        id="cancel-news-edit"
+                    >
+                        Cancelar
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="admin-button primary"
+                        id="save-news-edit"
+                    >
+                        Guardar alterações
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+    `;
+
+    document.body.appendChild(
+        modal
+    );
+
+    document
+        .getElementById(
+            "edit-news-team"
+        ).value =
+        await getTeamSlugById(
+            item.team_id
+        );
+
+    document
+        .getElementById(
+            "edit-news-category"
+        ).value =
+        item.category ||
+        "news";
+
+    document
+        .getElementById(
+            "edit-news-status"
+        ).value =
+        item.status ||
+        "draft";
+
+    document
+        .getElementById(
+            "edit-news-featured"
+        ).value =
+        item.is_featured
+            ? "true"
+            : "false";
+
+    document
+        .getElementById(
+            "close-news-edit-modal"
+        )
+        ?.addEventListener(
+            "click",
+            closeNewsEditModal
+        );
+
+    document
+        .getElementById(
+            "cancel-news-edit"
+        )
+        ?.addEventListener(
+            "click",
+            closeNewsEditModal
+        );
+
+    document
+        .getElementById(
+            "news-edit-form"
+        )
+        ?.addEventListener(
+            "submit",
+            event =>
+                saveNewsEdit(
+                    event,
+                    item
+                )
+        );
+
+    document
+        .getElementById(
+            "edit-news-image"
+        )
+        ?.addEventListener(
+            "change",
+            previewEditNewsImage
+        );
+
+    modal.addEventListener(
+        "click",
+        event => {
+
+            if (event.target === modal) {
+                closeNewsEditModal();
+            }
+        }
+    );
+}
+
+
+function closeNewsEditModal() {
+
+    closeModalById(
+        "news-edit-modal"
+    );
+}
+
+
+// ============================================================
+// 23. GUARDAR EDIÇÃO DA NOTÍCIA
+// ============================================================
+
+async function saveNewsEdit(
+    event,
+    item
+) {
+
+    event.preventDefault();
+
+    const message =
+        document.getElementById(
+            "edit-news-message"
+        );
+
+    const saveButton =
+        document.getElementById(
+            "save-news-edit"
+        );
+
+    const title =
+        document
+            .getElementById(
+                "edit-news-title"
+            )
+            ?.value
+            .trim();
+
+    const description =
+        document
+            .getElementById(
+                "edit-news-description"
+            )
+            ?.value
+            .trim() ||
+        null;
+
+    const articleBody =
+        document
+            .getElementById(
+                "edit-news-body"
+            )
+            ?.value
+            .trim() ||
+        null;
+
+    const sourceName =
+        document
+            .getElementById(
+                "edit-news-source"
+            )
+            ?.value
+            .trim() ||
+        item.source_name ||
+        "Barça Real";
+
+    const sourceUrl =
+        document
+            .getElementById(
+                "edit-news-source-url"
+            )
+            ?.value
+            .trim() ||
+        null;
+
+    const category =
+        document
+            .getElementById(
+                "edit-news-category"
+            )
+            ?.value ||
+        "news";
+
+    const teamSlug =
+        document
+            .getElementById(
+                "edit-news-team"
+            )
+            ?.value ||
+        "";
+
+    const status =
+        document
+            .getElementById(
+                "edit-news-status"
+            )
+            ?.value ||
+        "draft";
+
+    const isFeatured =
+        document
+            .getElementById(
+                "edit-news-featured"
+            )
+            ?.value ===
+        "true";
+
+    const imageFile =
+        document
+            .getElementById(
+                "edit-news-image"
+            )
+            ?.files?.[0] ||
+        null;
+
+    if (!title) {
+
+        if (message) {
+            message.textContent =
+                "O título é obrigatório.";
+        }
+
+        return;
+    }
+
+    if (saveButton) {
+
+        saveButton.disabled = true;
+        saveButton.textContent =
+            "A guardar...";
+    }
+
+    try {
+
+        let teamId = null;
+
+        if (teamSlug) {
+
+            const {
+                data: team,
+                error: teamError
+            } = await supabaseClient
+                .from("teams")
+                .select("id")
+                .eq(
+                    "slug",
+                    teamSlug
+                )
+                .single();
+
+            if (teamError || !team) {
+                throw new Error(
+                    "Não foi possível encontrar o clube."
+                );
+            }
+
+            teamId = team.id;
+        }
+
+        let imageUrl =
+            item.image_url ||
+            null;
+
+        if (imageFile) {
+
+            if (message) {
+                message.textContent =
+                    "A carregar a nova imagem...";
+            }
+
+            imageUrl =
+                await uploadContentFile(
+                    imageFile,
+                    "images"
+                );
+        }
+
+        if (message) {
+            message.textContent =
+                "A guardar as alterações...";
+        }
+
+        const updateData = {
+
+            team_id:
+                teamId,
+
+            title,
+
+            translated_title:
+                title,
+
+            description,
+
+            translated_description:
+                description,
+
+            article_body:
+                articleBody,
+
+            image_url:
+                imageUrl,
+
+            source_name:
+                sourceName,
+
+            source_url:
+                sourceUrl,
+
+            article_url:
+                item.article_url ||
+                sourceUrl ||
+                `br://${item.id}`,
+
+            category,
+
+            status,
+
+            is_featured:
+                isFeatured
+        };
+
+        if (
+            status === "published" &&
+            !item.published_at
+        ) {
+
+            updateData.published_at =
+                new Date().toISOString();
+        }
+
+        const {
+            error
+        } = await supabaseClient
+            .from("news")
+            .update(updateData)
+            .eq(
+                "id",
+                item.id
+            );
+
+        if (error) throw error;
+
+        await loadNewsLibrary();
+        await loadDashboardCounts();
+        await loadRecentActivity();
+
+        setTimeout(
+            closeNewsEditModal,
+            500
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Erro ao guardar notícia:",
+            error
+        );
+
+        if (message) {
+            message.textContent =
+                error.message ||
+                "Não foi possível guardar as alterações.";
+        }
+
+        if (saveButton) {
+            saveButton.disabled = false;
+            saveButton.textContent =
+                "Guardar alterações";
+        }
+    }
+}
+
+
+// ============================================================
+// 24. PREVIEWS DE NOTÍCIAS
+// ============================================================
+
+function previewCreateNewsImage(
+    event
+) {
+
+    const file =
+        event.target.files?.[0];
+
+    const preview =
+        document.getElementById(
+            "create-news-image-preview"
+        );
+
+    if (!preview) return;
+
+    preview.innerHTML = "";
+
+    if (!file) return;
+
+    const image =
+        document.createElement(
+            "img"
+        );
+
+    image.src =
+        URL.createObjectURL(
+            file
+        );
+
+    image.alt =
+        "Pré-visualização";
+
+    preview.appendChild(
+        image
+    );
+}
+
+
+function previewEditNewsImage(
+    event
+) {
+
+    const file =
+        event.target.files?.[0];
+
+    const preview =
+        document.getElementById(
+            "edit-news-image-preview"
+        );
+
+    if (!preview) return;
+
+    preview.innerHTML = "";
+
+    if (!file) return;
+
+    const image =
+        document.createElement(
+            "img"
+        );
+
+    image.src =
+        URL.createObjectURL(
+            file
+        );
+
+    image.alt =
+        "Nova imagem";
+
+    preview.appendChild(
+        image
+    );
+}
+
+
+// ============================================================
+// 25. PREVIEWS DE DESTAQUES
 // ============================================================
 
 function previewFeaturedImage(
@@ -2826,8 +5007,7 @@ function previewFeaturedImage(
 
     if (!preview) return;
 
-    preview.innerHTML =
-        "";
+    preview.innerHTML = "";
 
     if (!file) return;
 
@@ -2864,8 +5044,7 @@ function previewFeaturedAudio(
 
     if (!preview) return;
 
-    preview.innerHTML =
-        "";
+    preview.innerHTML = "";
 
     if (!file) return;
 
@@ -2874,8 +5053,7 @@ function previewFeaturedAudio(
             "audio"
         );
 
-    audio.controls =
-        true;
+    audio.controls = true;
 
     audio.src =
         URL.createObjectURL(
@@ -2902,8 +5080,7 @@ function previewEditFeaturedImage(
 
     if (!preview) return;
 
-    preview.innerHTML =
-        "";
+    preview.innerHTML = "";
 
     if (!file) return;
 
@@ -2940,8 +5117,7 @@ function previewEditFeaturedAudio(
 
     if (!preview) return;
 
-    preview.innerHTML =
-        "";
+    preview.innerHTML = "";
 
     if (!file) return;
 
@@ -2950,8 +5126,7 @@ function previewEditFeaturedAudio(
             "audio"
         );
 
-    audio.controls =
-        true;
+    audio.controls = true;
 
     audio.src =
         URL.createObjectURL(
@@ -2965,7 +5140,7 @@ function previewEditFeaturedAudio(
 
 
 // ============================================================
-// 14. STORAGE
+// 26. STORAGE
 // ============================================================
 
 async function uploadContentFile(
@@ -3035,7 +5210,7 @@ async function uploadContentFile(
 
 
 // ============================================================
-// 15. TECLADO / MODAIS
+// 27. TECLADO / MODAIS
 // ============================================================
 
 document.addEventListener(
@@ -3049,24 +5224,32 @@ document.addEventListener(
             return;
         }
 
-        if (
-            document.getElementById(
-                "featured-edit-modal"
-            )
+        const modalIds = [
+
+            "news-edit-modal",
+
+            "news-create-modal",
+
+            "featured-edit-modal",
+
+            "featured-modal"
+        ];
+
+        for (
+            const id of modalIds
         ) {
 
-            closeFeaturedEditModal();
+            const modal =
+                document.getElementById(
+                    id
+                );
 
-            return;
-        }
+            if (modal) {
 
-        if (
-            document.getElementById(
-                "featured-modal"
-            )
-        ) {
+                closeModalById(id);
 
-            closeFeaturedModal();
+                return;
+            }
         }
     }
 );
@@ -3082,14 +5265,13 @@ function closeModalById(
         );
 
     if (modal) {
-
         modal.remove();
     }
 }
 
 
 // ============================================================
-// 16. UTILITÁRIOS
+// 28. UTILITÁRIOS
 // ============================================================
 
 function normalizeStatus(
@@ -3128,9 +5310,7 @@ function formatDate(
     if (!value) return "—";
 
     const date =
-        new Date(
-            value
-        );
+        new Date(value);
 
     if (
         Number.isNaN(
@@ -3143,14 +5323,9 @@ function formatDate(
     return date.toLocaleDateString(
         "pt-PT",
         {
-            day:
-                "2-digit",
-
-            month:
-                "short",
-
-            year:
-                "numeric"
+            day: "2-digit",
+            month: "short",
+            year: "numeric"
         }
     );
 }
@@ -3161,8 +5336,7 @@ function escapeHTML(
 ) {
 
     return String(
-        value ??
-        ""
+        value ?? ""
     )
         .replace(
             /&/g,
@@ -3198,7 +5372,7 @@ function escapeAttribute(
 
 
 // ============================================================
-// 17. INICIALIZAÇÃO
+// 29. INICIALIZAÇÃO
 // ============================================================
 
 async function initAdmin() {
@@ -3217,6 +5391,8 @@ async function initAdmin() {
     setupLogout();
 
     setupFeaturedCreation();
+
+    setupNewsCreation();
 
     setupDashboardRetry();
 
