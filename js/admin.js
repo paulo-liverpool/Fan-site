@@ -3304,341 +3304,33 @@ async function loadNewsTeams() {
 
     return teamMap;
 }
+
 // ============================================================
 // 15A. NEWS CARDS — HOMEPAGE STYLE
 // ============================================================
 
 function renderNewsCards(items, teamMap = {}) {
 
-    const container = document.getElementById("news-library-results");
+    const container =
+        document.getElementById("news-library-results");
 
     if (!container) return;
 
-    if (!items.length) {
-
-        container.innerHTML = `
-            <div class="news-library-empty">
-                <div class="news-library-empty-icon">N</div>
-                <h3>Nenhuma notícia encontrada</h3>
-                <p>
-                    Não existem notícias que correspondam aos filtros seleccionados.
-                </p>
-                <button
-                    type="button"
-                    class="admin-primary-button"
-                    id="news-empty-create"
-                >
-                    + Criar Notícia
-                </button>
-            </div>
-        `;
-
-        document
-            .getElementById("news-empty-create")
-            ?.addEventListener("click", openNewsCreateModal);
-
-        return;
-    }
-
-    const lead = items[0];
-    const secondary = items.slice(1);
-
-    const renderImage = (item, large = false) => {
-
-        const title =
-            item.translated_title ||
-            item.title ||
-            "Notícia";
-
-        if (!item.image_url) {
-
-            return `
-                <div class="${large
-                    ? "news-admin-lead-media"
-                    : "news-admin-small-media"
-                } image-missing">
-
-                    <div class="news-image-fallback">
-                        <span>IMAGEM</span>
-                        <strong>Indisponível</strong>
-                    </div>
-
-                </div>
-            `;
-        }
-
-        return `
-            <div class="${large
-                ? "news-admin-lead-media"
-                : "news-admin-small-media"
-            }">
-
-                <img
-                    src="${escapeAttribute(item.image_url)}"
-                    alt="${escapeAttribute(title)}"
-                    class="news-admin-card-image"
-                    loading="lazy"
-                    onerror="
-                        this.onerror=null;
-                        this.style.display='none';
-                        this.parentElement.classList.add('image-missing');
-                        this.parentElement.querySelector('.news-image-fallback').style.display='flex';
-                    "
-                >
-
-                <div
-                    class="news-image-fallback"
-                    style="display:none;"
-                >
-                    <span>IMAGEM</span>
-                    <strong>Indisponível</strong>
-                </div>
-
-                <div class="news-image-overlay"></div>
-
-                <div class="news-card-status">
-                    ${renderNewsStatusBadge(item)}
-                </div>
-
-            </div>
-        `;
-    };
-
-
-    const renderMeta = item => {
-
-        const team = teamMap[item.team_id];
-
-        const teamName =
-            team?.short_name ||
-            team?.name ||
-            (!item.team_id ? "BARÇA REAL" : "BR");
-
-        const category =
-            item.category ||
-            "news";
-
-        const date =
-            item.published_at ||
-            item.created_at ||
-            item.imported_at;
-
-        return `
-            <div class="news-card-meta">
-
-                <span class="news-card-team">
-                    ${escapeHTML(teamName)}
-                </span>
-
-                <span class="news-card-separator">•</span>
-
-                <span>
-                    ${escapeHTML(category)}
-                </span>
-
-                <span class="news-card-separator">•</span>
-
-                <span>
-                    ${formatDate(date)}
-                </span>
-
-            </div>
-        `;
-    };
-
-
-    const renderEditorialInfo = item => {
-
-        const badges = [];
-
-        if (item.editorial_locked) {
-
-            badges.push(`
-                <span class="news-editorial-badge">
-                    EDITORIAL
-                </span>
-            `);
-        }
-
-        if (item.source_name) {
-
-            badges.push(`
-                <span class="news-source-badge">
-                    ${escapeHTML(item.source_name)}
-                </span>
-            `);
-        }
-
-        return badges.length
-            ? `<div class="news-editorial-info">${badges.join("")}</div>`
-            : "";
-    };
-
-
-    const renderActions = item => {
-
-        const statusAction =
-            getNewsStatusAction(item);
-
-        return `
-            <div class="news-card-actions">
-
-                <button
-                    type="button"
-                    class="admin-secondary-button"
-                    data-news-action="preview"
-                    data-id="${escapeAttribute(item.id)}"
-                >
-                    Pré-visualizar
-                </button>
-
-                <button
-                    type="button"
-                    class="admin-secondary-button"
-                    data-news-action="edit"
-                    data-id="${escapeAttribute(item.id)}"
-                >
-                    Editar
-                </button>
-
-                <button
-                    type="button"
-                    class="admin-secondary-button"
-                    data-news-action="${statusAction.action}"
-                    data-id="${escapeAttribute(item.id)}"
-                >
-                    ${statusAction.label}
-                </button>
-
-                <button
-                    type="button"
-                    class="admin-danger-button"
-                    data-news-action="delete"
-                    data-id="${escapeAttribute(item.id)}"
-                >
-                    Eliminar
-                </button>
-
-            </div>
-        `;
-    };
-
-
-    // --------------------------------------------------------
-    // LEAD NEWS
-    // --------------------------------------------------------
-
-    const leadTitle =
-        lead.translated_title ||
-        lead.title ||
-        "Sem título";
-
-    const leadDescription =
-        lead.translated_description ||
-        lead.description ||
-        "";
-
-    const leadHTML = `
-        <article
-            class="news-admin-lead-card"
-            data-news-id="${escapeAttribute(lead.id)}"
-        >
-
-            ${renderImage(lead, true)}
-
-            <div class="news-admin-lead-content">
-
-                ${renderMeta(lead)}
-
-                ${renderEditorialInfo(lead)}
-
-                <h2>
-                    ${escapeHTML(leadTitle)}
-                </h2>
-
-                <p>
-                    ${escapeHTML(leadDescription)}
-                </p>
-
-                ${renderActions(lead)}
-
-            </div>
-
-        </article>
-    `;
-
-
-    // --------------------------------------------------------
-    // SMALL NEWS
-    // --------------------------------------------------------
-
-    const secondaryHTML = secondary
-        .map(item => {
-
-            const title =
-                item.translated_title ||
-                item.title ||
-                "Sem título";
-
-            const description =
-                item.translated_description ||
-                item.description ||
-                "";
-
-            return `
-                <article
-                    class="news-admin-small-card"
-                    data-news-id="${escapeAttribute(item.id)}"
-                >
-
-                    ${renderImage(item, false)}
-
-                    <div class="news-admin-small-content">
-
-                        ${renderMeta(item)}
-
-                        ${renderEditorialInfo(item)}
-
-                        <h3>
-                            ${escapeHTML(title)}
-                        </h3>
-
-                        <p>
-                            ${escapeHTML(description)}
-                        </p>
-
-                        ${renderActions(item)}
-
-                    </div>
-
-                </article>
-            `;
-        })
-        .join("");
-
-
-    container.innerHTML = `
-
-        <div class="news-admin-lead">
-            ${leadHTML}
-        </div>
-
-        ${
-            secondary.length
-                ? `
-                    <div class="news-admin-small-grid">
-                        ${secondaryHTML}
-                    </div>
-                `
-                : ""
-        }
-
-    `;
+    container.innerHTML =
+        renderNewsCardsHTML(
+            items,
+            teamMap
+        );
 
     bindNewsActions();
+
+    document
+        .getElementById("news-empty-create")
+        ?.addEventListener(
+            "click",
+            openNewsCreateModal
+        );
 }
-
-
 // ============================================================
 // 15B. NEWS STATUS BADGE
 // ============================================================
@@ -3954,38 +3646,19 @@ function normalizeNewsStatus(
 }
 
 
-function getNewsStatusAction(
-    item
-) {
+function getNewsStatusAction(item) {
 
     if (item.status === "published") {
-
-        return `
-            <button
-                type="button"
-                class="news-action-button"
-                data-news-action="unpublish"
-                data-news-id="${escapeAttribute(
-                    item.id
-                )}"
-            >
-                Despublicar
-            </button>
-        `;
+        return {
+            action: "unpublish",
+            label: "Despublicar"
+        };
     }
 
-    return `
-        <button
-            type="button"
-            class="news-action-button primary"
-            data-news-action="publish"
-            data-news-id="${escapeAttribute(
-                item.id
-            )}"
-        >
-            Publicar
-        </button>
-    `;
+    return {
+        action: "publish",
+        label: "Publicar"
+    };
 }
 
 
