@@ -2792,7 +2792,7 @@ async function renderNewsLibrary(items) {
     const unpublished = items.filter(item => item.status === "unpublished").length;
 
     // Load teams directly here
-    const { data: teams } = await supabase
+    const { data: teams } = await supabaseClient
         .from("teams")
         .select("id,name,short_name,slug");
 
@@ -3304,7 +3304,6 @@ async function loadNewsTeams() {
 
     return teamMap;
 }
-
 // ============================================================
 // 15A. NEWS CARDS — HOMEPAGE STYLE
 // ============================================================
