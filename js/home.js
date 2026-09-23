@@ -456,17 +456,7 @@ function renderFeaturedSlides(items) {
                         ${escapeHTML(title)}
                     </h2>
 
-                    ${
-                        description
-                            ? `
-                                <p>
-                                    ${escapeHTML(
-                                        stripHTML(description)
-                                    )}
-                                </p>
-                            `
-                            : ""
-                    }
+                   
 
                 </div>
 
