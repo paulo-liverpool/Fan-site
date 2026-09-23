@@ -2780,7 +2780,8 @@ async function loadNewsLibrary() {
 // 14. RENDER NEWS LIBRARY
 // ============================================================
 
-function renderNewsLibrary(items) {
+async function renderNewsLibrary(items) {
+
     const container = document.getElementById("news-list");
 
     if (!container) return;
@@ -2790,10 +2791,20 @@ function renderNewsLibrary(items) {
     const pending = items.filter(item => item.status === "draft").length;
     const unpublished = items.filter(item => item.status === "unpublished").length;
 
+    // Load teams directly here
+    const { data: teams } = await supabase
+        .from("teams")
+        .select("id,name,short_name,slug");
+
+    const teamMap = {};
+
+    (teams || []).forEach(team => {
+        teamMap[team.id] = team;
+    });
+
     container.innerHTML = `
         <div class="news-library-shell">
 
-            <!-- NEWS TOOLBAR -->
             <div class="news-library-toolbar">
 
                 <div class="news-library-toolbar-left">
@@ -2840,57 +2851,433 @@ function renderNewsLibrary(items) {
 
             </div>
 
-            <!-- NEWS CONTENT -->
-            <div id="news-library-results" class="news-library-results"></div>
+            <div id="news-library-results" class="news-library-results">
+                ${renderNewsCardsHTML(items, teamMap)}
+            </div>
 
         </div>
     `;
 
-    const teamSelect = document.getElementById("news-team-filter");
+    document
+        .getElementById("news-status-filter")
+        ?.addEventListener("change", () => {
 
-    loadNewsTeams().then(teamMap => {
+            applyNewsLibraryFilters(items, teamMap);
+        });
 
-        const renderFiltered = () => {
+    document
+        .getElementById("news-team-filter")
+        ?.addEventListener("change", () => {
 
-            const statusFilter =
-                document.getElementById("news-status-filter")?.value || "all";
+            applyNewsLibraryFilters(items, teamMap);
+        });
 
-            const teamFilter =
-                document.getElementById("news-team-filter")?.value || "all";
+    bindNewsActions();
+    document
+    .getElementById("news-empty-create")
+    ?.addEventListener("click", openNewsCreateModal);
+}
 
-            let filtered = [...items];
 
-            if (statusFilter !== "all") {
-                filtered = filtered.filter(
-                    item => item.status === statusFilter
-                );
+// ============================================================
+// NEWS FILTERS
+// ============================================================
+
+function applyNewsLibraryFilters(items, teamMap) {
+
+    const statusFilter =
+        document.getElementById("news-status-filter")?.value || "all";
+
+    const teamFilter =
+        document.getElementById("news-team-filter")?.value || "all";
+
+    let filtered = [...items];
+
+    if (statusFilter !== "all") {
+
+        filtered = filtered.filter(
+            item => item.status === statusFilter
+        );
+    }
+
+    if (teamFilter !== "all") {
+
+        filtered = filtered.filter(item => {
+
+            const team = teamMap[item.team_id];
+
+            if (teamFilter === "both") {
+                return !item.team_id;
             }
 
-            if (teamFilter !== "all") {
+            return team?.slug === teamFilter;
+        });
+    }
 
-                filtered = filtered.filter(item => {
+    const results =
+        document.getElementById("news-library-results");
 
-                    const team = teamMap[item.team_id];
+    if (!results) return;
 
-                    if (teamFilter === "both") {
-                        return !item.team_id;
-                    }
+    results.innerHTML =
+        renderNewsCardsHTML(filtered, teamMap);
 
-                    return team?.slug === teamFilter;
-                });
-            }
+    bindNewsActions();
+    document
+    .getElementById("news-empty-create")
+    ?.addEventListener("click", openNewsCreateModal);
+}
 
-            renderNewsCards(filtered, teamMap);
-        };
 
-        document
-            .getElementById("news-status-filter")
-            ?.addEventListener("change", renderFiltered);
+// ============================================================
+// NEWS CARD HTML
+// ============================================================
 
-        teamSelect?.addEventListener("change", renderFiltered);
+function renderNewsCardsHTML(items, teamMap = {}) {
 
-        renderFiltered();
-    });
+    if (!items.length) {
+
+        return `
+            <div class="news-library-empty">
+
+                <div class="news-library-empty-icon">
+                    N
+                </div>
+
+                <h3>Nenhuma notícia encontrada</h3>
+
+                <p>
+                    Não existem notícias que correspondam aos filtros seleccionados.
+                </p>
+
+                <button
+                    type="button"
+                    class="admin-primary-button"
+                    id="news-empty-create"
+                >
+                    + Criar Notícia
+                </button>
+
+            </div>
+        `;
+    }
+
+    const lead = items[0];
+    const secondary = items.slice(1);
+
+
+    // --------------------------------------------------------
+    // IMAGE
+    // --------------------------------------------------------
+
+    const renderImage = (item, large = false) => {
+
+        const title =
+            item.translated_title ||
+            item.title ||
+            "Notícia";
+
+        const mediaClass = large
+            ? "news-admin-lead-media"
+            : "news-admin-small-media";
+
+        if (!item.image_url) {
+
+            return `
+                <div class="${mediaClass} image-missing">
+
+                    <div class="news-image-fallback">
+                        <span>IMAGEM</span>
+                        <strong>Indisponível</strong>
+                    </div>
+
+                </div>
+            `;
+        }
+
+        return `
+            <div class="${mediaClass}">
+
+                <img
+                    src="${escapeAttribute(item.image_url)}"
+                    alt="${escapeAttribute(title)}"
+                    class="news-admin-card-image"
+                    loading="lazy"
+                    onerror="
+                        this.onerror=null;
+                        this.style.display='none';
+                        this.parentElement.classList.add('image-missing');
+                        this.parentElement.querySelector('.news-image-fallback').style.display='flex';
+                    "
+                >
+
+                <div
+                    class="news-image-fallback"
+                    style="display:none;"
+                >
+                    <span>IMAGEM</span>
+                    <strong>Indisponível</strong>
+                </div>
+
+                <div class="news-image-overlay"></div>
+
+                <div class="news-card-status">
+                    ${renderNewsStatusBadge(item)}
+                </div>
+
+            </div>
+        `;
+    };
+
+
+    // --------------------------------------------------------
+    // META
+    // --------------------------------------------------------
+
+    const renderMeta = item => {
+
+        const team = teamMap[item.team_id];
+
+        const teamName =
+            team?.short_name ||
+            team?.name ||
+            (!item.team_id ? "BARÇA REAL" : "BR");
+
+        return `
+            <div class="news-card-meta">
+
+                <span class="news-card-team">
+                    ${escapeHTML(teamName)}
+                </span>
+
+                <span class="news-card-separator">•</span>
+
+                <span>
+                    ${escapeHTML(item.category || "news")}
+                </span>
+
+                <span class="news-card-separator">•</span>
+
+                <span>
+                    ${formatDate(
+                        item.published_at ||
+                        item.created_at ||
+                        item.imported_at
+                    )}
+                </span>
+
+            </div>
+        `;
+    };
+
+
+    // --------------------------------------------------------
+    // EDITORIAL BADGES
+    // --------------------------------------------------------
+
+    const renderEditorialInfo = item => {
+
+        let html = "";
+
+        if (item.editorial_locked) {
+
+            html += `
+                <span class="news-editorial-badge">
+                    EDITORIAL
+                </span>
+            `;
+        }
+
+        if (item.source_name) {
+
+            html += `
+                <span class="news-source-badge">
+                    ${escapeHTML(item.source_name)}
+                </span>
+            `;
+        }
+
+        return html
+            ? `<div class="news-editorial-info">${html}</div>`
+            : "";
+    };
+
+
+    // --------------------------------------------------------
+    // ACTIONS
+    // --------------------------------------------------------
+
+    const renderActions = item => {
+
+        const statusAction =
+            getNewsStatusAction(item);
+
+        return `
+            <div class="news-card-actions">
+
+                <button
+                    type="button"
+                    class="admin-secondary-button"
+                    data-news-action="preview"
+                    data-id="${escapeAttribute(item.id)}"
+                >
+                    Pré-visualizar
+                </button>
+
+                <button
+                    type="button"
+                    class="admin-secondary-button"
+                    data-news-action="edit"
+                    data-id="${escapeAttribute(item.id)}"
+                >
+                    Editar
+                </button>
+
+                <button
+                    type="button"
+                    class="admin-secondary-button"
+                    data-news-action="${statusAction.action}"
+                    data-id="${escapeAttribute(item.id)}"
+                >
+                    ${statusAction.label}
+                </button>
+
+                <button
+                    type="button"
+                    class="admin-danger-button"
+                    data-news-action="delete"
+                    data-id="${escapeAttribute(item.id)}"
+                >
+                    Eliminar
+                </button>
+
+            </div>
+        `;
+    };
+
+
+    // --------------------------------------------------------
+    // LEAD STORY
+    // --------------------------------------------------------
+
+    const leadTitle =
+        lead.translated_title ||
+        lead.title ||
+        "Sem título";
+
+    const leadDescription =
+        lead.translated_description ||
+        lead.description ||
+        "";
+
+    const leadHTML = `
+        <article
+            class="news-admin-lead-card"
+            data-news-id="${escapeAttribute(lead.id)}"
+        >
+
+            ${renderImage(lead, true)}
+
+            <div class="news-admin-lead-content">
+
+                ${renderMeta(lead)}
+
+                ${renderEditorialInfo(lead)}
+
+                <h2>
+                    ${escapeHTML(leadTitle)}
+                </h2>
+
+                ${
+                    leadDescription
+                        ? `
+                            <p>
+                                ${escapeHTML(leadDescription)}
+                            </p>
+                        `
+                        : ""
+                }
+
+                ${renderActions(lead)}
+
+            </div>
+
+        </article>
+    `;
+
+
+    // --------------------------------------------------------
+    // SECONDARY STORIES
+    // --------------------------------------------------------
+
+    const secondaryHTML = secondary
+        .map(item => {
+
+            const title =
+                item.translated_title ||
+                item.title ||
+                "Sem título";
+
+            const description =
+                item.translated_description ||
+                item.description ||
+                "";
+
+            return `
+                <article
+                    class="news-admin-small-card"
+                    data-news-id="${escapeAttribute(item.id)}"
+                >
+
+                    ${renderImage(item, false)}
+
+                    <div class="news-admin-small-content">
+
+                        ${renderMeta(item)}
+
+                        ${renderEditorialInfo(item)}
+
+                        <h3>
+                            ${escapeHTML(title)}
+                        </h3>
+
+                        ${
+                            description
+                                ? `
+                                    <p>
+                                        ${escapeHTML(description)}
+                                    </p>
+                                `
+                                : ""
+                        }
+
+                        ${renderActions(item)}
+
+                    </div>
+
+                </article>
+            `;
+        })
+        .join("");
+
+
+    return `
+
+        <div class="news-admin-lead">
+            ${leadHTML}
+        </div>
+
+        ${
+            secondary.length
+                ? `
+                    <div class="news-admin-small-grid">
+                        ${secondaryHTML}
+                    </div>
+                `
+                : ""
+        }
+
+    `;
 }
 
 
