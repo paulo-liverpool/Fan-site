@@ -115,13 +115,16 @@ button {
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
 }
 
 .team-brand-logo {
-    width: 20px;
-    height: 20px;
-    max-width: 20px;
-    max-height: 20px;
+    width: 18px !important;
+    height: 18px !important;
+    max-width: 18px !important;
+    max-height: 18px !important;
+    min-width: 18px !important;
+    min-height: 18px !important;
     display: block;
     object-fit: contain;
 }
