@@ -126,95 +126,15 @@ async function loadHome() {
             return;
         }
 
-        currentTeam = team;
+              currentTeam = team;
 
-applyTeamTheme(team);
-updateTeamHeader(team);
-await updateTeamBrand(team);
-updateProfileButton(user);
-      async function updateTeamBrand(team) {
-    const logo = $("#team-brand-logo");
+        applyTeamTheme(team);
+        updateTeamHeader(team);
+       
+        await updateTeamBrand(team);
+        updateProfileButton(user);
 
-    if (!logo || !team) return;
-
-    const client = getSupabase();
-    if (!client) return;
-
-    const slug = normalize(team.slug || team.name || "");
-
-    const providerTeamId =
-        slug.includes("barca") || slug.includes("barcelona")
-            ? 81
-            : slug.includes("real") || slug.includes("madrid")
-                ? 86
-                : null;
-
-    if (!providerTeamId) {
-        logo.hidden = true;
-        return;
-    }
-
-    try {
-        const { data, error } = await client
-            .from("football_matches")
-            .select(`
-                home_provider_team_id,
-                away_provider_team_id,
-                home_team_logo,
-                away_team_logo,
-                match_date
-            `)
-            .or(
-                `home_provider_team_id.eq.${providerTeamId},away_provider_team_id.eq.${providerTeamId}`
-            )
-            .not("match_date", "is", null)
-            .order("match_date", { ascending: false })
-            .limit(10);
-
-        if (error) {
-            console.error("BR: erro ao carregar logo da equipa:", error);
-            logo.hidden = true;
-            return;
-        }
-
-        let teamLogo = null;
-
-        for (const match of data || []) {
-            if (
-                match.home_provider_team_id === providerTeamId &&
-                match.home_team_logo
-            ) {
-                teamLogo = match.home_team_logo;
-                break;
-            }
-
-            if (
-                match.away_provider_team_id === providerTeamId &&
-                match.away_team_logo
-            ) {
-                teamLogo = match.away_team_logo;
-                break;
-            }
-        }
-
-        if (!teamLogo) {
-            logo.hidden = true;
-            return;
-        }
-
-        logo.src = teamLogo;
-        logo.alt =
-            providerTeamId === 81
-                ? "FC Barcelona"
-                : "Real Madrid";
-
-        logo.hidden = false;
-
-    } catch (error) {
-        console.error("BR: erro ao definir logo da equipa:", error);
-        logo.hidden = true;
-    }
-}
+        await Promise.all([
         updateProfileButton(user);
 
         await Promise.all([
@@ -284,7 +204,123 @@ function updateTeamHeader(team) {
     }
 }
 
+async function updateTeamBrand(team) {
+    const logo = $("#team-brand-logo");
 
+    if (!logo || !team) return;
+
+    const client = getSupabase();
+    if (!client) return;
+
+    const slug = normalize(
+        team.slug ||
+        team.name ||
+        ""
+    );
+
+    const providerTeamId =
+        slug.includes("barca") ||
+        slug.includes("barcelona")
+            ? 81
+            : slug.includes("real") ||
+              slug.includes("madrid")
+                ? 86
+                : null;
+
+    if (!providerTeamId) {
+        logo.hidden = true;
+        return;
+    }
+
+    try {
+        const { data, error } = await client
+            .from("football_matches")
+            .select(`
+                home_provider_team_id,
+                away_provider_team_id,
+                home_team_logo,
+                away_team_logo,
+                match_date
+            `)
+            .or(
+                `home_provider_team_id.eq.${providerTeamId},away_provider_team_id.eq.${providerTeamId}`
+            )
+            .not(
+                "match_date",
+                "is",
+                null
+            )
+            .order(
+                "match_date",
+                {
+                    ascending: false
+                }
+            )
+            .limit(10);
+
+        if (error) {
+            console.error(
+                "BR: erro ao carregar logo da equipa:",
+                error
+            );
+
+            logo.hidden = true;
+            return;
+        }
+
+        let teamLogo = null;
+
+        for (const match of data || []) {
+
+            if (
+                Number(
+                    match.home_provider_team_id
+                ) === providerTeamId &&
+                match.home_team_logo
+            ) {
+                teamLogo =
+                    match.home_team_logo;
+
+                break;
+            }
+
+            if (
+                Number(
+                    match.away_provider_team_id
+                ) === providerTeamId &&
+                match.away_team_logo
+            ) {
+                teamLogo =
+                    match.away_team_logo;
+
+                break;
+            }
+        }
+
+        if (!teamLogo) {
+            logo.hidden = true;
+            return;
+        }
+
+        logo.src = teamLogo;
+
+        logo.alt =
+            providerTeamId === 81
+                ? "FC Barcelona"
+                : "Real Madrid";
+
+        logo.hidden = false;
+
+    } catch (error) {
+
+        console.error(
+            "BR: erro ao definir logo da equipa:",
+            error
+        );
+
+        logo.hidden = true;
+    }
+}
 function updateProfileButton(user) {
     const button = $("#profile-button");
 
