@@ -128,8 +128,10 @@ async function loadHome() {
 
         currentTeam = team;
 
-        applyTeamTheme(team);
-        updateTeamHeader(team);
+applyTeamTheme(team);
+updateTeamHeader(team);
+await updateTeamBrand(team);
+updateProfileButton(user);
       async function updateTeamBrand(team) {
     const logo = $("#team-brand-logo");
 
