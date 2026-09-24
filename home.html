@@ -6,6 +6,7 @@
     <title>Início | Barça Real</title>
 
     <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/comments.css">
 </head>
 
 <body>
@@ -583,15 +584,25 @@
 
         </a>
 
-        <button
-            class="nav-item"
-            id="community-nav"
-            type="button">
+        <button class="nav-item" id="community-nav" type="button">
 
-            <span class="nav-icon">◉</span>
-            <span>Comunidade</span>
+    <span class="notification-nav-wrapper">
 
-        </button>
+        <span class="nav-icon">◉</span>
+
+        <span
+            class="notification-badge"
+            id="notification-badge"
+            hidden
+        >
+            0
+        </span>
+
+    </span>
+
+    <span>Comunidade</span>
+
+</button>
 
         <button
             class="nav-item"
@@ -622,6 +633,7 @@
      ============================================================= -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase.js"></script>
+<script src="js/comments.js"></script>
 <script src="js/home.js"></script>
 
 </body>
