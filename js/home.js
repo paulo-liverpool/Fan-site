@@ -1217,15 +1217,14 @@ function openNewsArticle(item) {
 
     showFocusedView();
 
-    if (
-        window.FanComments &&
-        item.id
-    ) {
-        window.FanComments.init({
-            articleKey:
-                `news:${item.id}`
-        });
-    }
+   if (
+    window.FanComments &&
+    item.id
+) {
+    window.FanComments.init(
+        `news:${item.id}`
+    );
+}
 }
 
 
@@ -1360,14 +1359,13 @@ function openContent(item) {
     showFocusedView();
 
     if (
-        window.FanComments &&
-        item.id
-    ) {
-        window.FanComments.init({
-            articleKey:
-                `content:${item.id}`
-        });
-    }
+    window.FanComments &&
+    item.id
+) {
+    window.FanComments.init(
+        `content:${item.id}`
+    );
+}
 }
 
 /* ============================================================
