@@ -1062,314 +1062,320 @@ function renderNews(items) {
    ============================================================ */
 
 function openNewsArticle(item) {
-    if (!item) return;
 
-    const focused =
+    const focusedView =
         $("#focused-content-view");
 
     const article =
         $("#focused-content");
 
-    if (!focused || !article) {
-        console.error(
-            "BR: focused article view não encontrado."
-        );
+    if (!focusedView || !article) {
         return;
     }
+
 
     const title =
         item.translated_title ||
         item.title ||
         "Sem título";
 
+
     const description =
         item.translated_description ||
         item.description ||
         "";
 
-    const imageUrl =
+
+    const image =
         item.image_url ||
         "";
 
+
     const category =
         item.category ||
-        "NOTÍCIA";
-
-    const sourceName =
         item.source_name ||
-        "Fonte original";
+        "BARÇA REAL";
+
+
+    const author =
+        getAuthor(item);
+
 
     const date =
-        item.published_at ||
-        item.imported_at ||
-        item.created_at;
+        formatPublishedDate(
+            item.published_at ||
+            item.imported_at ||
+            item.created_at
+        );
+
 
     const body =
-        item.article_body ||
-        "";
+        getArticleBody(item);
 
-    const imageHTML =
-        imageUrl
-            ? `
-                <div class="focused-content-image">
-                    <img
-                        src="${escapeAttribute(imageUrl)}"
-                        alt="${escapeAttribute(title)}"
-                        loading="eager"
-                        onerror="this.outerHTML='<div class=&quot;focused-image-placeholder&quot;>BR</div>';"
-                    >
-                </div>
-            `
-            : `
-                <div class="focused-content-image">
-                    <div class="focused-image-placeholder">
-                        BR
-                    </div>
-                </div>
-            `;
+
+    let imageHTML = "";
+
+
+    if (image) {
+
+        imageHTML = `
+            <div class="focused-content-image">
+
+                <img
+                    src="${escapeAttribute(image)}"
+                    alt="${escapeAttribute(title)}"
+                >
+
+            </div>
+        `;
+
+    } else {
+
+        imageHTML = `
+            <div class="focused-content-image"></div>
+        `;
+
+    }
+
 
     const bodyHTML =
         body
             ? `
-                <div class="focused-article-body">
-                    ${formatArticleBody(body)}
+                <div class="focused-content-body">
+                    ${body}
                 </div>
             `
             : "";
 
-    const sourceHTML =
-        item.article_url
-            ? `
-                <div class="focused-source">
 
-                    <div class="focused-source-label">
-                        ARTIGO ORIGINAL
-                    </div>
+    let sourceHTML = "";
 
-                    <div class="focused-source-name">
-                        ${escapeHTML(sourceName)}
-                    </div>
 
-                    <a
-                        class="focused-source-button"
-                        href="${escapeAttribute(item.article_url)}"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        Ler artigo original
-                    </a>
+    if (item.source_url) {
 
-                </div>
-            `
-            : "";
+        sourceHTML = `
+            <div class="focused-content-source">
+
+                <a
+                    href="${escapeAttribute(item.source_url)}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    Ler fonte original
+                </a>
+
+            </div>
+        `;
+
+    }
+
 
     article.innerHTML = `
+
         ${imageHTML}
 
         <div class="focused-content-meta">
             ${escapeHTML(category)}
         </div>
 
-        <h1>
+        <h1 id="focused-content-title">
             ${escapeHTML(title)}
         </h1>
 
-        ${
-            date
-                ? `
-                    <div class="focused-content-date">
-                        ${escapeHTML(
-                            formatArticleDate(date)
-                        )}
-                    </div>
-                `
-                : ""
-        }
+        <div class="focused-content-author">
+            ${escapeHTML(date)}
+            ${
+                author
+                    ? ` · ${escapeHTML(author)}`
+                    : ""
+            }
+        </div>
 
-        ${
-            item.author
-                ? `
-                    <div class="focused-content-author">
-                        Por ${escapeHTML(item.author)}
-                    </div>
-                `
-                : ""
-        }
-
-        ${
-            description
-                ? `
-                    <p id="focused-content-description">
-                        ${escapeHTML(
-                            stripHTML(description)
-                        )}
-                    </p>
-                `
-                : ""
-        }
+        <p id="focused-content-description">
+            ${escapeHTML(description)}
+        </p>
 
         ${bodyHTML}
 
         ${sourceHTML}
 
-        <div id="fan-comments"></div>
+        <div
+            id="fan-comments"
+            class="fan-comments-host"
+        ></div>
+
     `;
+
 
     showFocusedView();
 
-    if (
-        window.FanComments &&
-        item.id
-    ) {
-        window.FanComments.init({
-            articleKey:
-                `news:${item.id}`
-        });
-    }
-}
 
+    FanComments.init(
+        `news:${item.id}`
+    );
+
+}
 
 /* ============================================================
    GENERIC CONTENT
    ============================================================ */
 function openContent(item) {
-    if (!item) return;
 
-    if (item.__source === "news") {
-        openNewsArticle(item);
-        return;
-    }
-
-    const focused =
+    const focusedView =
         $("#focused-content-view");
 
     const article =
         $("#focused-content");
 
-    if (!focused || !article) return;
+    if (!focusedView || !article) {
+        return;
+    }
+
 
     const title =
         item.title ||
         "Sem título";
 
+
     const description =
         item.description ||
         "";
 
-    const imageUrl =
+
+    const image =
         item.image_url ||
         "";
+
 
     const category =
         getContentLabel(item);
 
+
+    const author =
+        getAuthor(item);
+
+
     const body =
         getArticleBody(item);
 
-    const imageHTML =
-        imageUrl
+
+    let imageHTML = "";
+
+
+    if (image) {
+
+        imageHTML = `
+            <div class="focused-content-image">
+
+                <img
+                    src="${escapeAttribute(image)}"
+                    alt="${escapeAttribute(title)}"
+                >
+
+            </div>
+        `;
+
+    } else {
+
+        imageHTML = `
+            <div class="focused-content-image"></div>
+        `;
+
+    }
+
+
+    const bodyHTML =
+        body
             ? `
-                <div class="focused-content-image">
-                    <img
-                        src="${escapeAttribute(imageUrl)}"
-                        alt="${escapeAttribute(title)}"
-                        loading="eager"
-                    >
+                <div class="focused-content-body">
+                    ${body}
                 </div>
             `
-            : `
-                <div class="focused-content-image">
-                    <div class="focused-image-placeholder">
-                        BR
-                    </div>
-                </div>
-            `;
+            : "";
+
+
+    let mediaHTML = "";
+
+
+    if (item.audio_url) {
+
+        mediaHTML += `
+            <div class="focused-content-audio">
+
+                <audio
+                    controls
+                    src="${escapeAttribute(item.audio_url)}"
+                ></audio>
+
+            </div>
+        `;
+
+    }
+
+
+    if (item.video_url) {
+
+        mediaHTML += `
+            <div class="focused-content-video">
+
+                <video
+                    controls
+                    playsinline
+                    src="${escapeAttribute(item.video_url)}"
+                ></video>
+
+            </div>
+        `;
+
+    }
+
 
     article.innerHTML = `
+
         ${imageHTML}
 
         <div class="focused-content-meta">
             ${escapeHTML(category)}
         </div>
 
-        <h1>
+        <h1 id="focused-content-title">
             ${escapeHTML(title)}
         </h1>
 
         ${
-            item.author
+            author
                 ? `
                     <div class="focused-content-author">
-                        Por ${escapeHTML(item.author)}
+                        ${escapeHTML(author)}
                     </div>
                 `
                 : ""
         }
 
-        ${
-            description
-                ? `
-                    <p id="focused-content-description">
-                        ${escapeHTML(
-                            stripHTML(description)
-                        )}
-                    </p>
-                `
-                : ""
-        }
+        <p id="focused-content-description">
+            ${escapeHTML(description)}
+        </p>
 
-        ${
-            body
-                ? `
-                    <div class="focused-article-body">
-                        ${formatArticleBody(body)}
-                    </div>
-                `
-                : ""
-        }
+        ${bodyHTML}
 
-        ${
-            item.audio_url
-                ? `
-                    <div class="focused-content-media">
-                        <audio
-                            controls
-                            src="${escapeAttribute(item.audio_url)}"
-                        ></audio>
-                    </div>
-                `
-                : ""
-        }
+        ${mediaHTML}
 
-        ${
-            item.video_url
-                ? `
-                    <div class="focused-content-media">
-                        <video
-                            controls
-                            src="${escapeAttribute(item.video_url)}"
-                        ></video>
-                    </div>
-                `
-                : ""
-        }
+        <div
+            id="fan-comments"
+            class="fan-comments-host"
+        ></div>
 
-        <div id="fan-comments"></div>
     `;
+
 
     showFocusedView();
 
-    if (
-        window.FanComments &&
-        item.id
-    ) {
-        window.FanComments.init({
-            articleKey:
-                `content:${item.id}`
-        });
-    }
-}
 
+    FanComments.init(
+        `content:${item.id}`
+    );
+
+}
 /* ============================================================
    VIEW STATE
    IMPORTANT:
