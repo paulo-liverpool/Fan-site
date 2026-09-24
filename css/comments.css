@@ -1,0 +1,447 @@
+/* ============================================================
+   BARÇA REAL — COMMENTS
+   ============================================================ */
+
+.fan-comments-host {
+    margin: 0 22px 25px;
+    padding-top: 22px;
+    border-top: 1px solid rgba(255,255,255,0.07);
+}
+
+.fan-comments {
+    width: 100%;
+}
+
+.fan-comments-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 15px;
+    margin-bottom: 16px;
+}
+
+.fan-comments-title {
+    color: #fff;
+    font-size: 17px;
+    font-weight: 900;
+    line-height: 1.2;
+}
+
+.fan-comments-count {
+    margin-top: 5px;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.fan-comments-user {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: rgba(255,255,255,0.65);
+    font-size: 10px;
+    font-weight: 800;
+    text-align: right;
+}
+
+
+/* ============================================================
+   NEW COMMENT
+   ============================================================ */
+
+.fan-comments-composer {
+    margin-bottom: 10px;
+}
+
+.fan-comments-textarea {
+    display: block;
+    width: 100%;
+    min-height: 82px;
+    padding: 12px 13px;
+
+    resize: vertical;
+
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    outline: none;
+
+    background: rgba(255,255,255,0.035);
+    color: #fff;
+
+    font-family: inherit;
+    font-size: 11px;
+    line-height: 1.55;
+}
+
+.fan-comments-textarea::placeholder {
+    color: rgba(255,255,255,0.3);
+}
+
+.fan-comments-textarea:focus {
+    border-color: var(--team-primary);
+}
+
+.fan-comments-submit-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 7px;
+}
+
+.fan-comments-submit {
+    border: 0;
+    border-radius: 8px;
+    padding: 8px 14px;
+
+    background: var(--team-primary);
+    color: #fff;
+
+    font-size: 9px;
+    font-weight: 900;
+}
+
+.fan-comments-submit:hover {
+    opacity: 0.9;
+}
+
+.fan-comments-submit:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+
+/* ============================================================
+   FILTERS
+   ============================================================ */
+
+.fan-comments-filters {
+    display: flex;
+    justify-content: flex-end;
+    gap: 5px;
+    margin: 4px 0 16px;
+}
+
+.fan-comments-filter {
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 999px;
+    padding: 6px 9px;
+
+    background: transparent;
+    color: rgba(255,255,255,0.38);
+
+    font-size: 8px;
+    font-weight: 900;
+}
+
+.fan-comments-filter:hover,
+.fan-comments-filter.active {
+    background: rgba(255,255,255,0.07);
+    color: #fff;
+}
+
+
+/* ============================================================
+   EMPTY / STATUS
+   ============================================================ */
+
+.fan-comments-empty,
+.fan-comments-status {
+    padding: 24px 10px;
+
+    color: rgba(255,255,255,0.35);
+
+    text-align: center;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.fan-comments-error {
+    padding: 14px;
+
+    border: 1px solid rgba(239,68,68,0.15);
+    border-radius: 10px;
+
+    background: rgba(239,68,68,0.04);
+    color: rgba(255,255,255,0.5);
+
+    text-align: center;
+    font-size: 10px;
+}
+
+
+/* ============================================================
+   COMMENTS LIST
+   ============================================================ */
+
+.fan-comments-list {
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+}
+
+.fan-comment {
+    width: 100%;
+}
+
+.fan-comment-main {
+    padding: 13px;
+
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 14px;
+
+    background: rgba(255,255,255,0.025);
+}
+
+
+/* ============================================================
+   AUTHOR
+   ============================================================ */
+
+.fan-comment-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+}
+
+.fan-comment-avatar {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    overflow: hidden;
+    border-radius: 50%;
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--team-primary),
+            var(--team-secondary)
+        );
+
+    color: #fff;
+
+    font-size: 10px;
+    font-weight: 900;
+}
+
+.fan-comment-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.fan-comment-author {
+    min-width: 0;
+}
+
+.fan-comment-name {
+    color: #fff;
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1.25;
+}
+
+.fan-comment-time {
+    margin-top: 3px;
+    color: rgba(255,255,255,0.32);
+    font-size: 8px;
+    font-weight: 700;
+}
+
+
+/* ============================================================
+   COMMENT BODY
+   ============================================================ */
+
+.fan-comment-body {
+    margin-top: 10px;
+
+    color: rgba(255,255,255,0.78);
+
+    font-size: 11px;
+    line-height: 1.6;
+
+    word-break: break-word;
+}
+
+
+/* ============================================================
+   COMMENT ACTIONS
+   ============================================================ */
+
+.fan-comment-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 10px;
+}
+
+.fan-comment-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+
+    border: 0;
+    border-radius: 7px;
+    padding: 5px 7px;
+
+    background: transparent;
+    color: rgba(255,255,255,0.36);
+
+    font-size: 8px;
+    font-weight: 800;
+}
+
+.fan-comment-action:hover {
+    background: rgba(255,255,255,0.045);
+    color: #fff;
+}
+
+.fan-comment-action.active {
+    color: var(--team-primary);
+}
+
+.fan-comment-action.dislike.active {
+    color: #ef4444;
+}
+
+.fan-comment-action svg {
+    width: 12px;
+    height: 12px;
+
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+
+/* ============================================================
+   REPLIES
+   ============================================================ */
+
+.fan-comment-replies {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    margin-top: 9px;
+    margin-left: 24px;
+    padding-left: 11px;
+
+    border-left: 1px solid rgba(255,255,255,0.07);
+}
+
+.fan-comment-reply {
+    padding: 10px;
+
+    border: 1px solid rgba(255,255,255,0.045);
+    border-radius: 12px;
+
+    background: rgba(255,255,255,0.018);
+}
+
+
+/* ============================================================
+   REPLY BOX
+   ============================================================ */
+
+.fan-comment-reply-box {
+    margin-top: 10px;
+    padding: 10px;
+
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 11px;
+
+    background: rgba(255,255,255,0.02);
+}
+
+.fan-comment-reply-box .fan-comments-textarea {
+    min-height: 62px;
+}
+
+.fan-comment-reply-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-top: 7px;
+}
+
+.fan-comments-cancel {
+    border: 0;
+    border-radius: 8px;
+    padding: 8px 10px;
+
+    background: transparent;
+    color: rgba(255,255,255,0.4);
+
+    font-size: 9px;
+    font-weight: 800;
+}
+
+
+/* ============================================================
+   NOTIFICATION BADGE
+   ============================================================ */
+
+.fan-nav-icon-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.fan-notification-badge {
+    position: absolute;
+
+    top: -9px;
+    right: -12px;
+
+    min-width: 16px;
+    height: 16px;
+
+    padding: 0 4px;
+
+    border: 1px solid #08090c;
+    border-radius: 999px;
+
+    background: #e11d48;
+    color: #fff;
+
+    font-size: 8px;
+    font-weight: 900;
+    line-height: 14px;
+
+    text-align: center;
+    pointer-events: none;
+}
+
+.fan-notification-badge[hidden] {
+    display: none;
+}
+
+
+/* ============================================================
+   MOBILE
+   ============================================================ */
+
+@media (max-width: 600px) {
+
+    .fan-comments-host {
+        margin-left: 15px;
+        margin-right: 15px;
+    }
+
+    .fan-comments-header {
+        align-items: flex-start;
+    }
+
+    .fan-comments-replies {
+        margin-left: 14px;
+    }
+}
