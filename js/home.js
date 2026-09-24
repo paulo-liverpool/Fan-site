@@ -1212,19 +1212,26 @@ function openNewsArticle(item) {
 
         ${sourceHTML}
 
-        <div class="focused-community">
-            A discussão da comunidade Barça Real será disponibilizada aqui.
-        </div>
+        <div id="fan-comments"></div>
     `;
 
     showFocusedView();
+
+    if (
+        window.FanComments &&
+        item.id
+    ) {
+        window.FanComments.init({
+            articleKey:
+                `news:${item.id}`
+        });
+    }
 }
 
 
 /* ============================================================
    GENERIC CONTENT
    ============================================================ */
-
 function openContent(item) {
     if (!item) return;
 
@@ -1346,11 +1353,22 @@ function openContent(item) {
                 `
                 : ""
         }
+
+        <div id="fan-comments"></div>
     `;
 
     showFocusedView();
-}
 
+    if (
+        window.FanComments &&
+        item.id
+    ) {
+        window.FanComments.init({
+            articleKey:
+                `content:${item.id}`
+        });
+    }
+}
 
 /* ============================================================
    VIEW STATE
