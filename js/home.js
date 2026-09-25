@@ -5,12 +5,11 @@
 
 let currentTeam = null;
 let currentUser = null;
-
 let newsItems = [];
 let opinionItems = [];
 let featuredItems = [];
-
 let currentTableType = "league";
+let currentStandingsRows = [];
 let currentFixture = null;
 
 
@@ -2877,20 +2876,15 @@ function renderAllFixturesView(
    ============================================================ */
 
 async function loadLeagueTable(teamId) {
-    const client = getSupabase();
+
+    const client =
+        getSupabase();
 
     if (!client) return;
 
     try {
 
-        /*
-         * HTML tabs:
-         *
-         * league    = La Liga
-         * champions = Champions League
-         */
-
-               const leagueId =
+        const leagueId =
             currentTableType === "champions"
                 ? 2001
                 : 2014;
@@ -2900,7 +2894,10 @@ async function loadLeagueTable(teamId) {
                 ? "UEFA Champions League"
                 : "La Liga";
 
-        const { data, error } = await client
+        const {
+            data,
+            error
+        } = await client
             .from("football_standings")
             .select("*")
             .eq(
@@ -2911,33 +2908,121 @@ async function loadLeagueTable(teamId) {
                 "competition_name",
                 competitionName
             )
-            .order("position", {
-                ascending: true
-            })
+            .order(
+                "position",
+                {
+                    ascending: true
+                }
+            )
             .limit(40);
 
         if (error) {
+
             console.warn(
                 "BR: football_standings não carregada:",
                 error
             );
+
+            currentStandingsRows = [];
+
+            renderLeagueTable([]);
+
             return;
         }
 
+        currentStandingsRows =
+            (data || [])
+                .sort(
+                    (a, b) =>
+                        Number(a.position || 999) -
+                        Number(b.position || 999)
+                );
+
         renderLeagueTable(
-            data || []
+            currentStandingsRows
         );
 
     } catch (error) {
+
         console.warn(
             "BR: erro tabela:",
             error
         );
+
+        currentStandingsRows = [];
+
+        renderLeagueTable([]);
     }
 }
 
 
+/*
+ * Returns the provider team ID used by the
+ * football data provider.
+ */
+function getCurrentProviderTeamId() {
+
+    if (!currentTeam) {
+        return null;
+    }
+
+    const teamName =
+        normalize(
+            currentTeam.name ||
+            currentTeam.short_name ||
+            currentTeam.slug ||
+            ""
+        );
+
+    if (
+        teamName.includes("barcelona") ||
+        teamName.includes("barca")
+    ) {
+        return 81;
+    }
+
+    if (
+        teamName.includes("real madrid")
+    ) {
+        return 86;
+    }
+
+    return null;
+}
+
+
+/*
+ * Returns the selected team's position
+ * inside the supplied standings array.
+ */
+function getCurrentTeamStandingIndex(rows) {
+
+    const providerTeamId =
+        getCurrentProviderTeamId();
+
+    if (!providerTeamId) {
+        return -1;
+    }
+
+    return rows.findIndex(row =>
+        Number(
+            row.provider_team_id
+        ) === providerTeamId
+    );
+}
+
+
+/*
+ * Render the compact five-team table on
+ * the homepage.
+ *
+ * Shows:
+ * two above
+ * selected team
+ * two below
+ */
 function renderLeagueTable(rows) {
+
     const body =
         $("#league-table-body");
 
@@ -2954,13 +3039,54 @@ function renderLeagueTable(rows) {
         return;
     }
 
+    const sortedRows =
+        [...rows].sort(
+            (a, b) =>
+                Number(a.position || 999) -
+                Number(b.position || 999)
+        );
+
+    const currentIndex =
+        getCurrentTeamStandingIndex(
+            sortedRows
+        );
+
+    let visibleRows = [];
+
+    if (currentIndex >= 0) {
+
+        const start =
+            Math.max(
+                0,
+                currentIndex - 2
+            );
+
+        const end =
+            Math.min(
+                sortedRows.length,
+                currentIndex + 3
+            );
+
+        visibleRows =
+            sortedRows.slice(
+                start,
+                end
+            );
+
+    } else {
+
+        /*
+         * Fallback: if the selected team
+         * cannot be found, show the first
+         * five teams rather than rendering
+         * an empty table.
+         */
+        visibleRows =
+            sortedRows.slice(0, 5);
+    }
+
     body.innerHTML =
-        rows
-            .sort(
-                (a, b) =>
-                    Number(a.position || 999) -
-                    Number(b.position || 999)
-            )
+        visibleRows
             .map((row, index) => {
 
                 const position =
@@ -2987,8 +3113,20 @@ function renderLeagueTable(rows) {
                     row.points ??
                     0;
 
+                const isCurrentTeam =
+                    currentIndex >= 0 &&
+                    Number(
+                        row.provider_team_id
+                    ) ===
+                    getCurrentProviderTeamId();
+
                 return `
-                    <div class="league-table-row">
+                    <div
+                        class="league-table-row ${
+                            isCurrentTeam
+                                ? "current-team"
+                                : ""
+                        }">
 
                         <span>
                             ${escapeHTML(
@@ -3037,6 +3175,204 @@ function renderLeagueTable(rows) {
 
             })
             .join("");
+}
+
+
+/*
+ * Open the complete standings inside the
+ * existing focused-content-view.
+ */
+function openFullStandings() {
+
+    if (!currentStandingsRows.length) {
+        return;
+    }
+
+    const article =
+        $("#focused-content");
+
+    if (!article) return;
+
+    const isChampions =
+        currentTableType === "champions";
+
+    const competitionLabel =
+        isChampions
+            ? "LIGA DOS CAMPEÕES"
+            : "LA LIGA";
+
+    const competitionTitle =
+        isChampions
+            ? "Liga dos campeões"
+            : "La Liga";
+
+    const currentProviderTeamId =
+        getCurrentProviderTeamId();
+
+    const rows =
+        [...currentStandingsRows]
+            .sort(
+                (a, b) =>
+                    Number(a.position || 999) -
+                    Number(b.position || 999)
+            );
+
+    const tableRows =
+        rows
+            .map((row, index) => {
+
+                const position =
+                    row.position ||
+                    index + 1;
+
+                const name =
+                    row.team_name ||
+                    "Equipa";
+
+                const logo =
+                    row.team_logo ||
+                    "";
+
+                const played =
+                    row.played ??
+                    0;
+
+                const goalDifference =
+                    row.goal_difference ??
+                    0;
+
+                const points =
+                    row.points ??
+                    0;
+
+                const isCurrentTeam =
+                    currentProviderTeamId &&
+                    Number(
+                        row.provider_team_id
+                    ) ===
+                    currentProviderTeamId;
+
+                return `
+                    <div
+                        class="league-table-row ${
+                            isCurrentTeam
+                                ? "current-team"
+                                : ""
+                        }">
+
+                        <span>
+                            ${escapeHTML(
+                                String(position)
+                            )}
+                        </span>
+
+                        <span class="table-team">
+
+                            ${
+                                logo
+                                    ? `
+                                        <img
+                                            src="${escapeAttribute(logo)}"
+                                            alt="${escapeAttribute(name)}"
+                                            loading="lazy"
+                                        >
+                                    `
+                                    : ""
+                            }
+
+                            ${escapeHTML(name)}
+
+                        </span>
+
+                        <span>
+                            ${escapeHTML(
+                                String(played)
+                            )}
+                        </span>
+
+                        <span>
+                            ${escapeHTML(
+                                String(goalDifference)
+                            )}
+                        </span>
+
+                        <strong>
+                            ${escapeHTML(
+                                String(points)
+                            )}
+                        </strong>
+
+                    </div>
+                `;
+
+            })
+            .join("");
+
+    article.innerHTML = `
+
+        <div class="focused-standings">
+
+            <div class="focused-content-meta">
+                ${competitionLabel}
+            </div>
+
+            <h1>
+                ${escapeHTML(
+                    competitionTitle
+                )}
+            </h1>
+
+            <div class="focused-standings-subtitle">
+                Classificação completa
+            </div>
+
+            <div
+                class="league-table-wrapper
+                       focused-standings-table">
+
+                <div class="league-table-head">
+
+                    <span>#</span>
+
+                    <span>Equipa</span>
+
+                    <span>J</span>
+
+                    <span>DG</span>
+
+                    <span>Pts</span>
+
+                </div>
+
+                <div class="league-table-body-full">
+
+                    ${tableRows}
+
+                </div>
+
+            </div>
+
+            <div
+                id="fan-comments"
+                class="standings-comments">
+            </div>
+
+        </div>
+    `;
+
+    showFocusedView();
+
+    /*
+     * Each competition gets its own
+     * independent comments history.
+     */
+    if (window.FanComments) {
+
+        window.FanComments.init(
+            `standings:${currentTableType}`
+        );
+
+    }
 }
 /* ============================================================
    PLAYER RATINGS
@@ -3586,7 +3922,15 @@ function setupHomepageInteractions() {
             }
         );
     }
+    const moreTable =
+        $("#more-table-button");
 
+    if (moreTable) {
+        moreTable.addEventListener(
+            "click",
+            openFullStandings
+        );
+    }
     const predictionButton =
         $("#prediction-button");
 
@@ -3643,9 +3987,11 @@ function setupTableTabs() {
                         "league";
 
                     if (currentTeam) {
+
                         await loadLeagueTable(
                             currentTeam.id
                         );
+
                     }
 
                 }
@@ -3653,8 +3999,6 @@ function setupTableTabs() {
 
         });
 }
-
-
 /* ============================================================
    BOTTOM NAVIGATION
    ============================================================ */
