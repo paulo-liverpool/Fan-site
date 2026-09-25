@@ -1469,11 +1469,21 @@ function hideOtherViews() {
 
 
 function closeFocusedView() {
+
     const homeContent =
         $("#home-content");
 
     const focused =
         $("#focused-content-view");
+
+    const focusedContent =
+        $("#focused-content");
+
+    const library =
+        $("#library-view");
+
+    const prediction =
+        $("#prediction-view");
 
     const header =
         document.querySelector(".team-header");
@@ -1484,17 +1494,85 @@ function closeFocusedView() {
     const nav =
         document.querySelector(".bottom-nav");
 
-    if (focused) {
-        focused.hidden = true;
-        focused.classList.remove("active");
+
+    /* ========================================================
+       1. CLEAR THE FOCUSED ARTICLE CONTENT
+       ======================================================== */
+
+    if (focusedContent) {
+        focusedContent.innerHTML = "";
     }
 
+
+    /* ========================================================
+       2. COMPLETELY HIDE THE FOCUSED VIEW
+       ======================================================== */
+
+    if (focused) {
+
+        focused.hidden = true;
+
+        focused.classList.remove(
+            "active"
+        );
+    }
+
+
+    /* ========================================================
+       3. HIDE OTHER SPECIAL VIEWS
+       ======================================================== */
+
+    if (library) {
+
+        library.hidden = true;
+
+        library.classList.remove(
+            "active"
+        );
+    }
+
+    if (prediction) {
+
+        prediction.hidden = true;
+
+        prediction.classList.remove(
+            "active"
+        );
+    }
+
+
+    /* ========================================================
+       4. RESTORE ONLY REAL HOMEPAGE SECTIONS
+       
+       IMPORTANT:
+       Never restore focused/library/prediction here.
+       ======================================================== */
+
     if (homeContent) {
+
         [...homeContent.children]
             .forEach(child => {
+
+                if (
+                    child.id ===
+                        "focused-content-view" ||
+                    child.id ===
+                        "library-view" ||
+                    child.id ===
+                        "prediction-view"
+                ) {
+                    child.hidden = true;
+                    return;
+                }
+
                 child.hidden = false;
             });
     }
+
+
+    /* ========================================================
+       5. RESTORE HOMEPAGE HEADER / FOOTER
+       ======================================================== */
 
     if (header) {
         header.hidden = false;
@@ -1504,16 +1582,25 @@ function closeFocusedView() {
         footer.hidden = false;
     }
 
+
+    /* ========================================================
+       6. KEEP BOTTOM NAVIGATION AVAILABLE
+       ======================================================== */
+
     if (nav) {
         nav.hidden = false;
     }
+
+
+    /* ========================================================
+       7. RETURN TO TOP OF HOMEPAGE
+       ======================================================== */
 
     window.scrollTo({
         top: 0,
         behavior: "smooth"
     });
 }
-
 
 function isAnyFocusedViewOpen() {
     const focused =
