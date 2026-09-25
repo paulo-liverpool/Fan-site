@@ -3868,7 +3868,7 @@ async function deleteNews(
 
     if (
         !confirm(
-            `Eliminar "${title}"? Esta ação não pode ser anulada.`
+            `Eliminar "${title}"? Esta notícia não voltará a ser importada automaticamente.`
         )
     ) {
         return;
@@ -3876,8 +3876,74 @@ async function deleteNews(
 
     try {
 
+        // ------------------------------------------------
+        // 1. PERMANENTLY IGNORE THE ARTICLE
+        // ------------------------------------------------
+
+        const externalId =
+            item.external_id ||
+            null;
+
+        const articleUrl =
+            item.article_url ||
+            null;
+
+        const sourceName =
+            item.source_name ||
+            null;
+
+
+        // ------------------------------------------------
+        // 2. SAVE ARTICLE IDENTITY
+        // ------------------------------------------------
+
+        if (
+            externalId ||
+            articleUrl
+        ) {
+
+            const {
+                error: ignoreError
+            } = await supabaseClient
+                .from("ignored_news")
+                .insert({
+                    external_id:
+                        externalId,
+
+                    article_url:
+                        articleUrl,
+
+                    source_name:
+                        sourceName
+                });
+
+            /*
+             * A duplicate suppression record is harmless.
+             *
+             * This can happen if an article was previously
+             * registered as ignored but somehow still exists
+             * in the news table.
+             *
+             * PostgreSQL duplicate-key error:
+             * 23505
+             */
+
+            if (
+                ignoreError &&
+                ignoreError.code !== "23505"
+            ) {
+
+                throw ignoreError;
+            }
+        }
+
+
+        // ------------------------------------------------
+        // 3. DELETE THE NEWS ARTICLE
+        // ------------------------------------------------
+
         const {
-            error
+            error: deleteError
         } = await supabaseClient
             .from("news")
             .delete()
@@ -3886,11 +3952,21 @@ async function deleteNews(
                 id
             );
 
-        if (error) throw error;
+        if (deleteError) {
+            throw deleteError;
+        }
+
+
+        // ------------------------------------------------
+        // 4. REFRESH ADMIN
+        // ------------------------------------------------
 
         await loadNewsLibrary();
+
         await loadDashboardCounts();
+
         await loadRecentActivity();
+
 
     } catch (error) {
 
