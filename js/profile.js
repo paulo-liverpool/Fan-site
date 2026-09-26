@@ -1,26 +1,22 @@
-/* ============================================================
-   BARÇA REAL
-   PROFILE PAGE
-   ============================================================ */
-
-
-/* ============================================================
-   STATE
-   ============================================================ */
+// ============================================================
+// BARÇA REAL
+// PROFILE PAGE
+// ============================================================
 
 let profileUser = null;
 let profileData = null;
-let profileTeam = null;
 let profilePreferences = null;
+let profileTeam = null;
 let profileSubscription = null;
+let platformSettings = null;
 
 
-/* ============================================================
-   HELPERS
-   ============================================================ */
+// ============================================================
+// HELPERS
+// ============================================================
 
-function $(id) {
-    return document.getElementById(id);
+function $(selector) {
+    return document.querySelector(selector);
 }
 
 
@@ -35,160 +31,153 @@ function escapeHTML(value) {
 }
 
 
-function normalizeUsername(value) {
+function formatDate(value) {
 
-    return String(value || "")
-        .trim()
-        .replace(/^@+/, "")
-        .toLowerCase()
-        .replace(/[^a-z0-9._-]/g, "")
-        .slice(0, 30);
-}
+    if (!value) {
+        return "—";
+    }
 
+    try {
 
-function showMessage(
-    element,
-    message,
-    type = ""
-) {
+        return new Intl.DateTimeFormat(
+            "pt-PT",
+            {
+                day: "2-digit",
+                month: "short",
+                year: "numeric"
+            }
+        ).format(
+            new Date(value)
+        );
 
-    if (!element) return;
+    } catch {
 
-    element.textContent = message;
-
-    element.classList.remove(
-        "success",
-        "error"
-    );
-
-    if (type) {
-        element.classList.add(type);
+        return "—";
     }
 }
 
 
-function getInitial(
-    displayName,
-    username
+function formatMoney(
+    amount,
+    currency = "AOA"
 ) {
 
     const value =
-        String(
-            displayName ||
-            username ||
-            "U"
-        ).trim();
+        Number(amount || 0);
+
+    return new Intl.NumberFormat(
+        "pt-PT",
+        {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2
+        }
+    ).format(value)
+        + " "
+        + currency;
+}
+
+
+function getInitials(name) {
+
+    const value =
+        String(name || "U")
+            .trim();
+
+    if (!value) {
+        return "U";
+    }
+
+    const parts =
+        value.split(/\s+/)
+            .filter(Boolean);
+
+    if (parts.length === 1) {
+        return parts[0]
+            .charAt(0)
+            .toUpperCase();
+    }
 
     return (
-        value.charAt(0) ||
-        "U"
+        parts[0].charAt(0) +
+        parts[parts.length - 1].charAt(0)
     ).toUpperCase();
 }
 
 
-/* ============================================================
-   TEAM THEME
-   ============================================================ */
+function showToast(message) {
 
-function applyProfileTeamTheme(team) {
+    const toast =
+        $("#profile-toast");
 
-    if (!team) return;
+    if (!toast) return;
 
-    const root =
-        document.documentElement;
+    toast.textContent =
+        message;
 
-    if (team.primary_color) {
+    toast.hidden = false;
 
-        root.style.setProperty(
-            "--team-primary",
-            team.primary_color
-        );
-    }
+    clearTimeout(
+        showToast.timer
+    );
 
-    if (team.secondary_color) {
+    showToast.timer =
+        setTimeout(() => {
 
-        root.style.setProperty(
-            "--team-secondary",
-            team.secondary_color
-        );
-    }
+            toast.hidden = true;
 
-    if (team.primary_color) {
-
-        root.style.setProperty(
-            "--team-glow",
-            hexToRGBA(
-                team.primary_color,
-                0.18
-            )
-        );
-    }
+        }, 3000);
 }
 
 
-function hexToRGBA(
-    hex,
-    alpha
-) {
+function getClient() {
 
-    if (!hex) {
-        return `rgba(255,255,255,${alpha})`;
+    if (
+        typeof getSupabase ===
+        "function"
+    ) {
+        return getSupabase();
     }
 
-    let value =
-        String(hex)
-            .replace("#", "")
-            .trim();
-
-    if (value.length === 3) {
-
-        value =
-            value
-                .split("")
-                .map(char => char + char)
-                .join("");
+    if (
+        typeof supabaseClient !==
+        "undefined"
+    ) {
+        return supabaseClient;
     }
 
-    if (value.length !== 6) {
-
-        return `rgba(255,255,255,${alpha})`;
-    }
-
-    const r =
-        parseInt(
-            value.substring(0, 2),
-            16
-        );
-
-    const g =
-        parseInt(
-            value.substring(2, 4),
-            16
-        );
-
-    const b =
-        parseInt(
-            value.substring(4, 6),
-            16
-        );
-
-    return `rgba(${r},${g},${b},${alpha})`;
+    return null;
 }
 
 
-/* ============================================================
-   LOAD PROFILE
-   ============================================================ */
+// ============================================================
+// INITIAL LOAD
+// ============================================================
 
-async function loadProfile() {
+document.addEventListener(
+    "DOMContentLoaded",
+    async () => {
+
+        setupProfileInteractions();
+
+        await loadProfilePage();
+
+    }
+);
+
+
+// ============================================================
+// LOAD PROFILE
+// ============================================================
+
+async function loadProfilePage() {
 
     const client =
-        supabaseClient;
+        getClient();
 
     if (!client) {
 
-        console.error(
-            "BR PROFILE: Supabase não encontrado."
+        showToast(
+            "Supabase não está disponível."
         );
 
         return;
@@ -207,16 +196,7 @@ async function loadProfile() {
 
 
         if (authError) {
-
-            console.error(
-                "BR PROFILE: erro de autenticação:",
-                authError
-            );
-
-            window.location.href =
-                "login.html";
-
-            return;
+            throw authError;
         }
 
 
@@ -233,883 +213,253 @@ async function loadProfile() {
             user;
 
 
-        /* ================================================
-           PROFILE
-           ================================================ */
-
-        const {
-            data: profile,
-            error: profileError
-        } =
-            await client
-                .from("profiles")
-                .select(`
-                    id,
-                    username,
-                    display_name,
-                    supported_team_id,
-                    role_id,
-                    avatar_url,
-                    is_active
-                `)
-                .eq(
-                    "id",
-                    user.id
-                )
-                .maybeSingle();
+        await loadProfileData(
+            client
+        );
 
 
-        if (profileError) {
-
-            throw profileError;
-        }
-
-
-        if (!profile) {
-
-            console.error(
-                "BR PROFILE: perfil não encontrado."
-            );
-
-            return;
-        }
+        await loadPreferences(
+            client
+        );
 
 
-        profileData =
-            profile;
+        await loadTeam(
+            client
+        );
 
 
-        /* ================================================
-           TEAM
-           ================================================ */
-
-        if (profile.supported_team_id) {
-
-            const {
-                data: team,
-                error: teamError
-            } =
-                await client
-                    .from("teams")
-                    .select(`
-                        id,
-                        name,
-                        slug,
-                        short_name,
-                        primary_color,
-                        secondary_color
-                    `)
-                    .eq(
-                        "id",
-                        profile.supported_team_id
-                    )
-                    .maybeSingle();
+        await loadSubscription(
+            client
+        );
 
 
-            if (teamError) {
-
-                console.error(
-                    "BR PROFILE: erro ao carregar equipa:",
-                    teamError
-                );
-
-            } else {
-
-                profileTeam =
-                    team;
-
-                applyProfileTeamTheme(
-                    team
-                );
-            }
-        }
+        await loadPlatformSettings(
+            client
+        );
 
 
-        /* ================================================
-           PREFERENCES
-           ================================================ */
-
-        const {
-            data: preferences,
-            error: preferencesError
-        } =
-            await client
-                .from("user_preferences")
-                .select(`
-                    user_id,
-                    language,
-                    notify_replies,
-                    notify_reactions,
-                    notify_mentions,
-                    email_notifications,
-                    profile_visibility,
-                    activity_visibility
-                `)
-                .eq(
-                    "user_id",
-                    user.id
-                )
-                .maybeSingle();
-
-
-        if (preferencesError) {
-
-            console.error(
-                "BR PROFILE: erro ao carregar preferências:",
-                preferencesError
-            );
-
-        } else {
-
-            profilePreferences =
-                preferences;
-        }
-
-
-        /* ================================================
-           SUBSCRIPTION
-           ================================================ */
-
-        const {
-            data: subscription,
-            error: subscriptionError
-        } =
-            await client
-                .from("subscriptions")
-                .select(`
-                    id,
-                    user_id,
-                    status,
-                    monthly_price,
-                    currency,
-                    current_period_start,
-                    current_period_end,
-                    next_payment_due_at,
-                    grace_until,
-                    auto_renew
-                `)
-                .eq(
-                    "user_id",
-                    user.id
-                )
-                .maybeSingle();
-
-
-        if (subscriptionError) {
-
-            console.error(
-                "BR PROFILE: erro ao carregar subscrição:",
-                subscriptionError
-            );
-
-        } else {
-
-            profileSubscription =
-                subscription;
-        }
+        await loadUnreadMessages(
+            client
+        );
 
 
         renderProfile();
 
-        await loadPaymentHistory();
-
-
-        $("profile-loading").hidden =
-            true;
-
-        $("profile-app").hidden =
-            false;
-
-
     } catch (error) {
 
         console.error(
-            "BR PROFILE: erro geral:",
+            "BR PROFILE: erro ao carregar:",
             error
         );
 
-        const loading =
-            $("profile-loading");
-
-        if (loading) {
-
-            loading.innerHTML = `
-                <p>
-                    Não foi possível carregar o perfil.
-                </p>
-
-                <small>
-                    ${escapeHTML(
-                        error.message ||
-                        "Erro desconhecido."
-                    )}
-                </small>
-            `;
-        }
+        showToast(
+            "Não foi possível carregar o perfil."
+        );
     }
 }
 
 
-/* ============================================================
-   RENDER PROFILE
-   ============================================================ */
+// ============================================================
+// PROFILE DATA
+// ============================================================
 
-function renderProfile() {
+async function loadProfileData(
+    client
+) {
 
-    if (!profileData) return;
-
-
-    const displayName =
-        profileData.display_name ||
-        profileData.username ||
-        "Utilizador";
-
-
-    const username =
-        profileData.username ||
-        "";
-
-
-    const initial =
-        getInitial(
-            displayName,
-            username
-        );
-
-
-    /* ================================================
-       IDENTITY
-       ================================================ */
-
-    $("profile-display-name")
-        .textContent =
-        displayName;
-
-
-    $("profile-username")
-        .textContent =
-        username
-            ? `@${username}`
-            : "Username ainda não definido";
-
-
-    $("profile-team")
-        .textContent =
-        profileTeam
-            ? (
-                profileTeam.short_name ||
-                profileTeam.name
+    const {
+        data,
+        error
+    } =
+        await client
+            .from("profiles")
+            .select(`
+                id,
+                username,
+                display_name,
+                supported_team_id,
+                role_id,
+                avatar_url,
+                bio,
+                is_active,
+                created_at,
+                updated_at
+            `)
+            .eq(
+                "id",
+                profileUser.id
             )
-            : "Equipa não definida";
+            .maybeSingle();
 
 
-    /* ================================================
-       ACCOUNT INPUTS
-       ================================================ */
-
-    $("display-name-input")
-        .value =
-        profileData.display_name ||
-        "";
-
-
-    $("username-input")
-        .value =
-        profileData.username ||
-        "";
-
-
-    $("profile-email")
-        .textContent =
-        profileUser?.email ||
-        "Email não disponível";
-
-
-    /* ================================================
-       AVATAR
-       ================================================ */
-
-    setAvatar(
-        profileData.avatar_url,
-        initial
-    );
-
-
-    /* ================================================
-       TEAM
-       ================================================ */
-
-    renderTeam();
-
-
-    /* ================================================
-       PREFERENCES
-       ================================================ */
-
-    renderPreferences();
-
-
-    /* ================================================
-       SUBSCRIPTION
-       ================================================ */
-
-    renderSubscription();
-}
-
-
-/* ============================================================
-   AVATAR
-   ============================================================ */
-
-function setAvatar(
-    avatarUrl,
-    initial
-) {
-
-    const avatar =
-        $("profile-avatar");
-
-    const placeholder =
-        $("profile-avatar-placeholder");
-
-    const preview =
-        $("preview-avatar");
-
-    const previewPlaceholder =
-        $("preview-avatar-placeholder");
-
-
-    if (avatarUrl) {
-
-        avatar.src =
-            avatarUrl;
-
-        avatar.hidden =
-            false;
-
-        placeholder.hidden =
-            true;
-
-
-        preview.src =
-            avatarUrl;
-
-        preview.hidden =
-            false;
-
-        previewPlaceholder.hidden =
-            true;
-
-
-        return;
+    if (error) {
+        throw error;
     }
 
 
-    avatar.removeAttribute("src");
+    profileData =
+        data || {
 
-    avatar.hidden =
-        true;
+            id:
+                profileUser.id,
 
-    placeholder.hidden =
-        false;
+            username:
+                null,
 
-    placeholder.textContent =
-        initial;
+            display_name:
+                profileUser.email
+                    ?.split("@")[0] ||
+                "Utilizador",
 
+            avatar_url:
+                null,
 
-    preview.removeAttribute("src");
+            bio:
+                null
 
-    preview.hidden =
-        true;
-
-    previewPlaceholder.hidden =
-        false;
-
-    previewPlaceholder.textContent =
-        initial;
+        };
 }
 
 
-/* ============================================================
-   UPDATE AVATAR PREVIEW
-   ============================================================ */
+// ============================================================
+// PREFERENCES
+// ============================================================
 
-function updateAvatarPreview(
-    url
+async function loadPreferences(
+    client
 ) {
 
-    const displayName =
-        $("display-name-input")
-            ?.value ||
-        profileData?.display_name ||
-        profileData?.username ||
-        "U";
-
-    const username =
-        $("username-input")
-            ?.value ||
-        profileData?.username ||
-        "";
-
-    setAvatar(
-        url,
-        getInitial(
-            displayName,
-            username
-        )
-    );
-}
-
-
-/* ============================================================
-   TEAM
-   ============================================================ */
-
-function renderTeam() {
-
-    const name =
-        profileTeam
-            ? (
-                profileTeam.name ||
-                profileTeam.short_name ||
-                "Equipa"
+    const {
+        data,
+        error
+    } =
+        await client
+            .from("user_preferences")
+            .select(`
+                user_id,
+                language,
+                notify_replies,
+                notify_reactions,
+                notify_mentions,
+                email_notifications,
+                profile_visibility,
+                activity_visibility
+            `)
+            .eq(
+                "user_id",
+                profileUser.id
             )
-            : "Equipa";
+            .maybeSingle();
 
 
-    $("locked-team-name")
-        .textContent =
-        name;
+    if (error) {
+        throw error;
+    }
 
 
-    const logoContainer =
-        $("locked-team-logo");
+    if (data) {
 
-
-    if (!logoContainer) return;
-
-
-    /*
-     * The teams table itself doesn't currently
-     * contain a logo column in the schema we
-     * have established.
-     *
-     * We therefore use the existing football
-     * provider logo data where available.
-     */
-    loadTeamLogo(
-        logoContainer
-    );
-}
-
-
-async function loadTeamLogo(
-    container
-) {
-
-    if (!profileTeam) return;
-
-
-    const slug =
-        String(
-            profileTeam.slug ||
-            profileTeam.name ||
-            ""
-        ).toLowerCase();
-
-
-    const providerTeamId =
-        slug.includes("barca") ||
-        slug.includes("barcelona")
-            ? 81
-            : slug.includes("real") ||
-              slug.includes("madrid")
-                ? 86
-                : null;
-
-
-    if (!providerTeamId) {
-
-        container.textContent =
-            profileTeam.short_name ||
-            "BR";
+        profilePreferences =
+            data;
 
         return;
     }
 
 
-    try {
+    const defaults = {
 
-        const {
-            data,
-            error
-        } =
-            await supabaseClient
-                .from("football_matches")
-                .select(`
-                    home_provider_team_id,
-                    away_provider_team_id,
-                    home_team_logo,
-                    away_team_logo,
-                    match_date
-                `)
-                .or(
-                    `home_provider_team_id.eq.${providerTeamId},away_provider_team_id.eq.${providerTeamId}`
-                )
-                .not(
-                    "match_date",
-                    "is",
-                    null
-                )
-                .order(
-                    "match_date",
-                    {
-                        ascending: false
-                    }
-                )
-                .limit(10);
+        user_id:
+            profileUser.id,
 
+        language:
+            "pt",
 
-        if (error) {
+        notify_replies:
+            true,
 
-            throw error;
-        }
+        notify_reactions:
+            true,
 
+        notify_mentions:
+            true,
 
-        let logoUrl =
-            null;
+        email_notifications:
+            true,
 
+        profile_visibility:
+            "public",
 
-        for (
-            const match
-            of data || []
-        ) {
-
-            if (
-                match.home_provider_team_id ===
-                    providerTeamId &&
-                match.home_team_logo
-            ) {
-
-                logoUrl =
-                    match.home_team_logo;
-
-                break;
-            }
-
-
-            if (
-                match.away_provider_team_id ===
-                    providerTeamId &&
-                match.away_team_logo
-            ) {
-
-                logoUrl =
-                    match.away_team_logo;
-
-                break;
-            }
-        }
-
-
-        if (logoUrl) {
-
-            container.innerHTML = `
-                <img
-                    src="${escapeHTML(
-                        logoUrl
-                    )}"
-                    alt="${escapeHTML(
-                        profileTeam.name ||
-                        "Equipa"
-                    )}">
-            `;
-
-            return;
-        }
-
-
-        container.textContent =
-            profileTeam.short_name ||
-            "BR";
-
-
-    } catch (error) {
-
-        console.error(
-            "BR PROFILE: erro ao carregar logo:",
-            error
-        );
-
-        container.textContent =
-            profileTeam.short_name ||
-            "BR";
-    }
-}
-
-
-/* ============================================================
-   PREFERENCES
-   ============================================================ */
-
-function renderPreferences() {
-
-    const preferences =
-        profilePreferences;
-
-
-    if (!preferences) {
-
-        $("language-select").value =
-            "pt";
-
-        $("notify-replies").checked =
-            true;
-
-        $("notify-reactions").checked =
-            true;
-
-        $("notify-mentions").checked =
-            true;
-
-        $("email-notifications").checked =
-            true;
-
-        $("profile-visibility").value =
-            "public";
-
-        $("activity-visibility").value =
-            "public";
-
-        return;
-    }
-
-
-    $("language-select").value =
-        preferences.language ||
-        "pt";
-
-
-    $("notify-replies").checked =
-        preferences.notify_replies !== false;
-
-
-    $("notify-reactions").checked =
-        preferences.notify_reactions !== false;
-
-
-    $("notify-mentions").checked =
-        preferences.notify_mentions !== false;
-
-
-    $("email-notifications").checked =
-        preferences.email_notifications !== false;
-
-
-    $("profile-visibility").value =
-        preferences.profile_visibility ||
-        "public";
-
-
-    $("activity-visibility").value =
-        preferences.activity_visibility ||
-        "public";
-}
-
-
-/* ============================================================
-   SUBSCRIPTION
-   ============================================================ */
-
-function renderSubscription() {
-
-    const subscription =
-        profileSubscription;
-
-
-    if (!subscription) {
-
-        $("subscription-status")
-            .textContent =
-            "Grátis";
-
-        $("subscription-price")
-            .textContent =
-            "0 AOA";
-
-        return;
-    }
-
-
-    const status =
-        subscription.status ||
-        "free";
-
-
-    const statusLabels = {
-
-        free: "Grátis",
-
-        active: "Ativa",
-
-        pending: "Pendente",
-
-        overdue: "Em atraso",
-
-        grace: "Período de tolerância",
-
-        suspended: "Suspensa",
-
-        cancelled: "Cancelada"
+        activity_visibility:
+            "public"
 
     };
 
 
-    $("subscription-status")
-        .textContent =
-        statusLabels[status] ||
-        status;
+    const {
+        data: inserted,
+        error: insertError
+    } =
+        await client
+            .from("user_preferences")
+            .insert(
+                defaults
+            )
+            .select()
+            .single();
 
 
-    const price =
-        Number(
-            subscription.monthly_price ||
-            0
-        );
-
-
-    const currency =
-        subscription.currency ||
-        "AOA";
-
-
-    $("subscription-price")
-        .textContent =
-        `${formatMoney(
-            price,
-            currency
-        )}`;
-
-
-    const description =
-        $("subscription-description");
-
-
-    if (!description) return;
-
-
-    if (status === "free") {
-
-        description.textContent =
-            "Neste momento a plataforma está disponível gratuitamente.";
-
-        return;
+    if (insertError) {
+        throw insertError;
     }
 
 
-    if (
-        status === "overdue"
-    ) {
-
-        description.textContent =
-            "Existe um pagamento pendente. A tua conta não é bloqueada automaticamente.";
-
-        return;
-    }
-
-
-    if (
-        status === "grace"
-    ) {
-
-        description.textContent =
-            "A tua conta encontra-se dentro de um período de tolerância definido pela administração.";
-
-        return;
-    }
-
-
-    if (
-        status === "suspended"
-    ) {
-
-        description.textContent =
-            "O estado da subscrição foi alterado pela administração.";
-
-        return;
-    }
-
-
-    description.textContent =
-        "O estado da tua subscrição será atualizado conforme a configuração da plataforma.";
+    profilePreferences =
+        inserted;
 }
 
 
-function formatMoney(
-    amount,
-    currency
+// ============================================================
+// TEAM
+// ============================================================
+
+async function loadTeam(
+    client
 ) {
 
-    return new Intl.NumberFormat(
-        "pt-AO",
-        {
-            style: "currency",
-            currency: currency,
-            minimumFractionDigits: 2
-        }
-    ).format(amount);
-}
-
-
-/* ============================================================
-   PAYMENT HISTORY
-   ============================================================ */
-
-async function loadPaymentHistory() {
-
-    if (!profileUser) return;
-
-
-    const container =
-        $("payment-history");
-
-
-    if (!container) return;
+    if (
+        !profileData ||
+        !profileData.supported_team_id
+    ) {
+        return;
+    }
 
 
     const {
         data,
         error
     } =
-        await supabaseClient
-            .from("subscription_payments")
+        await client
+            .from("teams")
             .select(`
                 id,
-                amount,
-                currency,
-                status,
-                payment_method,
-                transaction_reference,
-                due_at,
-                paid_at,
-                created_at
+                name,
+                slug,
+                short_name,
+                primary_color,
+                secondary_color,
+                loading_player
             `)
             .eq(
-                "user_id",
-                profileUser.id
+                "id",
+                profileData.supported_team_id
             )
-            .order(
-                "created_at",
-                {
-                    ascending: false
-                }
-            );
+            .maybeSingle();
 
 
     if (error) {
 
         console.error(
-            "BR PROFILE: erro ao carregar pagamentos:",
+            "BR PROFILE: erro equipa:",
             error
         );
 
@@ -1117,117 +467,905 @@ async function loadPaymentHistory() {
     }
 
 
-    if (!data || !data.length) {
+    profileTeam =
+        data;
+}
+
+
+// ============================================================
+// SUBSCRIPTION
+// ============================================================
+
+async function loadSubscription(
+    client
+) {
+
+    const {
+        data,
+        error
+    } =
+        await client
+            .from("subscriptions")
+            .select(`
+                id,
+                user_id,
+                status,
+                monthly_price,
+                currency,
+                current_period_start,
+                current_period_end,
+                next_payment_due_at,
+                grace_until,
+                auto_renew,
+                admin_note
+            `)
+            .eq(
+                "user_id",
+                profileUser.id
+            )
+            .maybeSingle();
+
+
+    if (error) {
+
+        console.error(
+            "BR PROFILE: erro subscrição:",
+            error
+        );
 
         return;
     }
 
 
-    container.innerHTML =
-        data
-            .map(
-                payment => {
-
-                    const statusLabels = {
-
-                        pending: "Pendente",
-
-                        paid: "Pago",
-
-                        failed: "Falhou",
-
-                        cancelled: "Cancelado",
-
-                        refunded: "Reembolsado"
-
-                    };
-
-
-                    return `
-                        <div class="payment-row">
-
-                            <div class="payment-main">
-
-                                <strong>
-                                    ${escapeHTML(
-                                        statusLabels[
-                                            payment.status
-                                        ] ||
-                                        payment.status
-                                    )}
-                                </strong>
-
-                                <span>
-                                    ${escapeHTML(
-                                        formatDate(
-                                            payment.paid_at ||
-                                            payment.created_at
-                                        )
-                                    )}
-                                </span>
-
-                            </div>
-
-
-                            <div class="payment-amount">
-
-                                ${escapeHTML(
-                                    formatMoney(
-                                        Number(
-                                            payment.amount ||
-                                            0
-                                        ),
-                                        payment.currency ||
-                                        "AOA"
-                                    )
-                                )}
-
-                            </div>
-
-                        </div>
-                    `;
-                }
-            )
-            .join("");
+    profileSubscription =
+        data;
 }
 
 
-/* ============================================================
-   SAVE PROFILE
-   ============================================================ */
+// ============================================================
+// PLATFORM SETTINGS
+// ============================================================
 
-async function saveProfile() {
+async function loadPlatformSettings(
+    client
+) {
 
-    if (!profileUser) return;
+    const {
+        data,
+        error
+    } =
+        await client
+            .from("platform_settings")
+            .select(`
+                id,
+                payments_active,
+                enforce_payment,
+                monthly_price,
+                currency,
+                grace_period_days
+            `)
+            .eq(
+                "id",
+                "global"
+            )
+            .maybeSingle();
 
 
-    const button =
-        $("save-profile-button");
+    if (error) {
+
+        console.error(
+            "BR PROFILE: erro settings:",
+            error
+        );
+
+        return;
+    }
 
 
-    const message =
-        $("profile-save-message");
+    platformSettings =
+        data;
+}
+
+
+// ============================================================
+// UNREAD MESSAGES
+// ============================================================
+
+async function loadUnreadMessages(
+    client
+) {
+
+    const {
+        data,
+        error
+    } =
+        await client
+            .from("private_messages")
+            .select("id")
+            .eq(
+                "recipient_id",
+                profileUser.id
+            )
+            .is(
+                "read_at",
+                null
+            );
+
+
+    if (error) {
+
+        console.error(
+            "BR PROFILE: erro mensagens:",
+            error
+        );
+
+        return;
+    }
+
+
+    const badge =
+        $("#message-count");
+
+    if (!badge) return;
+
+
+    const count =
+        data?.length || 0;
+
+
+    if (count > 0) {
+
+        badge.textContent =
+            count > 99
+                ? "99+"
+                : String(count);
+
+        badge.hidden = false;
+
+    } else {
+
+        badge.hidden = true;
+    }
+}
+
+
+// ============================================================
+// RENDER
+// ============================================================
+
+function renderProfile() {
+
+    if (!profileData) {
+        return;
+    }
 
 
     const displayName =
-        $("display-name-input")
-            .value
+        profileData.display_name ||
+        profileData.username ||
+        profileUser.email
+            ?.split("@")[0] ||
+        "Utilizador";
+
+
+    const username =
+        profileData.username;
+
+
+    $("#profile-display-name")
+        .textContent =
+        displayName;
+
+
+    $("#profile-username")
+        .textContent =
+        username
+            ? "@" + username
+            : "Username não definido";
+
+
+    $("#preview-name")
+        .textContent =
+        displayName;
+
+
+    renderAvatar(
+        profileData.avatar_url,
+        displayName
+    );
+
+
+    renderTeam();
+
+
+    renderSubscription();
+}
+
+
+// ============================================================
+// AVATAR
+// ============================================================
+
+function renderAvatar(
+    url,
+    name
+) {
+
+    const image =
+        $("#profile-avatar-image");
+
+    const letter =
+        $("#profile-avatar-letter");
+
+    const preview =
+        $("#preview-avatar");
+
+
+    if (url) {
+
+        image.src =
+            url;
+
+        image.hidden =
+            false;
+
+        letter.hidden =
+            true;
+
+
+        preview.innerHTML = `
+            <img
+                src="${escapeHTML(url)}"
+                alt=""
+            >
+        `;
+
+    } else {
+
+        image.hidden =
+            true;
+
+        image.removeAttribute(
+            "src"
+        );
+
+        letter.hidden =
+            false;
+
+        letter.textContent =
+            getInitials(name);
+
+
+        preview.textContent =
+            getInitials(name);
+    }
+}
+
+
+// ============================================================
+// TEAM RENDER
+// ============================================================
+
+function renderTeam() {
+
+    if (!profileTeam) {
+
+        $("#profile-team")
+            .textContent =
+            "Equipa não definida";
+
+        return;
+    }
+
+
+    const teamName =
+        profileTeam.short_name ||
+        profileTeam.name ||
+        "Equipa";
+
+
+    $("#profile-team")
+        .textContent =
+        teamName;
+
+
+    $("#locked-team-name")
+        .textContent =
+        profileTeam.name ||
+        teamName;
+
+
+    const logo =
+        $("#locked-team-logo");
+
+
+    const slug =
+        String(
+            profileTeam.slug ||
+            ""
+        ).toLowerCase();
+
+
+    if (
+        slug.includes("barca") ||
+        slug.includes("barcelona")
+    ) {
+
+        logo.textContent =
+            "BARÇA";
+
+    } else if (
+        slug.includes("real") ||
+        slug.includes("madrid")
+    ) {
+
+        logo.textContent =
+            "RM";
+
+    } else {
+
+        logo.textContent =
+            "BR";
+    }
+}
+
+
+// ============================================================
+// SUBSCRIPTION RENDER
+// ============================================================
+
+function renderSubscription() {
+
+    const status =
+        profileSubscription?.status ||
+        "free";
+
+
+    const price =
+        profileSubscription?.monthly_price ??
+        platformSettings?.monthly_price ??
+        0;
+
+
+    const currency =
+        profileSubscription?.currency ||
+        platformSettings?.currency ||
+        "AOA";
+
+
+    const statusLabel =
+        getSubscriptionLabel(
+            status
+        );
+
+
+    $("#subscription-status")
+        .textContent =
+        statusLabel;
+
+
+    $("#subscription-price")
+        .textContent =
+        formatMoney(
+            price,
+            currency
+        );
+
+
+    const description =
+        $("#subscription-description");
+
+
+    if (
+        !platformSettings?.payments_active
+    ) {
+
+        description.textContent =
+            "O sistema de pagamentos está preparado, mas as subscrições pagas ainda não estão activas.";
+
+    } else if (
+        !platformSettings.enforce_payment
+    ) {
+
+        description.textContent =
+            "Os pagamentos estão activos, mas o acesso não é bloqueado automaticamente por atraso.";
+
+    } else {
+
+        description.textContent =
+            "A tua subscrição e os respectivos pagamentos são geridos pelo Barça Real.";
+    }
+
+
+    const details =
+        $("#subscription-details");
+
+
+    if (!details) {
+        return;
+    }
+
+
+    let html = "";
+
+
+    if (
+        profileSubscription?.next_payment_due_at
+    ) {
+
+        html += `
+            <div class="activity-item">
+                <strong>
+                    Próximo pagamento
+                </strong>
+
+                <small>
+                    ${escapeHTML(
+                        formatDate(
+                            profileSubscription.next_payment_due_at
+                        )
+                    )}
+                </small>
+            </div>
+        `;
+    }
+
+
+    if (
+        profileSubscription?.grace_until
+    ) {
+
+        html += `
+            <div class="activity-item">
+                <strong>
+                    Período de tolerância
+                </strong>
+
+                <small>
+                    Até ${escapeHTML(
+                        formatDate(
+                            profileSubscription.grace_until
+                        )
+                    )}
+                </small>
+            </div>
+        `;
+    }
+
+
+    if (
+        profileSubscription?.admin_note
+    ) {
+
+        html += `
+            <div class="activity-item">
+                <strong>
+                    Nota da administração
+                </strong>
+
+                <small>
+                    ${escapeHTML(
+                        profileSubscription.admin_note
+                    )}
+                </small>
+            </div>
+        `;
+    }
+
+
+    details.innerHTML =
+        html;
+}
+
+
+function getSubscriptionLabel(
+    status
+) {
+
+    const labels = {
+
+        free:
+            "Gratuito",
+
+        active:
+            "Activo",
+
+        pending:
+            "Pendente",
+
+        overdue:
+            "Pagamento em atraso",
+
+        suspended:
+            "Suspenso",
+
+        cancelled:
+            "Cancelado"
+
+    };
+
+
+    return (
+        labels[status] ||
+        status ||
+        "Gratuito"
+    );
+}
+
+
+// ============================================================
+// INTERACTIONS
+// ============================================================
+
+function setupProfileInteractions() {
+
+    document
+        .querySelectorAll(
+            "[data-panel]"
+        )
+        .forEach(button => {
+
+            button.addEventListener(
+                "click",
+                () => {
+
+                    openProfilePanel(
+                        button.dataset.panel
+                    );
+
+                }
+            );
+
+        });
+
+
+    $("#profile-edit-button")
+        ?.addEventListener(
+            "click",
+            () => {
+
+                openProfilePanel(
+                    "profile"
+                );
+
+            }
+        );
+
+
+    $("#avatar-edit-button")
+        ?.addEventListener(
+            "click",
+            () => {
+
+                $("#avatar-file")
+                    ?.click();
+
+            }
+        );
+
+
+    $("#avatar-file")
+        ?.addEventListener(
+            "change",
+            handleAvatarUpload
+        );
+
+
+    $("#modal-close")
+        ?.addEventListener(
+            "click",
+            closeModal
+        );
+
+
+    $("#modal-backdrop")
+        ?.addEventListener(
+            "click",
+            closeModal
+        );
+
+
+    $("#signout-other-button")
+        ?.addEventListener(
+            "click",
+            signOutOtherSessions
+        );
+
+
+    $("#delete-account-button")
+        ?.addEventListener(
+            "click",
+            openDeleteAccount
+        );
+}
+
+
+// ============================================================
+// MODAL
+// ============================================================
+
+function openModal(
+    html
+) {
+
+    const modal =
+        $("#profile-modal");
+
+    const content =
+        $("#modal-content");
+
+
+    if (!modal || !content) {
+        return;
+    }
+
+
+    content.innerHTML =
+        html;
+
+
+    modal.hidden =
+        false;
+}
+
+
+function closeModal() {
+
+    const modal =
+        $("#profile-modal");
+
+    if (!modal) return;
+
+    modal.hidden =
+        true;
+}
+
+
+// ============================================================
+// PROFILE EDITOR
+// ============================================================
+
+function openProfilePanel(
+    panel
+) {
+
+    switch (panel) {
+
+        case "profile":
+            openProfileEditor();
+            break;
+
+        case "security":
+            openSecurityPanel();
+            break;
+
+        case "privacy":
+            openPrivacyPanel();
+            break;
+
+        case "notifications":
+            openNotificationPanel();
+            break;
+
+        case "activity":
+            openActivityPanel();
+            break;
+
+        case "messages":
+            openMessagesPanel();
+            break;
+
+        case "payments":
+            openPaymentsPanel();
+            break;
+
+        default:
+            break;
+    }
+}
+
+
+// ============================================================
+// PROFILE EDITOR
+// ============================================================
+
+function openProfileEditor() {
+
+    const name =
+        profileData?.display_name || "";
+
+    const username =
+        profileData?.username || "";
+
+    const bio =
+        profileData?.bio || "";
+
+
+    openModal(`
+
+        <h2>
+            Editar perfil
+        </h2>
+
+        <form id="profile-edit-form">
+
+            <div class="form-group">
+
+                <label>
+                    Nome apresentado
+                </label>
+
+                <input
+                    type="text"
+                    id="edit-display-name"
+                    value="${escapeHTML(name)}"
+                    maxlength="80"
+                    required
+                >
+
+                <div class="form-help">
+                    Este é o nome que outros adeptos verão nos comentários.
+                </div>
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label>
+                    Username
+                </label>
+
+                <input
+                    type="text"
+                    id="edit-username"
+                    value="${escapeHTML(username)}"
+                    maxlength="30"
+                    placeholder="ex.: paulosousa"
+                >
+
+                <div class="form-help">
+                    Deve ser único. Usa apenas letras, números e underscore.
+                </div>
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label>
+                    Bio
+                </label>
+
+                <textarea
+                    id="edit-bio"
+                    maxlength="300"
+                    placeholder="Fala um pouco sobre ti..."
+                >${escapeHTML(bio)}</textarea>
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label>
+                    Idioma
+                </label>
+
+                <select id="edit-language">
+
+                    <option
+                        value="pt"
+                        ${profilePreferences?.language === "pt" ? "selected" : ""}
+                    >
+                        Português
+                    </option>
+
+                    <option
+                        value="en"
+                        ${profilePreferences?.language === "en" ? "selected" : ""}
+                    >
+                        English
+                    </option>
+
+                    <option
+                        value="fr"
+                        ${profilePreferences?.language === "fr" ? "selected" : ""}
+                    >
+                        Français
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <div class="modal-actions">
+
+                <button
+                    type="button"
+                    class="modal-button secondary"
+                    id="cancel-profile-edit"
+                >
+                    Cancelar
+                </button>
+
+                <button
+                    type="submit"
+                    class="modal-button primary"
+                >
+                    Guardar
+                </button>
+
+            </div>
+
+        </form>
+
+    `);
+
+
+    $("#cancel-profile-edit")
+        ?.addEventListener(
+            "click",
+            closeModal
+        );
+
+
+    $("#profile-edit-form")
+        ?.addEventListener(
+            "submit",
+            saveProfile
+        );
+}
+
+
+// ============================================================
+// SAVE PROFILE
+// ============================================================
+
+async function saveProfile(
+    event
+) {
+
+    event.preventDefault();
+
+
+    const client =
+        getClient();
+
+
+    if (!client) return;
+
+
+    const displayName =
+        $("#edit-display-name")
+            ?.value
             .trim();
 
 
     const username =
-        normalizeUsername(
-            $("username-input")
-                .value
-        );
+        $("#edit-username")
+            ?.value
+            .trim()
+            .toLowerCase();
+
+
+    const bio =
+        $("#edit-bio")
+            ?.value
+            .trim();
+
+
+    const language =
+        $("#edit-language")
+            ?.value ||
+        "pt";
 
 
     if (!displayName) {
 
-        showMessage(
-            message,
-            "O nome apresentado é obrigatório.",
-            "error"
+        showToast(
+            "O nome apresentado é obrigatório."
         );
 
         return;
@@ -1236,350 +1374,120 @@ async function saveProfile() {
 
     if (
         username &&
-        (
-            username.length < 3 ||
-            username.length > 30
+        !/^[a-z0-9_]+$/.test(
+            username
         )
     ) {
 
-        showMessage(
-            message,
-            "O username deve ter entre 3 e 30 caracteres.",
-            "error"
+        showToast(
+            "O username só pode conter letras, números e underscore."
         );
 
         return;
     }
 
 
-    button.disabled =
-        true;
-
-
-    showMessage(
-        message,
-        "A guardar..."
-    );
-
-
     try {
 
         const {
-            data: existing,
-            error: usernameError
-        } =
-            await supabaseClient
-                .from("profiles")
-                .select("id")
-                .eq(
-                    "username",
-                    username
-                )
-                .neq(
-                    "id",
-                    profileUser.id
-                )
-                .maybeSingle();
-
-
-        if (usernameError) {
-
-            throw usernameError;
-        }
-
-
-        if (existing) {
-
-            showMessage(
-                message,
-                "Esse username já está a ser utilizado.",
-                "error"
-            );
-
-            return;
-        }
-
-
-        const {
-            data,
             error
         } =
-            await supabaseClient
+            await client
                 .from("profiles")
                 .update({
+
                     display_name:
                         displayName,
 
                     username:
-                        username || null
+                        username || null,
+
+                    bio:
+                        bio || null
+
                 })
                 .eq(
                     "id",
                     profileUser.id
-                )
-                .select(`
-                    id,
-                    username,
-                    display_name,
-                    supported_team_id,
-                    role_id,
-                    avatar_url,
-                    is_active
-                `)
-                .single();
+                );
 
 
         if (error) {
+
+            if (
+                error.code === "23505"
+            ) {
+
+                throw new Error(
+                    "Esse username já está a ser utilizado."
+                );
+            }
 
             throw error;
         }
 
 
-        profileData =
-            data;
+        const {
+            error:
+                preferenceError
+        } =
+            await client
+                .from("user_preferences")
+                .upsert({
+
+                    user_id:
+                        profileUser.id,
+
+                    language
+
+                });
+
+
+        if (preferenceError) {
+            throw preferenceError;
+        }
+
+
+        profileData.display_name =
+            displayName;
+
+        profileData.username =
+            username || null;
+
+        profileData.bio =
+            bio || null;
+
+
+        profilePreferences.language =
+            language;
 
 
         renderProfile();
 
+        closeModal();
 
-        showMessage(
-            message,
-            "Perfil atualizado com sucesso.",
-            "success"
+        showToast(
+            "Perfil actualizado."
         );
-
 
     } catch (error) {
 
         console.error(
-            "BR PROFILE: erro ao guardar perfil:",
+            "BR PROFILE: erro ao guardar:",
             error
         );
 
-
-        showMessage(
-            message,
+        showToast(
             error.message ||
-            "Não foi possível guardar as alterações.",
-            "error"
+            "Não foi possível guardar as alterações."
         );
-
-
-    } finally {
-
-        button.disabled =
-            false;
     }
 }
 
 
-/* ============================================================
-   SAVE PREFERENCES
-   ============================================================ */
-
-async function savePreferences() {
-
-    if (!profileUser) return;
-
-
-    const button =
-        $("save-preferences-button");
-
-
-    const message =
-        $("preferences-message");
-
-
-    button.disabled =
-        true;
-
-
-    showMessage(
-        message,
-        "A guardar..."
-    );
-
-
-    try {
-
-        const preferences = {
-
-            user_id:
-                profileUser.id,
-
-            language:
-                $("language-select").value,
-
-            notify_replies:
-                $("notify-replies").checked,
-
-            notify_reactions:
-                $("notify-reactions").checked,
-
-            notify_mentions:
-                $("notify-mentions").checked,
-
-            email_notifications:
-                $("email-notifications").checked,
-
-            profile_visibility:
-                $("profile-visibility").value,
-
-            activity_visibility:
-                $("activity-visibility").value
-        };
-
-
-        const {
-            data,
-            error
-        } =
-            await supabaseClient
-                .from("user_preferences")
-                .upsert(
-                    preferences,
-                    {
-                        onConflict:
-                            "user_id"
-                    }
-                )
-                .select()
-                .single();
-
-
-        if (error) {
-
-            throw error;
-        }
-
-
-        profilePreferences =
-            data;
-
-
-        showMessage(
-            message,
-            "Preferências atualizadas.",
-            "success"
-        );
-
-
-    } catch (error) {
-
-        console.error(
-            "BR PROFILE: erro ao guardar preferências:",
-            error
-        );
-
-
-        showMessage(
-            message,
-            error.message ||
-            "Não foi possível guardar as preferências.",
-            "error"
-        );
-
-
-    } finally {
-
-        button.disabled =
-            false;
-    }
-}
-
-
-/* ============================================================
-   SAVE PRIVACY
-   ============================================================ */
-
-async function savePrivacy() {
-
-    if (!profileUser) return;
-
-
-    const button =
-        $("save-privacy-button");
-
-
-    const message =
-        $("privacy-message");
-
-
-    button.disabled =
-        true;
-
-
-    try {
-
-        const {
-            data,
-            error
-        } =
-            await supabaseClient
-                .from("user_preferences")
-                .update({
-
-                    profile_visibility:
-                        $("profile-visibility")
-                            .value,
-
-                    activity_visibility:
-                        $("activity-visibility")
-                            .value
-
-                })
-                .eq(
-                    "user_id",
-                    profileUser.id
-                )
-                .select()
-                .single();
-
-
-        if (error) {
-
-            throw error;
-        }
-
-
-        profilePreferences =
-            data;
-
-
-        showMessage(
-            message,
-            "Definições de privacidade atualizadas.",
-            "success"
-        );
-
-
-    } catch (error) {
-
-        console.error(
-            "BR PROFILE: erro ao guardar privacidade:",
-            error
-        );
-
-
-        showMessage(
-            message,
-            error.message ||
-            "Não foi possível guardar a privacidade.",
-            "error"
-        );
-
-
-    } finally {
-
-        button.disabled =
-            false;
-    }
-}
-
-
-/* ============================================================
-   AVATAR UPLOAD
-   ============================================================ */
+// ============================================================
+// AVATAR UPLOAD
+// ============================================================
 
 async function handleAvatarUpload(
     event
@@ -1589,31 +1497,16 @@ async function handleAvatarUpload(
         event.target.files?.[0];
 
 
-    if (!file || !profileUser) {
+    if (!file) {
         return;
     }
 
 
-    const allowedTypes = [
-        "image/jpeg",
-        "image/png",
-        "image/webp"
-    ];
+    const client =
+        getClient();
 
 
-    if (
-        !allowedTypes.includes(
-            file.type
-        )
-    ) {
-
-        alert(
-            "Escolhe uma imagem JPG, PNG ou WebP."
-        );
-
-        event.target.value =
-            "";
-
+    if (!client) {
         return;
     }
 
@@ -1623,7 +1516,7 @@ async function handleAvatarUpload(
         5 * 1024 * 1024
     ) {
 
-        alert(
+        showToast(
             "A imagem deve ter no máximo 5 MB."
         );
 
@@ -1634,15 +1527,37 @@ async function handleAvatarUpload(
     }
 
 
-    const button =
-        $("avatar-button");
+    const allowed =
+        [
+            "image/jpeg",
+            "image/png",
+            "image/webp"
+        ];
 
 
-    button.disabled =
-        true;
+    if (
+        !allowed.includes(
+            file.type
+        )
+    ) {
+
+        showToast(
+            "Formato de imagem não suportado."
+        );
+
+        event.target.value =
+            "";
+
+        return;
+    }
 
 
     try {
+
+        showToast(
+            "A carregar fotografia..."
+        );
+
 
         const extension =
             file.name
@@ -1652,93 +1567,41 @@ async function handleAvatarUpload(
 
 
         const path =
-            `${profileUser.id}/avatar.${extension}`;
-
-
-        /*
-         * Remove previous known avatar files
-         * so each account keeps one current
-         * profile image.
-         */
-
-        const {
-            data: existingFiles,
-            error: listError
-        } =
-            await supabaseClient
-                .storage
-                .from("profile-media")
-                .list(
-                    profileUser.id
-                );
-
-
-        if (listError) {
-
-            console.warn(
-                "BR PROFILE: não foi possível listar avatar antigo:",
-                listError
-            );
-
-        } else if (
-            existingFiles &&
-            existingFiles.length
-        ) {
-
-            const filesToRemove =
-                existingFiles
-                    .filter(
-                        item =>
-                            item.name
-                    )
-                    .map(
-                        item =>
-                            `${profileUser.id}/${item.name}`
-                    );
-
-
-            if (
-                filesToRemove.length
-            ) {
-
-                await supabaseClient
-                    .storage
-                    .from("profile-media")
-                    .remove(
-                        filesToRemove
-                    );
-            }
-        }
+            profileUser.id +
+            "/avatar-" +
+            Date.now() +
+            "." +
+            extension;
 
 
         const {
-            error: uploadError
+            error:
+                uploadError
         } =
-            await supabaseClient
-                .storage
+            await client.storage
                 .from("profile-media")
                 .upload(
                     path,
                     file,
                     {
-                        upsert: true,
-                        contentType:
-                            file.type
+                        cacheControl:
+                            "3600",
+
+                        upsert:
+                            false
                     }
                 );
 
 
         if (uploadError) {
-
             throw uploadError;
         }
 
 
         const {
-            data: publicData
+            data
         } =
-            supabaseClient
-                .storage
+            client.storage
                 .from("profile-media")
                 .getPublicUrl(
                     path
@@ -1746,103 +1609,64 @@ async function handleAvatarUpload(
 
 
         const avatarUrl =
-            publicData?.publicUrl ||
-            "";
+            data?.publicUrl;
 
 
         if (!avatarUrl) {
 
             throw new Error(
-                "Não foi possível obter o URL da imagem."
+                "Não foi possível obter o endereço da fotografia."
             );
         }
 
 
         const {
-            data: updatedProfile,
-            error: profileError
+            error:
+                updateError
         } =
-            await supabaseClient
+            await client
                 .from("profiles")
                 .update({
+
                     avatar_url:
                         avatarUrl
+
                 })
                 .eq(
                     "id",
                     profileUser.id
-                )
-                .select(`
-                    id,
-                    username,
-                    display_name,
-                    supported_team_id,
-                    role_id,
-                    avatar_url,
-                    is_active
-                `)
-                .single();
+                );
 
 
-        if (profileError) {
-
-            throw profileError;
+        if (updateError) {
+            throw updateError;
         }
 
 
-        profileData =
-            updatedProfile;
+        profileData.avatar_url =
+            avatarUrl;
 
 
-        setAvatar(
-            avatarUrl,
-            getInitial(
-                profileData.display_name,
-                profileData.username
-            )
+        renderProfile();
+
+
+        showToast(
+            "Fotografia actualizada."
         );
-
-
-        /*
-         * Cache-busting ensures the browser
-         * doesn't continue displaying the old
-         * image after replacement.
-         */
-
-        const cacheBusted =
-            `${avatarUrl}${
-                avatarUrl.includes("?")
-                    ? "&"
-                    : "?"
-            }v=${Date.now()}`;
-
-
-        $("profile-avatar").src =
-            cacheBusted;
-
-
-        $("preview-avatar").src =
-            cacheBusted;
 
 
     } catch (error) {
 
         console.error(
-            "BR PROFILE: erro ao carregar avatar:",
+            "BR PROFILE: erro avatar:",
             error
         );
 
-
-        alert(
-            error.message ||
-            "Não foi possível atualizar a fotografia."
+        showToast(
+            "Não foi possível actualizar a fotografia."
         );
 
-
     } finally {
-
-        button.disabled =
-            false;
 
         event.target.value =
             "";
@@ -1850,112 +1674,230 @@ async function handleAvatarUpload(
 }
 
 
-/* ============================================================
-   CHANGE EMAIL
-   ============================================================ */
+// ============================================================
+// SECURITY
+// ============================================================
 
-async function changeEmail() {
+function openSecurityPanel() {
 
-    if (!profileUser) return;
+    openModal(`
+
+        <h2>
+            Segurança
+        </h2>
 
 
-    const currentEmail =
-        profileUser.email ||
-        "";
+        <div class="form-group">
+
+            <label>
+                Email actual
+            </label>
+
+            <input
+                type="email"
+                value="${escapeHTML(
+                    profileUser.email || ""
+                )}"
+                disabled
+            >
+
+        </div>
 
 
-    const newEmail =
-        prompt(
-            `Email atual:\n${currentEmail}\n\nNovo email:`
+        <h3>
+            Alterar email
+        </h3>
+
+        <form id="email-form">
+
+            <div class="form-group">
+
+                <label>
+                    Novo email
+                </label>
+
+                <input
+                    type="email"
+                    id="new-email"
+                    required
+                >
+
+            </div>
+
+            <button
+                class="modal-button primary"
+                type="submit"
+            >
+                Alterar email
+            </button>
+
+        </form>
+
+
+        <h3>
+            Alterar palavra-passe
+        </h3>
+
+        <form id="password-form">
+
+            <div class="form-group">
+
+                <label>
+                    Nova palavra-passe
+                </label>
+
+                <input
+                    type="password"
+                    id="new-password"
+                    minlength="8"
+                    required
+                >
+
+            </div>
+
+            <div class="form-group">
+
+                <label>
+                    Confirmar palavra-passe
+                </label>
+
+                <input
+                    type="password"
+                    id="confirm-password"
+                    minlength="8"
+                    required
+                >
+
+            </div>
+
+            <button
+                class="modal-button primary"
+                type="submit"
+            >
+                Alterar palavra-passe
+            </button>
+
+        </form>
+
+        <h3>
+            Sessões
+        </h3>
+
+        <button
+            type="button"
+            class="modal-button danger"
+            id="modal-signout-other"
+        >
+            Terminar outras sessões
+        </button>
+
+    `);
+
+
+    $("#email-form")
+        ?.addEventListener(
+            "submit",
+            changeEmail
         );
 
 
-    if (
-        !newEmail ||
-        !newEmail.trim()
-    ) {
-
-        return;
-    }
-
-
-    const email =
-        newEmail.trim();
-
-
-    if (
-        email ===
-        currentEmail
-    ) {
-
-        return;
-    }
-
-
-    const {
-        error
-    } =
-        await supabaseClient.auth.updateUser({
-            email
-        });
-
-
-    if (error) {
-
-        alert(
-            error.message ||
-            "Não foi possível alterar o email."
+    $("#password-form")
+        ?.addEventListener(
+            "submit",
+            changePassword
         );
 
-        return;
-    }
 
-
-    alert(
-        "Pedido enviado. Poderá ser necessário confirmar o novo email através da mensagem enviada."
-    );
+    $("#modal-signout-other")
+        ?.addEventListener(
+            "click",
+            signOutOtherSessions
+        );
 }
 
 
-/* ============================================================
-   CHANGE PASSWORD
-   ============================================================ */
+async function changeEmail(
+    event
+) {
 
-async function changePassword() {
+    event.preventDefault();
+
+
+    const email =
+        $("#new-email")
+            ?.value
+            .trim();
+
+
+    if (!email) {
+        return;
+    }
+
+
+    const client =
+        getClient();
+
+
+    try {
+
+        const {
+            error
+        } =
+            await client.auth
+                .updateUser({
+
+                    email
+
+                });
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        showToast(
+            "Confirma o novo email através da mensagem enviada."
+        );
+
+    } catch (error) {
+
+        console.error(
+            "BR PROFILE: email:",
+            error
+        );
+
+        showToast(
+            error.message ||
+            "Não foi possível alterar o email."
+        );
+    }
+}
+
+
+async function changePassword(
+    event
+) {
+
+    event.preventDefault();
+
 
     const password =
-        prompt(
-            "Introduz a nova palavra-passe:"
-        );
-
-
-    if (!password) {
-        return;
-    }
-
-
-    if (password.length < 8) {
-
-        alert(
-            "A palavra-passe deve ter pelo menos 8 caracteres."
-        );
-
-        return;
-    }
+        $("#new-password")
+            ?.value;
 
 
     const confirmation =
-        prompt(
-            "Confirma a nova palavra-passe:"
-        );
+        $("#confirm-password")
+            ?.value;
 
 
     if (
-        confirmation !==
-        password
+        password !==
+        confirmation
     ) {
 
-        alert(
+        showToast(
             "As palavras-passe não coincidem."
         );
 
@@ -1963,40 +1905,56 @@ async function changePassword() {
     }
 
 
-    const {
-        error
-    } =
-        await supabaseClient.auth.updateUser({
-            password
-        });
+    const client =
+        getClient();
 
 
-    if (error) {
+    try {
 
-        alert(
+        const {
+            error
+        } =
+            await client.auth
+                .updateUser({
+
+                    password
+
+                });
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        $("#password-form")
+            ?.reset();
+
+
+        showToast(
+            "Palavra-passe alterada."
+        );
+
+    } catch (error) {
+
+        console.error(
+            "BR PROFILE: password:",
+            error
+        );
+
+        showToast(
             error.message ||
             "Não foi possível alterar a palavra-passe."
         );
-
-        return;
     }
-
-
-    alert(
-        "Palavra-passe alterada com sucesso."
-    );
 }
 
 
-/* ============================================================
-   SIGN OUT
-   ============================================================ */
-
-async function signOut() {
+async function signOutOtherSessions() {
 
     const confirmed =
-        confirm(
-            "Queres terminar a sessão?"
+        window.confirm(
+            "Queres terminar a sessão do Barça Real em todos os outros dispositivos?"
         );
 
 
@@ -2005,59 +1963,1018 @@ async function signOut() {
     }
 
 
+    const client =
+        getClient();
+
+
+    try {
+
+        const {
+            error
+        } =
+            await client.auth.signOut({
+                scope: "others"
+            });
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        closeModal();
+
+        showToast(
+            "As outras sessões foram terminadas."
+        );
+
+    } catch (error) {
+
+        console.error(
+            "BR PROFILE: sessões:",
+            error
+        );
+
+        showToast(
+            "Não foi possível terminar as outras sessões."
+        );
+    }
+}
+
+
+// ============================================================
+// PRIVACY
+// ============================================================
+
+function openPrivacyPanel() {
+
+    openModal(`
+
+        <h2>
+            Privacidade
+        </h2>
+
+        <form id="privacy-form">
+
+            <div class="form-group">
+
+                <label>
+                    Visibilidade do perfil
+                </label>
+
+                <select id="profile-visibility">
+
+                    <option
+                        value="public"
+                        ${profilePreferences.profile_visibility === "public" ? "selected" : ""}
+                    >
+                        Público
+                    </option>
+
+                    <option
+                        value="private"
+                        ${profilePreferences.profile_visibility === "private" ? "selected" : ""}
+                    >
+                        Privado
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label>
+                    Visibilidade da actividade
+                </label>
+
+                <select id="activity-visibility">
+
+                    <option
+                        value="public"
+                        ${profilePreferences.activity_visibility === "public" ? "selected" : ""}
+                    >
+                        Público
+                    </option>
+
+                    <option
+                        value="private"
+                        ${profilePreferences.activity_visibility === "private" ? "selected" : ""}
+                    >
+                        Privado
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <div class="modal-actions">
+
+                <button
+                    type="button"
+                    class="modal-button secondary"
+                    onclick="closeModal()"
+                >
+                    Cancelar
+                </button>
+
+                <button
+                    type="submit"
+                    class="modal-button primary"
+                >
+                    Guardar
+                </button>
+
+            </div>
+
+        </form>
+
+    `);
+
+
+    $("#privacy-form")
+        ?.addEventListener(
+            "submit",
+            savePrivacy
+        );
+}
+
+
+async function savePrivacy(
+    event
+) {
+
+    event.preventDefault();
+
+
+    const client =
+        getClient();
+
+
+    const profileVisibility =
+        $("#profile-visibility")
+            ?.value;
+
+
+    const activityVisibility =
+        $("#activity-visibility")
+            ?.value;
+
+
+    try {
+
+        const {
+            error
+        } =
+            await client
+                .from("user_preferences")
+                .update({
+
+                    profile_visibility:
+                        profileVisibility,
+
+                    activity_visibility:
+                        activityVisibility
+
+                })
+                .eq(
+                    "user_id",
+                    profileUser.id
+                );
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        profilePreferences.profile_visibility =
+            profileVisibility;
+
+        profilePreferences.activity_visibility =
+            activityVisibility;
+
+
+        closeModal();
+
+        showToast(
+            "Definições de privacidade actualizadas."
+        );
+
+    } catch (error) {
+
+        console.error(
+            "BR PROFILE: privacy:",
+            error
+        );
+
+        showToast(
+            "Não foi possível guardar as definições."
+        );
+    }
+}
+
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+
+function openNotificationPanel() {
+
+    openModal(`
+
+        <h2>
+            Notificações
+        </h2>
+
+        <form id="notification-form">
+
+            ${preferenceCheckbox(
+                "notify_replies",
+                "Respostas",
+                "Quando alguém responder aos teus comentários.",
+                profilePreferences.notify_replies
+            )}
+
+            ${preferenceCheckbox(
+                "notify_reactions",
+                "Reacções",
+                "Quando alguém reagir aos teus comentários.",
+                profilePreferences.notify_reactions
+            )}
+
+            ${preferenceCheckbox(
+                "notify_mentions",
+                "Menções",
+                "Quando fores mencionado na comunidade.",
+                profilePreferences.notify_mentions
+            )}
+
+            ${preferenceCheckbox(
+                "email_notifications",
+                "Notificações por email",
+                "Receber notificações relevantes por email.",
+                profilePreferences.email_notifications
+            )}
+
+            <div class="modal-actions">
+
+                <button
+                    type="submit"
+                    class="modal-button primary"
+                >
+                    Guardar
+                </button>
+
+            </div>
+
+        </form>
+
+    `);
+
+
+    $("#notification-form")
+        ?.addEventListener(
+            "submit",
+            saveNotifications
+        );
+}
+
+
+function preferenceCheckbox(
+    id,
+    title,
+    description,
+    checked
+) {
+
+    return `
+
+        <label class="preference-row">
+
+            <span class="preference-copy">
+
+                <strong>
+                    ${escapeHTML(title)}
+                </strong>
+
+                <small>
+                    ${escapeHTML(description)}
+                </small>
+
+            </span>
+
+            <input
+                type="checkbox"
+                id="${escapeHTML(id)}"
+                ${checked ? "checked" : ""}
+            >
+
+        </label>
+
+    `;
+}
+
+
+async function saveNotifications(
+    event
+) {
+
+    event.preventDefault();
+
+
+    const client =
+        getClient();
+
+
+    const values = {
+
+        notify_replies:
+            $("#notify_replies")
+                ?.checked,
+
+        notify_reactions:
+            $("#notify_reactions")
+                ?.checked,
+
+        notify_mentions:
+            $("#notify_mentions")
+                ?.checked,
+
+        email_notifications:
+            $("#email_notifications")
+                ?.checked
+
+    };
+
+
+    try {
+
+        const {
+            error
+        } =
+            await client
+                .from("user_preferences")
+                .update(values)
+                .eq(
+                    "user_id",
+                    profileUser.id
+                );
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        Object.assign(
+            profilePreferences,
+            values
+        );
+
+
+        closeModal();
+
+        showToast(
+            "Preferências de notificações actualizadas."
+        );
+
+    } catch (error) {
+
+        console.error(
+            "BR PROFILE: notifications:",
+            error
+        );
+
+        showToast(
+            "Não foi possível guardar as preferências."
+        );
+    }
+}
+
+
+// ============================================================
+// ACTIVITY
+// ============================================================
+
+async function openActivityPanel() {
+
+    const client =
+        getClient();
+
+
+    openModal(`
+
+        <h2>
+            A minha actividade
+        </h2>
+
+        <div id="activity-list">
+
+            <div class="empty-state">
+                A carregar...
+            </div>
+
+        </div>
+
+    `);
+
+
+    try {
+
+        const {
+            data,
+            error
+        } =
+            await client
+                .from("fan_comments")
+                .select(`
+                    id,
+                    article_key,
+                    body,
+                    created_at,
+                    parent_id
+                `)
+                .eq(
+                    "user_id",
+                    profileUser.id
+                )
+                .order(
+                    "created_at",
+                    {
+                        ascending: false
+                    }
+                )
+                .limit(50);
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        const container =
+            $("#activity-list");
+
+
+        if (
+            !data ||
+            data.length === 0
+        ) {
+
+            container.innerHTML = `
+                <div class="empty-state">
+                    Ainda não publicaste comentários.
+                </div>
+            `;
+
+            return;
+        }
+
+
+        container.innerHTML =
+            data.map(
+                item => `
+
+                    <div class="activity-item">
+
+                        <strong>
+                            ${escapeHTML(
+                                item.body
+                            )}
+                        </strong>
+
+                        <small>
+                            ${escapeHTML(
+                                item.article_key
+                            )}
+                            ·
+                            ${escapeHTML(
+                                formatDate(
+                                    item.created_at
+                                )
+                            )}
+                        </small>
+
+                    </div>
+
+                `
+            ).join("");
+
+    } catch (error) {
+
+        console.error(
+            "BR PROFILE: activity:",
+            error
+        );
+
+        $("#activity-list")
+            .innerHTML = `
+                <div class="empty-state">
+                    Não foi possível carregar a actividade.
+                </div>
+            `;
+    }
+}
+
+
+// ============================================================
+// PRIVATE MESSAGES
+// ============================================================
+
+async function openMessagesPanel() {
+
+    const client =
+        getClient();
+
+
+    openModal(`
+
+        <h2>
+            Mensagens
+        </h2>
+
+        <div id="messages-list">
+
+            <div class="empty-state">
+                A carregar...
+            </div>
+
+        </div>
+
+    `);
+
+
+    try {
+
+        const {
+            data,
+            error
+        } =
+            await client
+                .from("private_messages")
+                .select(`
+                    id,
+                    sender_id,
+                    subject,
+                    body,
+                    message_type,
+                    sent_at,
+                    read_at
+                `)
+                .eq(
+                    "recipient_id",
+                    profileUser.id
+                )
+                .order(
+                    "sent_at",
+                    {
+                        ascending: false
+                    }
+                );
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        const container =
+            $("#messages-list");
+
+
+        if (
+            !data ||
+            data.length === 0
+        ) {
+
+            container.innerHTML = `
+                <div class="empty-state">
+                    Não tens mensagens privadas.
+                </div>
+            `;
+
+            return;
+        }
+
+
+        container.innerHTML =
+            data.map(
+                message => `
+
+                    <div
+                        class="message-item"
+                        data-message-id="${escapeHTML(
+                            message.id
+                        )}"
+                    >
+
+                        <strong>
+                            ${escapeHTML(
+                                message.subject
+                            )}
+                        </strong>
+
+                        <small>
+                            ${escapeHTML(
+                                getMessageTypeLabel(
+                                    message.message_type
+                                )
+                            )}
+                            ·
+                            ${escapeHTML(
+                                formatDate(
+                                    message.sent_at
+                                )
+                            )}
+                        </small>
+
+                        <div
+                            style="
+                                margin-top:8px;
+                                color:rgba(255,255,255,.72);
+                                font-size:12px;
+                                line-height:1.55;
+                            "
+                        >
+                            ${escapeHTML(
+                                message.body
+                            )}
+                        </div>
+
+                    </div>
+
+                `
+            ).join("");
+
+
+        await markMessagesRead(
+            client,
+            data
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "BR PROFILE: messages:",
+            error
+        );
+
+        $("#messages-list")
+            .innerHTML = `
+                <div class="empty-state">
+                    Não foi possível carregar as mensagens.
+                </div>
+            `;
+    }
+}
+
+
+function getMessageTypeLabel(
+    type
+) {
+
+    const labels = {
+
+        general:
+            "Geral",
+
+        payment:
+            "Pagamento",
+
+        warning:
+            "Aviso",
+
+        account:
+            "Conta",
+
+        community:
+            "Comunidade",
+
+        moderation:
+            "Moderação",
+
+        important:
+            "Importante"
+
+    };
+
+
+    return (
+        labels[type] ||
+        "Mensagem"
+    );
+}
+
+
+async function markMessagesRead(
+    client,
+    messages
+) {
+
+    const unread =
+        messages.filter(
+            message =>
+                !message.read_at
+        );
+
+
+    if (!unread.length) {
+        return;
+    }
+
+
+    const ids =
+        unread.map(
+            message =>
+                message.id
+        );
+
+
     const {
         error
     } =
-        await supabaseClient.auth.signOut();
+        await client
+            .from("private_messages")
+            .update({
+
+                read_at:
+                    new Date()
+                        .toISOString()
+
+            })
+            .in(
+                "id",
+                ids
+            );
 
 
     if (error) {
 
-        alert(
-            error.message ||
-            "Não foi possível terminar a sessão."
+        console.error(
+            "BR PROFILE: erro marcar mensagens:",
+            error
         );
 
         return;
     }
 
 
-    window.location.href =
-        "login.html";
+    $("#message-count")
+        .hidden = true;
 }
 
 
-/* ============================================================
-   DELETE ACCOUNT
-   ============================================================ */
+// ============================================================
+// PAYMENTS
+// ============================================================
 
-async function deleteAccount() {
+async function openPaymentsPanel() {
 
-    /*
-     * IMPORTANT:
-     *
-     * We intentionally do NOT directly delete
-     * auth.users from the browser.
-     *
-     * The secure account-deletion RPC will be
-     * implemented in the account-security phase.
-     */
+    const client =
+        getClient();
 
-    const first =
-        confirm(
-            "A eliminação da conta é permanente.\n\nQueres continuar?"
+
+    openModal(`
+
+        <h2>
+            Histórico de pagamentos
+        </h2>
+
+        <div id="payments-list">
+
+            <div class="empty-state">
+                A carregar...
+            </div>
+
+        </div>
+
+    `);
+
+
+    try {
+
+        const {
+            data,
+            error
+        } =
+            await client
+                .from("subscription_payments")
+                .select(`
+                    id,
+                    amount,
+                    currency,
+                    status,
+                    payment_method,
+                    provider,
+                    transaction_reference,
+                    due_at,
+                    paid_at,
+                    created_at
+                `)
+                .eq(
+                    "user_id",
+                    profileUser.id
+                )
+                .order(
+                    "created_at",
+                    {
+                        ascending: false
+                    }
+                );
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        const container =
+            $("#payments-list");
+
+
+        if (
+            !data ||
+            data.length === 0
+        ) {
+
+            container.innerHTML = `
+                <div class="empty-state">
+                    Ainda não existem pagamentos registados.
+                </div>
+            `;
+
+            return;
+        }
+
+
+        container.innerHTML =
+            data.map(
+                payment => `
+
+                    <div class="payment-item">
+
+                        <strong>
+                            ${escapeHTML(
+                                formatMoney(
+                                    payment.amount,
+                                    payment.currency
+                                )
+                            )}
+                        </strong>
+
+                        <small>
+                            Estado:
+                            ${escapeHTML(
+                                payment.status
+                            )}
+
+                            ·
+
+                            Criado:
+                            ${escapeHTML(
+                                formatDate(
+                                    payment.created_at
+                                )
+                            )}
+
+                            ${
+                                payment.paid_at
+                                    ? `
+                                        · Pago:
+                                        ${escapeHTML(
+                                            formatDate(
+                                                payment.paid_at
+                                            )
+                                        )}
+                                    `
+                                    : ""
+                            }
+
+                        </small>
+
+                        ${
+                            payment.transaction_reference
+                                ? `
+                                    <small>
+                                        Referência:
+                                        ${escapeHTML(
+                                            payment.transaction_reference
+                                        )}
+                                    </small>
+                                `
+                                : ""
+                        }
+
+                    </div>
+
+                `
+            ).join("");
+
+    } catch (error) {
+
+        console.error(
+            "BR PROFILE: payments:",
+            error
         );
 
-
-    if (!first) {
-        return;
+        $("#payments-list")
+            .innerHTML = `
+                <div class="empty-state">
+                    Não foi possível carregar o histórico.
+                </div>
+            `;
     }
+}
 
+
+// ============================================================
+// DELETE ACCOUNT
+// ============================================================
+
+function openDeleteAccount() {
+
+    openModal(`
+
+        <h2>
+            Eliminar conta
+        </h2>
+
+        <p
+            style="
+                color:rgba(255,255,255,.68);
+                font-size:13px;
+                line-height:1.6;
+            "
+        >
+            A eliminação da conta é uma operação permanente.
+            Os dados associados à conta poderão ser removidos
+            e esta acção não pode ser desfeita.
+        </p>
+
+        <div class="form-group">
+
+            <label>
+                Escreve ELIMINAR para continuar
+            </label>
+
+            <input
+                type="text"
+                id="delete-confirmation"
+                autocomplete="off"
+            >
+
+        </div>
+
+
+        <div class="modal-actions">
+
+            <button
+                type="button"
+                class="modal-button secondary"
+                onclick="closeModal()"
+            >
+                Cancelar
+            </button>
+
+            <button
+                type="button"
+                class="modal-button danger"
+                id="confirm-delete-button"
+            >
+                Eliminar conta
+            </button>
+
+        </div>
+
+        <div
+            class="form-help"
+            style="margin-top:12px;"
+        >
+            Por segurança, a eliminação definitiva deverá ser
+            executada por uma operação segura no servidor.
+        </div>
+
+    `);
+
+
+    $("#confirm-delete-button")
+        ?.addEventListener(
+            "click",
+            requestAccountDeletion
+        );
+}
+
+
+async function requestAccountDeletion() {
 
     const confirmation =
-        prompt(
-            "Escreve ELIMINAR para confirmar:"
-        );
+        $("#delete-confirmation")
+            ?.value
+            .trim();
 
 
     if (
@@ -2065,224 +2982,15 @@ async function deleteAccount() {
         "ELIMINAR"
     ) {
 
-        alert(
-            "A conta não foi eliminada."
+        showToast(
+            "Escreve ELIMINAR para confirmar."
         );
 
         return;
     }
 
 
-    alert(
-        "A eliminação segura da conta será disponibilizada através do sistema de segurança da plataforma. Nenhuma conta foi eliminada."
+    showToast(
+        "A eliminação definitiva da conta ainda precisa de ser ligada ao processo seguro do servidor."
     );
 }
-
-
-/* ============================================================
-   DATE
-   ============================================================ */
-
-function formatDate(
-    value
-) {
-
-    if (!value) {
-        return "—";
-    }
-
-
-    const date =
-        new Date(value);
-
-
-    if (
-        Number.isNaN(
-            date.getTime()
-        )
-    ) {
-
-        return "—";
-    }
-
-
-    return new Intl.DateTimeFormat(
-        "pt-AO",
-        {
-            day: "2-digit",
-            month: "short",
-            year: "numeric"
-        }
-    ).format(date);
-}
-
-
-/* ============================================================
-   EVENTS
-   ============================================================ */
-
-function setupProfileEvents() {
-
-
-    /* Avatar */
-
-    $("avatar-button")
-        .addEventListener(
-            "click",
-            () => {
-
-                $("avatar-input")
-                    .click();
-
-            }
-        );
-
-
-    $("avatar-input")
-        .addEventListener(
-            "change",
-            handleAvatarUpload
-        );
-
-
-    /* Profile */
-
-    $("save-profile-button")
-        .addEventListener(
-            "click",
-            saveProfile
-        );
-
-
-    /* Preferences */
-
-    $("save-preferences-button")
-        .addEventListener(
-            "click",
-            savePreferences
-        );
-
-
-    /* Privacy */
-
-    $("save-privacy-button")
-        .addEventListener(
-            "click",
-            savePrivacy
-        );
-
-
-    /* Security */
-
-    $("change-email-button")
-        .addEventListener(
-            "click",
-            changeEmail
-        );
-
-
-    $("change-password-button")
-        .addEventListener(
-            "click",
-            changePassword
-        );
-
-
-    $("sign-out-button")
-        .addEventListener(
-            "click",
-            signOut
-        );
-
-
-    /* Delete */
-
-    $("delete-account-button")
-        .addEventListener(
-            "click",
-            deleteAccount
-        );
-
-
-    /* Live preview */
-
-    $("display-name-input")
-        .addEventListener(
-            "input",
-            updateLivePreview
-        );
-
-
-    $("username-input")
-        .addEventListener(
-            "input",
-            updateLivePreview
-        );
-}
-
-
-/* ============================================================
-   LIVE PROFILE PREVIEW
-   ============================================================ */
-
-function updateLivePreview() {
-
-    const displayName =
-        $("display-name-input")
-            .value
-            .trim() ||
-        profileData?.display_name ||
-        profileData?.username ||
-        "Utilizador";
-
-
-    const username =
-        normalizeUsername(
-            $("username-input")
-                .value
-        );
-
-
-    $("preview-display-name")
-        .textContent =
-        displayName;
-
-
-    $("preview-username")
-        .textContent =
-        username
-            ? `@${username}`
-            : "@username";
-
-
-    const currentAvatar =
-        profileData?.avatar_url;
-
-
-    if (!currentAvatar) {
-
-        setAvatar(
-            null,
-            getInitial(
-                displayName,
-                username
-            )
-        );
-    }
-}
-
-
-/* ============================================================
-   DOM READY
-   ============================================================ */
-
-document.addEventListener(
-    "DOMContentLoaded",
-    async () => {
-
-        setupProfileEvents();
-
-        await loadProfile();
-
-    }
-);
