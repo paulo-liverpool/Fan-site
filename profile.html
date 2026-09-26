@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+    <title>Perfil | Barça Real</title>
+
+    <link
+        rel="stylesheet"
+        href="css/global.css">
+
+    <link
+        rel="stylesheet"
+        href="css/profile.css">
+</head>
+
+<body>
+
+<div class="profile-page">
+
+    <!-- =====================================================
+         TOPBAR
+         ===================================================== -->
+
+    <header class="topbar">
+
+        <a
+            href="home.html"
+            class="profile-back-brand"
+            aria-label="Voltar ao início">
+
+            <span class="profile-brand-main">
+                BARÇA
+            </span>
+
+            <span class="profile-brand-secondary">
+                REAL
+            </span>
+
+        </a>
+
+
+        <div class="profile-top-title">
+            Perfil
+        </div>
+
+
+        <a
+            href="home.html"
+            class="profile-close-button"
+            aria-label="Voltar">
+
+            ×
+
+        </a>
+
+    </header>
+
+
+    <!-- =====================================================
+         MAIN
+         ===================================================== -->
+
+    <main class="profile-content">
+
+
+        <!-- =================================================
+             LOADING
+             ================================================= -->
+
+        <section
+            id="profile-loading"
+            class="profile-loading">
+
+            <div class="profile-loading-spinner"></div>
+
+            <p>
+                A carregar perfil...
+            </p>
+
+        </section>
+
+
+        <!-- =================================================
+             PROFILE APP
+             ================================================= -->
+
+        <div
+            id="profile-app"
+            class="profile-app"
+            hidden>
+
+
+            <!-- =============================================
+                 PROFILE HERO
+                 ============================================= -->
+
+            <section class="profile-hero">
+
+                <div class="profile-avatar-wrapper">
+
+                    <button
+                        id="avatar-button"
+                        class="profile-avatar-button"
+                        type="button"
+                        aria-label="Alterar fotografia">
+
+                        <img
+                            id="profile-avatar"
+                            src=""
+                            alt="Fotografia de perfil"
+                            hidden>
+
+                        <span
+                            id="profile-avatar-placeholder"
+                            class="profile-avatar-placeholder">
+                            U
+                        </span>
+
+                        <span class="avatar-camera">
+                            +
+                        </span>
+
+                    </button>
+
+                    <input
+                        type="file"
+                        id="avatar-input"
+                        accept="image/jpeg,image/png,image/webp"
+                        hidden>
+
+                </div>
+
+
+                <div class="profile-identity">
+
+                    <h1 id="profile-display-name">
+                        —
+                    </h1>
+
+                    <p id="profile-username">
+                        @username
+                    </p>
+
+                    <div
+                        id="profile-team"
+                        class="profile-team">
+                        —
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- =============================================
+                 PROFILE PREVIEW
+                 ============================================= -->
+
+            <section class="profile-section">
+
+                <div class="profile-section-heading">
+
+                    <div>
+                        <h2>
+                            Como apareces
+                        </h2>
+
+                        <span>
+                            PRÉVIA NA COMUNIDADE
+                        </span>
+                    </div>
+
+                </div>
+
+
+                <div class="comment-preview">
+
+                    <div class="comment-preview-avatar">
+
+                        <img
+                            id="preview-avatar"
+                            src=""
+                            alt=""
+                            hidden>
+
+                        <span
+                            id="preview-avatar-placeholder">
+                            U
+                        </span>
+
+                    </div>
+
+
+                    <div class="comment-preview-content">
+
+                        <div class="comment-preview-header">
+
+                            <strong id="preview-display-name">
+                                —
+                            </strong>
+
+                            <span id="preview-username">
+                                @username
+                            </span>
+
+                        </div>
+
+                        <p>
+                            Este é o nome que os outros
+                            adeptos verão quando participares
+                            na comunidade.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- =============================================
+                 ACCOUNT
+                 ============================================= -->
+
+            <section class="profile-section">
+
+                <div class="profile-section-heading">
+
+                    <div>
+                        <h2>
+                            Conta
+                        </h2>
+
+                        <span>
+                            INFORMAÇÃO PESSOAL
+                        </span>
+                    </div>
+
+                </div>
+
+
+                <div class="profile-card">
+
+
+                    <!-- DISPLAY NAME -->
+
+                    <div class="profile-field">
+
+                        <label for="display-name-input">
+                            Nome apresentado
+                        </label>
+
+                        <input
+                            id="display-name-input"
+                            type="text"
+                            maxlength="80"
+                            autocomplete="name"
+                            placeholder="O teu nome">
+
+                    </div>
+
+
+                    <!-- USERNAME -->
+
+                    <div class="profile-field">
+
+                        <label for="username-input">
+                            Username
+                        </label>
+
+                        <div class="username-input-wrap">
+
+                            <span>@</span>
+
+                            <input
+                                id="username-input"
+                                type="text"
+                                maxlength="30"
+                                autocomplete="username"
+                                placeholder="username">
+
+                        </div>
+
+                        <small>
+                            O username deve ser único.
+                        </small>
+
+                    </div>
+
+
+                    <button
+                        id="save-profile-button"
+                        class="profile-primary-button"
+                        type="button">
+
+                        Guardar alterações
+
+                    </button>
+
+                    <p
+                        id="profile-save-message"
+                        class="profile-message">
+                    </p>
+
+                </div>
+
+            </section>
+
+
+            <!-- =============================================
+                 TEAM
+                 ============================================= -->
+
+            <section class="profile-section">
+
+                <div class="profile-section-heading">
+
+                    <div>
+                        <h2>
+                            A tua equipa
+                        </h2>
+
+                        <span>
+                            ESCOLHA ORIGINAL
+                        </span>
+                    </div>
+
+                </div>
+
+
+                <div class="locked-team-card">
+
+                    <div
+                        id="locked-team-logo"
+                        class="locked-team-logo">
+
+                        —
+
+                    </div>
+
+
+                    <div class="locked-team-info">
+
+                        <strong id="locked-team-name">
+                            —
+                        </strong>
+
+                        <span>
+                            A equipa escolhida no início
+                            da tua experiência.
+                        </span>
+
+                    </div>
+
+
+                    <div class="locked-team-lock">
+                        🔒
+                    </div>
+
+                </div>
+
+                <p class="profile-note">
+                    A equipa escolhida não pode ser alterada.
+                </p>
+
+            </section>
+
+
+            <!-- =============================================
+                 PREFERENCES
+                 ============================================= -->
+
+            <section class="profile-section">
+
+                <div class="profile-section-heading">
+
+                    <div>
+                        <h2>
+                            Preferências
+                        </h2>
+
+                        <span>
+                            A TUA EXPERIÊNCIA
+                        </span>
+                    </div>
+
+                </div>
+
+
+                <div class="profile-card">
+
+
+                    <!-- LANGUAGE -->
+
+                    <div class="profile-setting">
+
+                        <div>
+                            <strong>
+                                Idioma
+                            </strong>
+
+                            <span>
+                                Idioma utilizado na plataforma.
+                            </span>
+                        </div>
+
+                        <select id="language-select">
+
+                            <option value="pt">
+                                Português
+                            </option>
+
+                            <option value="en">
+                                English
+                            </option>
+
+                            <option value="fr">
+                                Français
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <!-- REPLIES -->
+
+                    <label class="profile-toggle">
+
+                        <span>
+
+                            <strong>
+                                Respostas
+                            </strong>
+
+                            <small>
+                                Receber notificações quando alguém
+                                responder aos teus comentários.
+                            </small>
+
+                        </span>
+
+                        <input
+                            type="checkbox"
+                            id="notify-replies">
+
+                        <span class="toggle-ui"></span>
+
+                    </label>
+
+
+                    <!-- REACTIONS -->
+
+                    <label class="profile-toggle">
+
+                        <span>
+
+                            <strong>
+                                Reações
+                            </strong>
+
+                            <small>
+                                Saber quando alguém reage
+                                aos teus comentários.
+                            </small>
+
+                        </span>
+
+                        <input
+                            type="checkbox"
+                            id="notify-reactions">
+
+                        <span class="toggle-ui"></span>
+
+                    </label>
+
+
+                    <!-- MENTIONS -->
+
+                    <label class="profile-toggle">
+
+                        <span>
+
+                            <strong>
+                                Menções
+                            </strong>
+
+                            <small>
+                                Receber notificações quando
+                                alguém te mencionar.
+                            </small>
+
+                        </span>
+
+                        <input
+                            type="checkbox"
+                            id="notify-mentions">
+
+                        <span class="toggle-ui"></span>
+
+                    </label>
+
+
+                    <!-- EMAIL -->
+
+                    <label class="profile-toggle">
+
+                        <span>
+
+                            <strong>
+                                Notificações por email
+                            </strong>
+
+                            <small>
+                                Permitir notificações importantes
+                                por email.
+                            </small>
+
+                        </span>
+
+                        <input
+                            type="checkbox"
+                            id="email-notifications">
+
+                        <span class="toggle-ui"></span>
+
+                    </label>
+
+
+                    <button
+                        id="save-preferences-button"
+                        class="profile-primary-button"
+                        type="button">
+
+                        Guardar preferências
+
+                    </button>
+
+                    <p
+                        id="preferences-message"
+                        class="profile-message">
+                    </p>
+
+                </div>
+
+            </section>
+
+
+            <!-- =============================================
+                 PRIVACY
+                 ============================================= -->
+
+            <section class="profile-section">
+
+                <div class="profile-section-heading">
+
+                    <div>
+                        <h2>
+                            Privacidade
+                        </h2>
+
+                        <span>
+                            CONTROLA A TUA VISIBILIDADE
+                        </span>
+                    </div>
+
+                </div>
+
+
+                <div class="profile-card">
+
+
+                    <div class="profile-setting">
+
+                        <div>
+
+                            <strong>
+                                Visibilidade do perfil
+                            </strong>
+
+                            <span>
+                                Define quem pode consultar
+                                o teu perfil.
+                            </span>
+
+                        </div>
+
+                        <select id="profile-visibility">
+
+                            <option value="public">
+                                Público
+                            </option>
+
+                            <option value="members">
+                                Membros
+                            </option>
+
+                            <option value="private">
+                                Privado
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <div class="profile-setting">
+
+                        <div>
+
+                            <strong>
+                                Atividade
+                            </strong>
+
+                            <span>
+                                Controla quem pode consultar
+                                a tua atividade.
+                            </span>
+
+                        </div>
+
+                        <select id="activity-visibility">
+
+                            <option value="public">
+                                Público
+                            </option>
+
+                            <option value="members">
+                                Membros
+                            </option>
+
+                            <option value="private">
+                                Privado
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <button
+                        id="save-privacy-button"
+                        class="profile-primary-button"
+                        type="button">
+
+                        Guardar privacidade
+
+                    </button>
+
+                    <p
+                        id="privacy-message"
+                        class="profile-message">
+                    </p>
+
+                </div>
+
+            </section>
+
+
+            <!-- =============================================
+                 SUBSCRIPTION
+                 ============================================= -->
+
+            <section class="profile-section">
+
+                <div class="profile-section-heading">
+
+                    <div>
+                        <h2>
+                            Subscrição
+                        </h2>
+
+                        <span>
+                            ESTADO DA CONTA
+                        </span>
+                    </div>
+
+                </div>
+
+
+                <div class="subscription-card">
+
+                    <div class="subscription-status">
+
+                        <span>
+                            PLANO ATUAL
+                        </span>
+
+                        <strong id="subscription-status">
+                            Grátis
+                        </strong>
+
+                    </div>
+
+
+                    <div class="subscription-price">
+
+                        <strong id="subscription-price">
+                            0 AOA
+                        </strong>
+
+                        <span>
+                            por mês
+                        </span>
+
+                    </div>
+
+
+                    <div
+                        id="subscription-description"
+                        class="subscription-description">
+
+                        Neste momento a plataforma
+                        está disponível gratuitamente.
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- =============================================
+                 PAYMENT HISTORY
+                 ============================================= -->
+
+            <section class="profile-section">
+
+                <div class="profile-section-heading">
+
+                    <div>
+                        <h2>
+                            Pagamentos
+                        </h2>
+
+                        <span>
+                            HISTÓRICO
+                        </span>
+                    </div>
+
+                </div>
+
+
+                <div
+                    id="payment-history"
+                    class="profile-card payment-history">
+
+                    <div class="profile-empty">
+
+                        <span>
+                            €
+                        </span>
+
+                        <strong>
+                            Ainda não existem pagamentos.
+                        </strong>
+
+                        <small>
+                            O teu histórico de pagamentos
+                            aparecerá aqui quando necessário.
+                        </small>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- =============================================
+                 SECURITY
+                 ============================================= -->
+
+            <section class="profile-section">
+
+                <div class="profile-section-heading">
+
+                    <div>
+                        <h2>
+                            Segurança
+                        </h2>
+
+                        <span>
+                            ACESSO À CONTA
+                        </span>
+                    </div>
+
+                </div>
+
+
+                <div class="profile-card security-card">
+
+
+                    <div class="security-row">
+
+                        <div>
+
+                            <strong>
+                                Email
+                            </strong>
+
+                            <span id="profile-email">
+                                —
+                            </span>
+
+                        </div>
+
+                        <button
+                            id="change-email-button"
+                            type="button">
+                            Alterar
+                        </button>
+
+                    </div>
+
+
+                    <div class="security-row">
+
+                        <div>
+
+                            <strong>
+                                Palavra-passe
+                            </strong>
+
+                            <span>
+                                Atualiza regularmente os teus
+                                dados de acesso.
+                            </span>
+
+                        </div>
+
+                        <button
+                            id="change-password-button"
+                            type="button">
+                            Alterar
+                        </button>
+
+                    </div>
+
+
+                    <div class="security-row">
+
+                        <div>
+
+                            <strong>
+                                Sessão
+                            </strong>
+
+                            <span>
+                                Terminar a sessão neste dispositivo.
+                            </span>
+
+                        </div>
+
+                        <button
+                            id="sign-out-button"
+                            class="danger-outline-button"
+                            type="button">
+                            Terminar sessão
+                        </button>
+
+                    </div>
+
+
+                    <p
+                        id="security-message"
+                        class="profile-message">
+                    </p>
+
+                </div>
+
+            </section>
+
+
+            <!-- =============================================
+                 DELETE ACCOUNT
+                 ============================================= -->
+
+            <section class="profile-section danger-section">
+
+                <div class="profile-section-heading">
+
+                    <div>
+                        <h2>
+                            Zona de perigo
+                        </h2>
+
+                        <span>
+                            AÇÕES IRREVERSÍVEIS
+                        </span>
+                    </div>
+
+                </div>
+
+
+                <div class="danger-card">
+
+                    <div>
+
+                        <strong>
+                            Eliminar conta
+                        </strong>
+
+                        <p>
+                            A eliminação da conta é permanente
+                            e não deve ser utilizada para terminar
+                            apenas a sessão.
+                        </p>
+
+                    </div>
+
+                    <button
+                        id="delete-account-button"
+                        class="danger-button"
+                        type="button">
+
+                        Eliminar conta
+
+                    </button>
+
+                </div>
+
+            </section>
+
+
+        </div>
+
+    </main>
+
+
+    <!-- =====================================================
+         BOTTOM NAV
+         ===================================================== -->
+
+    <nav class="bottom-nav">
+
+        <a
+            href="home.html"
+            class="nav-item">
+
+            <span class="nav-icon">⌂</span>
+
+            <span>
+                Início
+            </span>
+
+        </a>
+
+
+        <a
+            href="community.html"
+            class="nav-item">
+
+            <span class="nav-icon">
+                ◉
+            </span>
+
+            <span>
+                Comunidade
+            </span>
+
+        </a>
+
+
+        <a
+            href="home.html?view=fixtures"
+            class="nav-item">
+
+            <span class="nav-icon">
+                ⚽
+            </span>
+
+            <span>
+                Jogos
+            </span>
+
+        </a>
+
+
+        <a
+            href="profile.html"
+            class="nav-item active">
+
+            <span class="nav-icon">
+                ○
+            </span>
+
+            <span>
+                Perfil
+            </span>
+
+        </a>
+
+    </nav>
+
+</div>
+
+
+<!-- =========================================================
+     SUPABASE
+     ========================================================= -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script src="js/supabase.js"></script>
+
+<script src="js/profile.js"></script>
+
+</body>
+</html>
