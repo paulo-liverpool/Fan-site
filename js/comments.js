@@ -434,8 +434,13 @@
                 error
             } = await client
                 .from("profiles")
-                .select("*")
-                .eq("id", userId)
+                .select(
+                    "id,username,display_name,avatar_url"
+                )
+                .eq(
+                    "id",
+                    userId
+                )
                 .maybeSingle();
 
 
@@ -487,9 +492,13 @@
                 data,
                 error
             } = await client
-                .from("profiles")
-                .select("*")
-                .in("id", userIds);
+                .rpc(
+                    "get_public_profiles",
+                    {
+                        user_ids:
+                            userIds
+                    }
+                );
 
 
             if (error) {
@@ -525,6 +534,144 @@
                 "BR Comments: erro ao carregar autores.",
                 error
             );
+
+        }
+
+    }
+
+
+    /* ========================================================
+       BLOCK CHECK
+       ======================================================== */
+
+    async function isBlocked(targetUserId) {
+
+        const client =
+            getSupabase();
+
+
+        if (
+            !client ||
+            !state.user ||
+            !targetUserId
+        ) {
+            return false;
+        }
+
+
+        if (
+            targetUserId ===
+            state.user.id
+        ) {
+            return false;
+        }
+
+
+        try {
+
+            const {
+                data,
+                error
+            } = await client
+                .rpc(
+                    "users_are_blocked",
+                    {
+                        first_user:
+                            state.user.id,
+
+                        second_user:
+                            targetUserId
+                    }
+                );
+
+
+            if (error) {
+
+                console.warn(
+                    "BR Comments: erro ao verificar bloqueio.",
+                    error
+                );
+
+                return false;
+
+            }
+
+
+            return Boolean(data);
+
+        } catch (error) {
+
+            console.warn(
+                "BR Comments: erro ao verificar bloqueio.",
+                error
+            );
+
+            return false;
+
+        }
+
+    }
+
+
+    async function getBlockedUserIds(userId) {
+
+        const client =
+            getSupabase();
+
+
+        if (
+            !client ||
+            !userId
+        ) {
+            return [];
+        }
+
+
+        try {
+
+            const {
+                data,
+                error
+            } = await client
+                .from("user_blocks")
+                .select(
+                    "blocked_id"
+                )
+                .eq(
+                    "blocker_id",
+                    userId
+                );
+
+
+            if (error) {
+
+                console.warn(
+                    "BR Comments: erro ao carregar bloqueios.",
+                    error
+                );
+
+                return [];
+
+            }
+
+
+            return (
+                data || []
+            )
+                .map(
+                    row =>
+                        row.blocked_id
+                )
+                .filter(Boolean);
+
+        } catch (error) {
+
+            console.warn(
+                "BR Comments: erro ao carregar bloqueios.",
+                error
+            );
+
+            return [];
 
         }
 
@@ -1391,6 +1538,34 @@
 
         try {
 
+            if (parentId) {
+
+                const parent =
+                    state.comments.find(
+                        comment =>
+                            Number(comment.id) ===
+                            Number(parentId)
+                    );
+
+
+                if (
+                    parent &&
+                    await isBlocked(
+                        parent.user_id
+                    )
+                ) {
+
+                    alert(
+                        "Não podes responder a este utilizador porque existe um bloqueio entre as contas."
+                    );
+
+                    return false;
+
+                }
+
+            }
+
+
             const {
                 error
             } = await client
@@ -1471,6 +1646,30 @@
 
 
         try {
+
+            const comment =
+                state.comments.find(
+                    item =>
+                        Number(item.id) ===
+                        Number(commentId)
+                );
+
+
+            if (
+                comment &&
+                await isBlocked(
+                    comment.user_id
+                )
+            ) {
+
+                alert(
+                    "Não podes interagir com este utilizador porque existe um bloqueio entre as contas."
+                );
+
+                return;
+
+            }
+
 
             const existing =
                 state.reactions.find(
@@ -1592,10 +1791,6 @@
                     button.dataset.action;
 
 
-                /* --------------------------------------------
-                   FILTER
-                   -------------------------------------------- */
-
                 if (
                     action === "filter"
                 ) {
@@ -1630,10 +1825,6 @@
                     return;
                 }
 
-
-                /* --------------------------------------------
-                   COMMENT
-                   -------------------------------------------- */
 
                 if (
                     action ===
@@ -1687,10 +1878,6 @@
                     return;
                 }
 
-
-                /* --------------------------------------------
-                   REPLY TOGGLE
-                   -------------------------------------------- */
 
                 if (
                     action ===
@@ -1746,10 +1933,6 @@
                 }
 
 
-                /* --------------------------------------------
-                   CANCEL REPLY
-                   -------------------------------------------- */
-
                 if (
                     action ===
                     "reply-cancel"
@@ -1767,10 +1950,6 @@
                     return;
                 }
 
-
-                /* --------------------------------------------
-                   SUBMIT REPLY
-                   -------------------------------------------- */
 
                 if (
                     action ===
@@ -1830,10 +2009,6 @@
                     return;
                 }
 
-
-                /* --------------------------------------------
-                   REACTION
-                   -------------------------------------------- */
 
                 if (
                     action ===
@@ -2140,7 +2315,8 @@
 
     window.FanComments = {
         init,
-        updateNotificationBadge
+        updateNotificationBadge,
+        getBlockedUserIds
     };
 
 
