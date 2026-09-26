@@ -12,16 +12,257 @@ let currentTableType = "league";
 let currentStandingsRows = [];
 let currentFixture = null;
 
+/* ============================================================
+   HOMEPAGE VIEW STATE
+   ============================================================ */
 
+let homepageScrollPosition = 0;
+let homepageViewRestoring = false;
+
+const HOME_VIEW_KEY =
+    "br-home-view";
+
+const HOME_SCROLL_KEY =
+    "br-home-scroll";
+
+
+function saveHomepagePosition() {
+
+    homepageScrollPosition =
+        window.scrollY ||
+        window.pageYOffset ||
+        0;
+
+    try {
+
+        sessionStorage.setItem(
+            HOME_SCROLL_KEY,
+            String(homepageScrollPosition)
+        );
+
+    } catch (error) {
+
+        console.warn(
+            "BR: não foi possível guardar posição:",
+            error
+        );
+    }
+}
+
+
+function getSavedHomepagePosition() {
+
+    try {
+
+        const value =
+            Number(
+                sessionStorage.getItem(
+                    HOME_SCROLL_KEY
+                )
+            );
+
+        return Number.isFinite(value)
+            ? value
+            : 0;
+
+    } catch (error) {
+
+        return homepageScrollPosition || 0;
+    }
+}
+
+
+function saveHomepageView(view) {
+
+    try {
+
+        sessionStorage.setItem(
+            HOME_VIEW_KEY,
+            JSON.stringify(view)
+        );
+
+    } catch (error) {
+
+        console.warn(
+            "BR: não foi possível guardar view:",
+            error
+        );
+    }
+}
+
+
+function clearHomepageView() {
+
+    try {
+
+        sessionStorage.removeItem(
+            HOME_VIEW_KEY
+        );
+
+        sessionStorage.removeItem(
+            HOME_SCROLL_KEY
+        );
+
+    } catch (error) {
+
+        console.warn(
+            "BR: não foi possível limpar view:",
+            error
+        );
+    }
+}
+
+
+function updateHomepageURL(view, replace = false) {
+
+    const url =
+        new URL(
+            window.location.href
+        );
+
+    url.search = "";
+
+    if (view && view.type) {
+
+        url.searchParams.set(
+            "view",
+            view.type
+        );
+
+        if (
+            view.id !== undefined &&
+            view.id !== null
+        ) {
+            url.searchParams.set(
+                "id",
+                String(view.id)
+            );
+        }
+
+        if (view.competition) {
+
+            url.searchParams.set(
+                "competition",
+                view.competition
+            );
+        }
+    }
+
+    const state = {
+        brHomepageView:
+            view || null
+    };
+
+    if (replace) {
+
+        window.history.replaceState(
+            state,
+            "",
+            url.toString()
+        );
+
+    } else {
+
+        window.history.pushState(
+            state,
+            "",
+            url.toString()
+        );
+    }
+}
+
+
+function openHomepageView(view) {
+
+    if (!view || !view.type) {
+        return;
+    }
+
+    /*
+     * Save exactly where the user was before
+     * opening the view.
+     */
+    saveHomepagePosition();
+
+    /*
+     * Save the view so a page refresh can
+     * reconstruct it.
+     */
+    saveHomepageView(view);
+
+    /*
+     * Add the view to browser history.
+     */
+    updateHomepageURL(
+        view,
+        false
+    );
+}
+
+
+function returnToHomepage() {
+
+    /*
+     * If this page was opened with a view in
+     * its history, go back to the homepage
+     * state instead of reloading the page.
+     */
+    if (
+        window.history.state &&
+        window.history.state.brHomepageView
+    ) {
+
+        window.history.back();
+
+        return;
+    }
+
+    /*
+     * This handles a direct refresh/open of
+     * a story URL where there may not be a
+     * previous homepage state.
+     */
+    clearHomepageView();
+
+    updateHomepageURL(
+        null,
+        true
+    );
+
+    closeHomepageView(false);
+}
+
+
+function restoreHomepageScroll() {
+
+    const position =
+        getSavedHomepagePosition();
+
+    requestAnimationFrame(() => {
+
+        window.scrollTo({
+            top: position,
+            left: 0,
+            behavior: "instant"
+        });
+
+    });
+}
 /* ============================================================
    DOM READY
    ============================================================ */
 
-document.addEventListener("DOMContentLoaded", async () => {
-    setupHomepageInteractions();
-    await loadHome();
-});
+document.addEventListener(
+    "DOMContentLoaded",
+    async () => {
 
+        setupHomepageInteractions();
+
+        setupHomepageHistory();
+
+        await loadHome();
+    }
+);
 
 /* ============================================================
    SUPABASE HELPERS
@@ -226,7 +467,49 @@ updateProfileButton(user);
             loadVideos(team.id)
         ]);
 
-        setupFeaturedCarousel();
+          setupFeaturedCarousel();
+
+        /*
+         * Restore the exact view represented by
+         * the current URL after all homepage data
+         * has finished loading.
+         */
+
+        const params =
+            new URLSearchParams(
+                window.location.search
+            );
+
+        const viewType =
+            params.get("view");
+
+        if (viewType) {
+
+            const view = {
+                type: viewType,
+                id: params.get("id"),
+                competition:
+                    params.get("competition")
+            };
+
+            /*
+             * Rebuild the browser state so
+             * Back/Home knows this is a BR view.
+             */
+            window.history.replaceState(
+                {
+                    brHomepageView: view
+                },
+                "",
+                window.location.href
+            );
+
+            saveHomepageView(view);
+
+            await restoreHomepageView(
+                view
+            );
+        }
 
     } catch (error) {
         console.error("BR: erro geral no carregamento:", error);
@@ -1002,9 +1285,12 @@ function renderNews(items) {
     if (mainCard) {
 
         mainCard.addEventListener(
-            "click",
-            () => openNewsArticle(main)
-        );
+    "click",
+    () => openNewsArticle(
+        main,
+        true
+    )
+);
 
         mainCard.addEventListener(
             "keydown",
@@ -1015,7 +1301,10 @@ function renderNews(items) {
                     event.key === " "
                 ) {
                     event.preventDefault();
-                    openNewsArticle(main);
+                     openNewsArticle(
+                      main,
+                      true
+                );
                 }
 
             }
@@ -1033,10 +1322,13 @@ function renderNews(items) {
 
             if (!item) return;
 
-            card.addEventListener(
-                "click",
-                () => openNewsArticle(item)
-            );
+    card.addEventListener(
+    "click",
+    () => openNewsArticle(
+        item,
+        true
+    )
+);
 
             card.addEventListener(
                 "keydown",
@@ -1047,7 +1339,10 @@ function renderNews(items) {
                         event.key === " "
                     ) {
                         event.preventDefault();
-                        openNewsArticle(item);
+openNewsArticle(
+    item,
+    true
+);
                     }
 
                 }
@@ -1060,7 +1355,10 @@ function renderNews(items) {
    OPEN NEWS ARTICLE
    ============================================================ */
 
-function openNewsArticle(item) {
+function openNewsArticle(
+    item,
+    createHistory = true
+) {
     if (!item) return;
 
     const focused =
@@ -1214,12 +1512,21 @@ function openNewsArticle(item) {
         <div id="fan-comments"></div>
     `;
 
+     if (createHistory) {
+
+        openHomepageView({
+            type: "news",
+            id: item.id
+        });
+
+    }
+
     showFocusedView();
 
-   if (
-    window.FanComments &&
-    item.id
-) {
+    if (
+        window.FanComments &&
+        item.id
+    ) {
     window.FanComments.init(
         `news:${item.id}`
     );
@@ -1230,7 +1537,10 @@ function openNewsArticle(item) {
 /* ============================================================
    GENERIC CONTENT
    ============================================================ */
-function openContent(item) {
+function openContent(
+    item,
+    createHistory = true
+) {
     if (!item) return;
 
     if (item.__source === "news") {
@@ -1355,10 +1665,19 @@ function openContent(item) {
         <div id="fan-comments"></div>
     `;
 
+    if (createHistory) {
+
+        openHomepageView({
+            type: "content",
+            id: item.id
+        });
+
+    }
+
     showFocusedView();
 
     if (
-    window.FanComments &&
+        window.FanComments &&
     item.id
 ) {
     window.FanComments.init(
@@ -1375,7 +1694,9 @@ function openContent(item) {
    than hiding #home-content itself.
    ============================================================ */
 
+
 function showFocusedView() {
+
     hideOtherViews();
 
     const homeContent =
@@ -1393,7 +1714,9 @@ function showFocusedView() {
     const nav =
         document.querySelector(".bottom-nav");
 
+
     if (homeContent) {
+
         [...homeContent.children]
             .forEach(child => {
 
@@ -1411,6 +1734,7 @@ function showFocusedView() {
             });
     }
 
+
     if (header) {
         header.hidden = true;
     }
@@ -1419,21 +1743,27 @@ function showFocusedView() {
         footer.hidden = true;
     }
 
+
     if (focused) {
+
         focused.hidden = false;
-        focused.classList.add("active");
+
+        focused.classList.add(
+            "active"
+        );
     }
+
 
     if (nav) {
         nav.hidden = false;
     }
+
 
     window.scrollTo({
         top: 0,
         behavior: "instant"
     });
 }
-
 
 function hideOtherViews() {
     const focused =
@@ -1468,7 +1798,9 @@ function hideOtherViews() {
 }
 
 
-function closeFocusedView() {
+function closeFocusedView(
+    restorePosition = true
+) {
 
     const homeContent =
         $("#home-content");
@@ -1494,6 +1826,119 @@ function closeFocusedView() {
     const nav =
         document.querySelector(".bottom-nav");
 
+
+    /* ========================================================
+       1. CLEAR FOCUSED CONTENT
+       ======================================================== */
+
+    if (focusedContent) {
+        focusedContent.innerHTML = "";
+    }
+
+
+    /* ========================================================
+       2. HIDE FOCUSED VIEW
+       ======================================================== */
+
+    if (focused) {
+
+        focused.hidden = true;
+
+        focused.classList.remove(
+            "active"
+        );
+    }
+
+
+    /* ========================================================
+       3. HIDE LIBRARY
+       ======================================================== */
+
+    if (library) {
+
+        library.hidden = true;
+
+        library.classList.remove(
+            "active"
+        );
+    }
+
+
+    /* ========================================================
+       4. HIDE PREDICTION
+       ======================================================== */
+
+    if (prediction) {
+
+        prediction.hidden = true;
+
+        prediction.classList.remove(
+            "active"
+        );
+    }
+
+
+    /* ========================================================
+       5. RESTORE HOMEPAGE SECTIONS
+       ======================================================== */
+
+    if (homeContent) {
+
+        [...homeContent.children]
+            .forEach(child => {
+
+                if (
+                    child.id ===
+                        "focused-content-view" ||
+                    child.id ===
+                        "library-view" ||
+                    child.id ===
+                        "prediction-view"
+                ) {
+                    child.hidden = true;
+                    return;
+                }
+
+                child.hidden = false;
+            });
+    }
+
+
+    /* ========================================================
+       6. RESTORE HEADER / FOOTER
+       ======================================================== */
+
+    if (header) {
+        header.hidden = false;
+    }
+
+    if (footer) {
+        footer.hidden = false;
+    }
+
+
+    if (nav) {
+        nav.hidden = false;
+    }
+
+
+    /* ========================================================
+       7. RESTORE ORIGINAL HOMEPAGE POSITION
+       ======================================================== */
+
+    if (restorePosition) {
+
+        restoreHomepageScroll();
+
+    } else {
+
+        window.scrollTo({
+            top: 0,
+            behavior: "instant"
+        });
+
+    }
+}
 
     /* ========================================================
        1. CLEAR THE FOCUSED ARTICLE CONTENT
@@ -1624,7 +2069,12 @@ function isAnyFocusedViewOpen() {
    LIBRARY / MORE
    ============================================================ */
 
-function openListView(items, title, label) {
+function openListView(
+    items,
+    title,
+    label,
+    createHistory = true
+) {
     const library =
         $("#library-view");
 
@@ -1680,7 +2130,29 @@ function openListView(items, title, label) {
         labelElement.textContent =
             label || "BARÇA REAL";
     }
+     if (createHistory) {
 
+        let viewId =
+            "news";
+
+        if (
+            label === "VOZES"
+        ) {
+            viewId = "opinion";
+        }
+
+        if (
+            label === "BARÇA REAL TV"
+        ) {
+            viewId = "videos";
+        }
+
+        openHomepageView({
+            type: "library",
+            id: viewId
+        });
+
+    }
     renderLibrary(items || []);
 
     library.hidden = false;
@@ -2629,7 +3101,9 @@ function ensureMoreFixturesButton() {
  * Load the complete fixture list for the
  * currently selected team.
  */
-async function openAllFixtures() {
+async function openAllFixtures(
+    createHistory = true
+) {
 
     if (!currentTeam) return;
 
@@ -2734,9 +3208,10 @@ async function openAllFixtures() {
 
                 });
 
-        renderAllFixturesView(
+         renderAllFixturesView(
             fixtures,
-            currentTeam
+            currentTeam,
+            createHistory
         );
 
     } catch (error) {
@@ -2755,7 +3230,8 @@ async function openAllFixtures() {
  */
 function renderAllFixturesView(
     fixtures,
-    team
+    team,
+    createHistory = true
 ) {
 
     const article =
@@ -2954,6 +3430,14 @@ function renderAllFixturesView(
                 `
         }
     `;
+
+     if (createHistory) {
+
+        openHomepageView({
+            type: "fixtures"
+        });
+
+    }
 
     showFocusedView();
 }
@@ -3269,7 +3753,9 @@ function renderLeagueTable(rows) {
  * Open the complete standings inside the
  * existing focused-content-view.
  */
-function openFullStandings() {
+function openFullStandings(
+    createHistory = true
+) {
 
     if (!currentStandingsRows.length) {
         return;
@@ -3446,7 +3932,15 @@ function openFullStandings() {
 
         </div>
     `;
+     if (createHistory) {
 
+        openHomepageView({
+            type: "standings",
+            competition:
+                currentTableType
+        });
+
+    }
     showFocusedView();
 
     /*
@@ -3742,7 +4236,9 @@ function renderVideos(items) {
    PREDICTION
    ============================================================ */
 
-function openPrediction() {
+function openPrediction(
+    createHistory = true
+) {
     if (!currentFixture) {
         return;
     }
@@ -3790,6 +4286,13 @@ function openPrediction() {
     if (awayInput) awayInput.value = "";
     if (message) message.textContent = "";
 
+    if (createHistory) {
+
+        openHomepageView({
+            type: "prediction"
+        });
+
+    }
     hideOtherViews();
 
     const homeContent =
@@ -3921,7 +4424,264 @@ async function submitPrediction() {
     }
 }
 
+/* ============================================================
+   BROWSER HISTORY
+   ============================================================ */
 
+function setupHomepageHistory() {
+
+    window.addEventListener(
+        "popstate",
+        event => {
+
+            const state =
+                event.state;
+
+            /*
+             * Browser returned to a homepage view.
+             */
+            if (
+                state &&
+                state.brHomepageView
+            ) {
+
+                restoreHomepageView(
+                    state.brHomepageView
+                );
+
+                return;
+            }
+
+
+            /*
+             * No view = normal homepage.
+             */
+            clearHomepageView();
+
+            closeHomepageView(
+                true
+            );
+        }
+    );
+}
+
+function closeHomepageView(
+    restorePosition = true
+) {
+
+    closeFocusedView(
+        restorePosition
+    );
+}
+
+/* ============================================================
+   RESTORE VIEW AFTER REFRESH
+   ============================================================ */
+
+async function restoreHomepageView(view) {
+
+    if (!view || !view.type) {
+        return;
+    }
+
+    homepageViewRestoring = true;
+
+    try {
+
+        /* ====================================================
+           NEWS ARTICLE
+           ==================================================== */
+
+        if (view.type === "news") {
+
+            const id =
+                Number(view.id);
+
+            const item =
+                newsItems.find(
+                    news =>
+                        Number(news.id) === id
+                );
+
+            if (item) {
+
+                openNewsArticle(
+                    item,
+                    false
+                );
+
+                return;
+            }
+        }
+
+
+        /* ====================================================
+           GENERIC CONTENT
+           ==================================================== */
+          if (view.type === "content") {
+
+            const id =
+                Number(view.id);
+
+            const sources = [
+                ...featuredItems,
+                ...opinionItems
+            ];
+
+            let item =
+                sources.find(
+                    content =>
+                        Number(content.id) === id
+                );
+
+
+            /*
+             * Fallback: retrieve the content
+             * directly from Supabase.
+             */
+            if (!item) {
+
+                const client =
+                    getSupabase();
+
+                if (client) {
+
+                    const {
+                        data,
+                        error
+                    } = await client
+                        .from("content")
+                        .select("*")
+                        .eq("id", id)
+                        .maybeSingle();
+
+                    if (!error) {
+                        item = data;
+                    }
+                }
+            }
+
+
+            if (item) {
+
+                openContent(
+                    item,
+                    false
+                );
+
+                return;
+            }
+        }
+
+
+        /* ====================================================
+           ALL FIXTURES
+           ==================================================== */
+
+        if (view.type === "fixtures") {
+
+            await openAllFixtures(
+                false
+            );
+
+            return;
+        }
+
+
+        /* ====================================================
+           STANDINGS
+           ==================================================== */
+
+        if (view.type === "standings") {
+
+            if (
+                view.competition ===
+                "champions"
+            ) {
+                currentTableType =
+                    "champions";
+            } else {
+                currentTableType =
+                    "league";
+            }
+
+            if (currentTeam) {
+
+                await loadLeagueTable(
+                    currentTeam.id
+                );
+
+                openFullStandings(
+                    false
+                );
+            }
+
+            return;
+        }
+
+
+        /* ====================================================
+           LIBRARY
+           ==================================================== */
+
+        if (view.type === "library") {
+
+            if (
+                view.id === "news"
+            ) {
+
+                openListView(
+                    newsItems,
+                    "Todas as notícias",
+                    "NOTÍCIAS",
+                    false
+                );
+
+            } else if (
+                view.id === "opinion"
+            ) {
+
+                openListView(
+                    opinionItems,
+                    "Opinião & Análise",
+                    "VOZES",
+                    false
+                );
+
+            } else if (
+                view.id === "videos"
+            ) {
+
+                openListView(
+                    [],
+                    "Vídeos",
+                    "BARÇA REAL TV",
+                    false
+                );
+            }
+
+            return;
+        }
+
+
+        /* ====================================================
+           PREDICTION
+           ==================================================== */
+
+        if (view.type === "prediction") {
+
+            openPrediction(
+                false
+            );
+
+            return;
+        }
+
+    } finally {
+
+        homepageViewRestoring = false;
+    }
+}
 /* ============================================================
    NAVIGATION / INTERACTIONS
    ============================================================ */
@@ -4092,6 +4852,52 @@ function setupTableTabs() {
 
 function setupBottomNavigation() {
 
+   /* ========================================================
+       HOME NAVIGATION
+       ======================================================== */
+
+    const homeButtons =
+        $$(
+            "#home-nav, " +
+            "#home-button, " +
+            "[data-nav='home'], " +
+            ".bottom-nav a[href='home.html'], " +
+            ".bottom-nav a[href='./home.html']"
+        );
+
+    homeButtons.forEach(button => {
+
+        button.addEventListener(
+            "click",
+            event => {
+
+                if (
+                    isAnyFocusedViewOpen()
+                ) {
+
+                    event.preventDefault();
+
+                    returnToHomepage();
+
+                    return;
+                }
+
+                /*
+                 * Already on homepage.
+                 * Prevent unnecessary reload.
+                 */
+                event.preventDefault();
+
+                clearHomepageView();
+
+                updateHomepageURL(
+                    null,
+                    true
+                );
+            }
+        );
+
+    });
     const community =
         $("#community-nav");
 
