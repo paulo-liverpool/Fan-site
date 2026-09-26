@@ -4383,7 +4383,7 @@ async function restoreHomepageView(view) {
 
     try {
 
-        /* ====================================================
+          /* ====================================================
            NEWS ARTICLE
            ==================================================== */
 
@@ -4392,11 +4392,46 @@ async function restoreHomepageView(view) {
             const id =
                 Number(view.id);
 
-            const item =
+            let item =
                 newsItems.find(
                     news =>
                         Number(news.id) === id
                 );
+
+
+            /*
+             * Fallback: retrieve the article
+             * directly from Supabase.
+             */
+            if (!item) {
+
+                const client =
+                    getSupabase();
+
+                if (client) {
+
+                    const {
+                        data,
+                        error
+                    } = await client
+                        .from("news")
+                        .select("*")
+                        .eq("id", id)
+                        .maybeSingle();
+
+                    if (!error) {
+                        item = data;
+                    } else {
+
+                        console.error(
+                            "BR: erro ao restaurar notícia:",
+                            error
+                        );
+
+                    }
+                }
+            }
+
 
             if (item) {
 
@@ -4407,6 +4442,13 @@ async function restoreHomepageView(view) {
 
                 return;
             }
+
+            console.warn(
+                "BR: notícia não encontrada para restauração:",
+                id
+            );
+
+            return;
         }
 
 
