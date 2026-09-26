@@ -4383,25 +4383,43 @@ async function restoreHomepageView(view) {
 
     try {
 
-          /* ====================================================
+        /* ====================================================
            NEWS ARTICLE
            ==================================================== */
 
         if (view.type === "news") {
 
+            /*
+             * News IDs are kept as strings.
+             * Do NOT convert them with Number().
+             */
             const id =
-                Number(view.id);
+                String(view.id || "").trim();
 
+            if (!id) {
+
+                console.warn(
+                    "BR: ID da notícia não encontrado na URL."
+                );
+
+                return;
+            }
+
+
+            /*
+             * First try the news already loaded
+             * on the homepage.
+             */
             let item =
                 newsItems.find(
                     news =>
-                        Number(news.id) === id
+                        String(news.id) === id
                 );
 
 
             /*
-             * Fallback: retrieve the article
-             * directly from Supabase.
+             * Fallback:
+             * retrieve the article directly from Supabase.
              */
             if (!item) {
 
@@ -4419,20 +4437,26 @@ async function restoreHomepageView(view) {
                         .eq("id", id)
                         .maybeSingle();
 
-                    if (!error) {
-                        item = data;
-                    } else {
+                    if (error) {
 
                         console.error(
                             "BR: erro ao restaurar notícia:",
                             error
                         );
 
+                    } else {
+
+                        item = data;
+
                     }
                 }
             }
 
 
+            /*
+             * Reopen the exact article without
+             * creating another history entry.
+             */
             if (item) {
 
                 openNewsArticle(
@@ -4443,6 +4467,7 @@ async function restoreHomepageView(view) {
                 return;
             }
 
+
             console.warn(
                 "BR: notícia não encontrada para restauração:",
                 id
@@ -4450,7 +4475,6 @@ async function restoreHomepageView(view) {
 
             return;
         }
-
 
         /* ====================================================
            GENERIC CONTENT
