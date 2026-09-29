@@ -4859,7 +4859,7 @@ function setupBottomNavigation() {
         );
 
     });
-    const community =
+      const community =
         $("#community-nav");
 
     const games =
@@ -4870,7 +4870,7 @@ function setupBottomNavigation() {
             "click",
             () => {
                 window.location.href =
-                    "community.html";
+                    "comunidade.html";
             }
         );
     }
