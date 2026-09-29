@@ -10,3 +10,6 @@ const supabaseClient = window.supabase.createClient(
     SUPABASE_URL,
     SUPABASE_ANON_KEY
 );
+
+// Expose the initialized client globally
+window.supabaseClient = supabaseClient;
