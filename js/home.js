@@ -483,7 +483,7 @@ updateProfileButton(user);
         const viewType =
             params.get("view");
 
-        if (viewType) {
+              if (viewType) {
 
             const view = {
                 type: viewType,
@@ -509,6 +509,21 @@ updateProfileButton(user);
             await restoreHomepageView(
                 view
             );
+
+        } else {
+
+            /*
+             * Community deep link:
+             *
+             * comunidade.html stores:
+             *
+             * br_pending_article_key
+             * br_pending_comment_id
+             *
+             * We wait until all homepage data is
+             * loaded, then open the exact article.
+             */
+            await restorePendingCommunityComment();
         }
 
     } catch (error) {
@@ -1357,7 +1372,8 @@ openNewsArticle(
 
 function openNewsArticle(
     item,
-    createHistory = true
+    createHistory = true,
+    focusCommentId = null
 ) {
     if (!item) return;
 
@@ -1512,7 +1528,7 @@ function openNewsArticle(
         <div id="fan-comments"></div>
     `;
 
-     if (createHistory) {
+    if (createHistory) {
 
         openHomepageView({
             type: "news",
@@ -1527,24 +1543,30 @@ function openNewsArticle(
         window.FanComments &&
         item.id
     ) {
-    window.FanComments.init(
-        `news:${item.id}`
-    );
-}
-}
 
+        window.FanComments.init(
+            `news:${item.id}`,
+            focusCommentId
+        );
 
+    }
+}
 /* ============================================================
    GENERIC CONTENT
    ============================================================ */
 function openContent(
     item,
-    createHistory = true
+    createHistory = true,
+    focusCommentId = null
 ) {
     if (!item) return;
 
     if (item.__source === "news") {
-        openNewsArticle(item);
+        openNewsArticle(
+            item,
+            createHistory,
+            focusCommentId
+        );
         return;
     }
 
@@ -1678,14 +1700,16 @@ function openContent(
 
     if (
         window.FanComments &&
-    item.id
-) {
-    window.FanComments.init(
-        `content:${item.id}`
-    );
-}
-}
+        item.id
+    ) {
 
+        window.FanComments.init(
+            `content:${item.id}`,
+            focusCommentId
+        );
+
+    }
+}
 /* ============================================================
    VIEW STATE
    IMPORTANT:
@@ -3649,9 +3673,9 @@ function renderLeagueTable(rows) {
  * existing focused-content-view.
  */
 function openFullStandings(
-    createHistory = true
+    createHistory = true,
+    focusCommentId = null
 ) {
-
     if (!currentStandingsRows.length) {
         return;
     }
@@ -3842,10 +3866,11 @@ function openFullStandings(
      * Each competition gets its own
      * independent comments history.
      */
-    if (window.FanComments) {
+       if (window.FanComments) {
 
         window.FanComments.init(
-            `standings:${currentTableType}`
+            `standings:${currentTableType}`,
+            focusCommentId
         );
 
     }
@@ -4318,7 +4343,273 @@ async function submitPrediction() {
         }
     }
 }
+/* ============================================================
+   COMMUNITY COMMENT DEEP LINK
+   ============================================================ */
 
+async function restorePendingCommunityComment() {
+
+    let articleKey = null;
+    let commentId = null;
+
+    try {
+
+        articleKey =
+            localStorage.getItem(
+                "br_pending_article_key"
+            );
+
+        commentId =
+            localStorage.getItem(
+                "br_pending_comment_id"
+            );
+
+    } catch (error) {
+
+        console.warn(
+            "BR: não foi possível ler o comentário pendente:",
+            error
+        );
+
+        return false;
+    }
+
+    if (!articleKey) {
+        return false;
+    }
+
+    articleKey =
+        String(articleKey).trim();
+
+    if (!articleKey) {
+        return false;
+    }
+
+    commentId =
+        commentId
+            ? String(commentId).trim()
+            : null;
+
+    /*
+     * Clear immediately so a refresh cannot
+     * reopen the same Community notification.
+     */
+    try {
+
+        localStorage.removeItem(
+            "br_pending_article_key"
+        );
+
+        localStorage.removeItem(
+            "br_pending_comment_id"
+        );
+
+    } catch (error) {
+
+        console.warn(
+            "BR: não foi possível limpar deep link:",
+            error
+        );
+    }
+
+
+    /* ========================================================
+       NEWS
+       ======================================================== */
+
+    if (
+        articleKey.startsWith("news:")
+    ) {
+
+        const id =
+            articleKey
+                .slice(5)
+                .trim();
+
+        if (!id) {
+            return false;
+        }
+
+        let item =
+            newsItems.find(
+                news =>
+                    String(news.id) === id
+            );
+
+        if (!item) {
+
+            const client =
+                getSupabase();
+
+            if (client) {
+
+                const {
+                    data,
+                    error
+                } = await client
+                    .from("news")
+                    .select("*")
+                    .eq("id", id)
+                    .maybeSingle();
+
+                if (error) {
+
+                    console.error(
+                        "BR: erro ao abrir notícia do Community:",
+                        error
+                    );
+
+                } else {
+
+                    item = data;
+
+                }
+            }
+        }
+
+        if (!item) {
+
+            console.warn(
+                "BR: notícia do comentário não encontrada:",
+                id
+            );
+
+            return false;
+        }
+
+        openNewsArticle(
+            item,
+            true,
+            commentId
+        );
+
+        return true;
+    }
+
+
+    /* ========================================================
+       GENERIC CONTENT
+       ======================================================== */
+
+    if (
+        articleKey.startsWith("content:")
+    ) {
+
+        const id =
+            Number(
+                articleKey
+                    .slice(8)
+                    .trim()
+            );
+
+        if (!Number.isFinite(id)) {
+            return false;
+        }
+
+        const sources = [
+            ...featuredItems,
+            ...opinionItems
+        ];
+
+        let item =
+            sources.find(
+                content =>
+                    Number(content.id) === id
+            );
+
+        if (!item) {
+
+            const client =
+                getSupabase();
+
+            if (client) {
+
+                const {
+                    data,
+                    error
+                } = await client
+                    .from("content")
+                    .select("*")
+                    .eq("id", id)
+                    .maybeSingle();
+
+                if (error) {
+
+                    console.error(
+                        "BR: erro ao abrir conteúdo do Community:",
+                        error
+                    );
+
+                } else {
+
+                    item = data;
+
+                }
+            }
+        }
+
+        if (!item) {
+
+            console.warn(
+                "BR: conteúdo do comentário não encontrado:",
+                id
+            );
+
+            return false;
+        }
+
+        openContent(
+            item,
+            true,
+            commentId
+        );
+
+        return true;
+    }
+
+
+    /* ========================================================
+       STANDINGS
+       ======================================================== */
+
+    if (
+        articleKey.startsWith("standings:")
+    ) {
+
+        const competition =
+            articleKey
+                .slice(10)
+                .trim();
+
+        currentTableType =
+            competition === "champions"
+                ? "champions"
+                : "league";
+
+        if (!currentTeam) {
+            return false;
+        }
+
+        await loadLeagueTable(
+            currentTeam.id
+        );
+
+        openFullStandings(
+            true,
+            commentId
+        );
+
+        return true;
+    }
+
+
+    console.warn(
+        "BR: article_key do Community não reconhecido:",
+        articleKey
+    );
+
+    return false;
+}
 /* ============================================================
    BROWSER HISTORY
    ============================================================ */
