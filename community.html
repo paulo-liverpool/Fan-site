@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="pt">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Comunidade | Barça Real</title>
+
+    <link
+        rel="stylesheet"
+        href="css/global.css"
+    >
+
+    <link
+        rel="stylesheet"
+        href="css/community.css"
+    >
+
+</head>
+
+<body>
+
+<div class="community-page">
+
+    <!-- ========================================================
+         TOPBAR
+         ======================================================== -->
+
+    <header class="topbar">
+
+        <a
+            href="home.html"
+            class="brand team-brand"
+            aria-label="Início"
+        >
+            <img
+                id="team-brand-logo"
+                src=""
+                alt=""
+            >
+        </a>
+
+        <a
+            href="profile.html"
+            id="profile-button"
+            class="profile-button"
+            aria-label="Perfil"
+        >
+            —
+        </a>
+
+    </header>
+
+
+    <!-- ========================================================
+         COMMUNITY HEADER
+         ======================================================== -->
+
+    <section class="community-header">
+
+        <div class="community-header-inner">
+
+            <div class="eyebrow">
+                BARÇA REAL
+            </div>
+
+            <h1>
+                Comunidade
+            </h1>
+
+            <p>
+                Onde os adeptos encontram o futebol.
+            </p>
+
+        </div>
+
+    </section>
+
+
+    <!-- ========================================================
+         MAIN CONTENT
+         ======================================================== -->
+
+    <main class="content community-content">
+
+
+        <!-- ====================================================
+             COMMUNITY ROOMS
+             ==================================================== -->
+
+        <section class="section">
+
+            <div class="section-heading">
+
+                <h2>
+                    Espaços da comunidade
+                </h2>
+
+                <span>
+                    PARTICIPA
+                </span>
+
+            </div>
+
+
+            <div class="community-rooms">
+
+
+                <button
+                    type="button"
+                    class="community-room room-general"
+                    data-category="general"
+                >
+
+                    <span class="community-room-icon">
+                        ◉
+                    </span>
+
+                    <span class="community-room-content">
+
+                        <strong>
+                            Futebol Geral
+                        </strong>
+
+                        <small>
+                            Fala de futebol para além do Barça e do Real.
+                        </small>
+
+                    </span>
+
+                    <span class="community-room-arrow">
+                        →
+                    </span>
+
+                </button>
+
+
+                <button
+                    type="button"
+                    class="community-room room-debate"
+                    data-category="debate"
+                >
+
+                    <span class="community-room-icon">
+                        ?
+                    </span>
+
+                    <span class="community-room-content">
+
+                        <strong>
+                            Debate da Semana
+                        </strong>
+
+                        <small>
+                            Uma questão. Diferentes opiniões.
+                        </small>
+
+                    </span>
+
+                    <span class="community-room-arrow">
+                        →
+                    </span>
+
+                </button>
+
+
+                <button
+                    type="button"
+                    class="community-room room-fantalk"
+                    data-category="fan_talk"
+                >
+
+                    <span class="community-room-icon">
+                        💬
+                    </span>
+
+                    <span class="community-room-content">
+
+                        <strong>
+                            Fan Talk
+                        </strong>
+
+                        <small>
+                            O espaço dos adeptos.
+                        </small>
+
+                    </span>
+
+                    <span class="community-room-arrow">
+                        →
+                    </span>
+
+                </button>
+
+
+                <button
+                    type="button"
+                    class="community-room room-match"
+                    data-category="match"
+                >
+
+                    <span class="community-room-icon">
+                        ⚽
+                    </span>
+
+                    <span class="community-room-content">
+
+                        <strong>
+                            Discussões dos Jogos
+                        </strong>
+
+                        <small>
+                            Conversa antes, durante e depois dos jogos.
+                        </small>
+
+                    </span>
+
+                    <span class="community-room-arrow">
+                        →
+                    </span>
+
+                </button>
+
+
+                <button
+                    type="button"
+                    class="community-room room-classico"
+                    data-category="el_clasico"
+                >
+
+                    <span class="community-room-icon">
+                        ★
+                    </span>
+
+                    <span class="community-room-content">
+
+                        <strong>
+                            El Clásico
+                        </strong>
+
+                        <small>
+                            O espaço especial para Barça x Real.
+                        </small>
+
+                    </span>
+
+                    <span class="community-room-arrow">
+                        →
+                    </span>
+
+                </button>
+
+
+            </div>
+
+        </section>
+
+
+        <!-- ====================================================
+             ACTIVE ROOM
+             ==================================================== -->
+
+        <section
+            id="community-room-view"
+            class="community-room-view"
+            hidden
+        >
+
+            <div class="community-room-view-header">
+
+                <button
+                    type="button"
+                    id="community-room-back"
+                    class="community-back-button"
+                >
+                    ← Comunidade
+                </button>
+
+                <div>
+
+                    <div
+                        id="community-room-label"
+                        class="community-room-label"
+                    >
+                        FAN TALK
+                    </div>
+
+                    <h2
+                        id="community-room-title"
+                    >
+                        Fan Talk
+                    </h2>
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                 CREATE POST
+                 ================================================= -->
+
+            <div
+                id="community-composer"
+                class="community-composer"
+            >
+
+                <div class="community-composer-top">
+
+                    <span
+                        id="community-user-avatar"
+                        class="community-avatar"
+                    >
+                        —
+                    </span>
+
+                    <span
+                        id="community-user-name"
+                        class="community-composer-name"
+                    >
+                        Adepto
+                    </span>
+
+                </div>
+
+
+                <textarea
+                    id="community-post-input"
+                    rows="4"
+                    maxlength="1000"
+                    placeholder="O que estás a pensar?"
+                ></textarea>
+
+
+                <div class="community-composer-bottom">
+
+                    <span
+                        id="community-character-count"
+                    >
+                        0/1000
+                    </span>
+
+                    <button
+                        type="button"
+                        id="community-post-submit"
+                        class="community-primary-button"
+                    >
+                        Publicar
+                    </button>
+
+                </div>
+
+                <div
+                    id="community-post-message"
+                    class="community-message"
+                    aria-live="polite"
+                ></div>
+
+            </div>
+
+
+            <!-- =================================================
+                 POSTS
+                 ================================================= -->
+
+            <div
+                id="community-posts"
+                class="community-posts"
+            >
+
+                <div class="community-loading">
+                    A carregar a comunidade...
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ====================================================
+             DEFAULT COMMUNITY FEED
+             ==================================================== -->
+
+        <section
+            id="community-feed"
+            class="section"
+        >
+
+            <div class="section-heading">
+
+                <h2>
+                    Fan Talk
+                </h2>
+
+                <span>
+                    ADEPTOS
+                </span>
+
+            </div>
+
+
+            <div
+                id="community-feed-list"
+                class="community-feed-list"
+            >
+
+                <div class="community-loading">
+                    A carregar...
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ====================================================
+             COMMUNITY INFO
+             ==================================================== -->
+
+        <section class="section community-info-section">
+
+            <div class="community-info-card">
+
+                <div class="community-info-icon">
+                    ⚽
+                </div>
+
+                <div>
+
+                    <strong>
+                        Uma comunidade para todos
+                    </strong>
+
+                    <p>
+                        Apoias o Barça ou o Real, aqui podes
+                        falar de futebol, participar nos debates
+                        e acompanhar as discussões dos jogos.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- ========================================================
+         FOOTER
+         ======================================================== -->
+
+    <footer class="site-footer">
+
+        <div class="footer-brand">
+            BARÇA <span>REAL</span>
+        </div>
+
+        <p>
+            A tua comunidade de futebol.
+        </p>
+
+        <div class="footer-links">
+
+            <a href="home.html">
+                Início
+            </a>
+
+            <a href="community.html">
+                Comunidade
+            </a>
+
+            <a href="home.html#fixtures-section">
+                Jogos
+            </a>
+
+            <a href="profile.html">
+                Perfil
+            </a>
+
+        </div>
+
+        <div class="footer-copy">
+            © Barça Real
+        </div>
+
+    </footer>
+
+
+    <!-- ========================================================
+         BOTTOM NAVIGATION
+         ======================================================== -->
+
+    <nav
+        class="bottom-nav"
+        aria-label="Navegação principal"
+    >
+
+        <a
+            href="home.html"
+            class="nav-item"
+            id="home-nav"
+        >
+
+            <span class="nav-icon">
+                ⌂
+            </span>
+
+            <span>
+                Início
+            </span>
+
+        </a>
+
+
+        <button
+            type="button"
+            class="nav-item active"
+            id="community-nav"
+        >
+
+            <span class="nav-icon community-nav-icon-wrap">
+
+                ◉
+
+                <span
+                    id="fan-notification-badge"
+                    class="fan-notification-badge"
+                    hidden
+                >
+                    0
+                </span>
+
+            </span>
+
+            <span>
+                Comunidade
+            </span>
+
+        </button>
+
+
+        <a
+            href="home.html#fixtures-section"
+            class="nav-item"
+            id="games-nav"
+        >
+
+            <span class="nav-icon">
+                ⚽
+            </span>
+
+            <span>
+                Jogos
+            </span>
+
+        </a>
+
+
+        <a
+            href="profile.html"
+            class="nav-item"
+            id="profile-nav"
+        >
+
+            <span class="nav-icon">
+                ●
+            </span>
+
+            <span>
+                Perfil
+            </span>
+
+        </a>
+
+    </nav>
+
+</div>
+
+
+<!-- ============================================================
+     SUPABASE
+     ============================================================ -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script src="js/supabase.js"></script>
+
+<script src="js/community.js"></script>
+
+</body>
+
+</html>
