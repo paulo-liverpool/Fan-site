@@ -206,7 +206,7 @@
        PROFILE CACHE
        ======================================================== */
 
-    async function loadProfiles(ids) {
+       async function loadProfiles(ids) {
 
         const supabase =
             getSupabase();
@@ -217,48 +217,40 @@
             )
         ];
 
-
         const missingIds =
             uniqueIds.filter(
                 id =>
                     !state.profiles.has(id)
             );
 
-
         if (!missingIds.length) {
             return;
         }
 
-
+        /*
+         * Public profiles must be loaded through the
+         * secure RPC because normal users cannot directly
+         * read other users' profiles through RLS.
+         */
         const {
             data,
             error
-        } = await supabase
-            .from("profiles")
-            .select(`
-                id,
-                username,
-                display_name,
-                avatar_url,
-                bio
-            `)
-            .in(
-                "id",
-                missingIds
-            );
-
+        } = await supabase.rpc(
+            "get_public_profiles",
+            {
+                user_ids: missingIds
+            }
+        );
 
         if (error) {
 
             console.error(
-                "BR Comunidade: erro ao carregar perfis.",
+                "BR Comunidade: erro ao carregar perfis públicos.",
                 error
             );
 
             return;
-
         }
-
 
         (data || []).forEach(
             profile => {
@@ -272,10 +264,6 @@
         );
 
     }
-
-
-    function getProfile(id) {
-
         return (
             state.profiles.get(id) ||
             {
@@ -2046,7 +2034,7 @@
     function openPeopleSearch() {
 
         window.location.href =
-            "perfil.html";
+            "profile.html";
 
     }
 
@@ -2140,7 +2128,7 @@
                 () => {
 
                     window.location.href =
-                        "perfil.html";
+                        "profile.html";
 
                 }
             );
