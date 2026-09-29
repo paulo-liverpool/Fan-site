@@ -4,7 +4,8 @@
 
 .community-page {
     min-height: 100vh;
-    padding-bottom: 90px;
+    padding-bottom: 92px;
+    background: var(--team-background, #08090c);
 }
 
 
@@ -15,20 +16,20 @@
 .community-topbar {
     position: sticky;
     top: 0;
-    z-index: 100;
+    z-index: 50;
 
-    height: 70px;
-
-    display: flex;
+    display: grid;
+    grid-template-columns: 44px 1fr auto;
     align-items: center;
-    gap: 14px;
 
-    padding: 0 16px;
+    min-height: 64px;
+    padding: 8px 16px;
 
     background: rgba(8, 9, 12, 0.94);
-    backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 
-    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
 }
 
 
@@ -36,15 +37,34 @@
     width: 38px;
     height: 38px;
 
-    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 0;
     border-radius: 50%;
 
-    background: var(--surface);
-    color: white;
+    background: rgba(255, 255, 255, 0.06);
+    color: #ffffff;
 
-    font-size: 20px;
+    font-size: 22px;
+    line-height: 1;
 
     cursor: pointer;
+
+    transition:
+        background 0.2s ease,
+        transform 0.2s ease;
+}
+
+
+.community-back:hover {
+    background: rgba(255, 255, 255, 0.11);
+}
+
+
+.community-back:active {
+    transform: scale(0.94);
 }
 
 
@@ -53,30 +73,30 @@
     align-items: center;
     gap: 9px;
 
-    flex: 1;
+    min-width: 0;
 }
 
 
 .community-title {
     font-size: 18px;
     font-weight: 700;
+    color: #ffffff;
 }
 
 
 .community-unread-count {
-    min-width: 22px;
-    height: 22px;
+    min-width: 21px;
+    height: 21px;
+    padding: 0 6px;
 
     display: inline-flex;
     align-items: center;
     justify-content: center;
 
-    padding: 0 6px;
+    border-radius: 999px;
 
-    border-radius: 20px;
-
-    background: var(--team-primary);
-    color: white;
+    background: #ef3340;
+    color: #ffffff;
 
     font-size: 11px;
     font-weight: 800;
@@ -87,12 +107,17 @@
     border: 0;
     background: transparent;
 
-    color: var(--team-primary);
+    color: var(--team-primary, #ffffff);
 
     font-size: 12px;
     font-weight: 700;
 
     cursor: pointer;
+}
+
+
+.community-read-button:hover {
+    opacity: 0.8;
 }
 
 
@@ -101,20 +126,22 @@
    ============================================================ */
 
 .community-content {
-    width: min(calc(100% - 24px), 900px);
+    width: min(100%, 900px);
     margin: 0 auto;
+    padding: 18px 16px 32px;
 }
 
 
 .community-section {
-    margin-top: 26px;
+    margin-bottom: 30px;
 }
 
 
 .community-section-header {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: space-between;
+    gap: 16px;
 
     margin-bottom: 12px;
 }
@@ -123,28 +150,51 @@
 .community-section-label {
     display: block;
 
-    color: var(--muted);
+    margin-bottom: 4px;
+
+    color: var(--team-primary, #8f98a8);
 
     font-size: 10px;
     font-weight: 800;
-
-    letter-spacing: 1.4px;
+    letter-spacing: 0.12em;
 }
 
 
-.community-section h2 {
-    margin: 4px 0 0;
+.community-section-header h2 {
+    margin: 0;
 
-    font-size: 21px;
-    line-height: 1.2;
+    color: #ffffff;
+
+    font-size: 20px;
+    font-weight: 750;
+}
+
+
+.community-section-count {
+    min-width: 28px;
+    height: 28px;
+    padding: 0 8px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 999px;
+
+    background: rgba(255, 255, 255, 0.07);
+    color: #b7becb;
+
+    font-size: 11px;
+    font-weight: 700;
 }
 
 
 .community-text-button {
     border: 0;
-    background: transparent;
+    padding: 0;
 
-    color: var(--team-primary);
+    background: transparent;
+    color: var(--team-primary, #ffffff);
 
     font-size: 12px;
     font-weight: 700;
@@ -153,39 +203,45 @@
 }
 
 
+.community-text-button:hover {
+    opacity: 0.8;
+}
+
+
 /* ============================================================
-   COMMON CARD
+   GENERIC CARD
    ============================================================ */
 
 .community-card {
-    background: var(--surface);
+    overflow: hidden;
 
-    border: 1px solid var(--border);
+    border: 1px solid rgba(255, 255, 255, 0.065);
     border-radius: 16px;
 
-    overflow: hidden;
+    background: rgba(17, 19, 24, 0.88);
+
+    box-shadow:
+        0 10px 30px rgba(0, 0, 0, 0.16);
+}
+
+
+/* ============================================================
+   LOADING / EMPTY
+   ============================================================ */
+
+.community-loading,
+.community-empty {
+    padding: 22px 18px;
+
+    color: #7f8795;
+
+    font-size: 13px;
+    text-align: center;
 }
 
 
 .community-empty {
-    padding: 28px 18px;
-
-    text-align: center;
-
-    color: var(--muted);
-
-    font-size: 13px;
-}
-
-
-.community-loading {
-    padding: 22px 18px;
-
-    color: var(--muted);
-
-    font-size: 13px;
-
-    text-align: center;
+    color: #777f8d;
 }
 
 
@@ -193,60 +249,96 @@
    NOTIFICATIONS
    ============================================================ */
 
+.community-notifications {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+
 .community-notification {
+    position: relative;
+
     display: flex;
     align-items: flex-start;
     gap: 12px;
 
     padding: 15px;
 
-    border-bottom: 1px solid var(--border);
-
     cursor: pointer;
 
     transition:
-        background 0.18s ease,
-        opacity 0.18s ease;
-}
-
-
-.community-notification:last-child {
-    border-bottom: 0;
+        background 0.2s ease,
+        transform 0.2s ease;
 }
 
 
 .community-notification:hover {
-    background: rgba(255,255,255,0.025);
+    background: rgba(255, 255, 255, 0.035);
+}
+
+
+.community-notification:active {
+    transform: scale(0.995);
 }
 
 
 .community-notification.unread {
-    background: var(--team-glow);
+    border-color: rgba(255, 255, 255, 0.11);
+    background:
+        linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0.055),
+            rgba(255, 255, 255, 0.018)
+        );
 }
 
 
 .community-notification-avatar,
 .favorite-avatar,
-.message-avatar {
+.message-avatar,
+.community-my-comment-avatar {
+    flex: 0 0 auto;
+
     width: 42px;
     height: 42px;
-
-    flex: 0 0 42px;
-
-    border-radius: 50%;
-
-    object-fit: cover;
-
-    background: rgba(255,255,255,0.08);
 
     display: flex;
     align-items: center;
     justify-content: center;
 
-    color: var(--muted);
+    overflow: hidden;
 
-    font-size: 15px;
+    border-radius: 50%;
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--team-primary, #555),
+            var(--team-secondary, #222)
+        );
+
+    color: #ffffff;
+
+    font-size: 12px;
     font-weight: 800;
+}
+
+
+.community-notification-avatar {
+    width: 42px;
+    height: 42px;
+}
+
+
+.community-notification-avatar img,
+.favorite-avatar img,
+.message-avatar img,
+.community-my-comment-avatar img {
+    width: 100%;
+    height: 100%;
+
+    object-fit: cover;
 }
 
 
@@ -257,22 +349,20 @@
 
 
 .community-notification-title {
-    color: white;
+    color: #ffffff;
 
     font-size: 13px;
     font-weight: 700;
-
-    line-height: 1.35;
+    line-height: 1.4;
 }
 
 
 .community-notification-message {
     margin-top: 3px;
 
-    color: var(--muted);
+    color: #8e96a4;
 
     font-size: 12px;
-
     line-height: 1.4;
 }
 
@@ -280,23 +370,103 @@
 .community-notification-time {
     margin-top: 7px;
 
-    color: var(--faint);
+    color: #606876;
 
     font-size: 10px;
 }
 
 
 .community-unread-dot {
+    position: absolute;
+    top: 18px;
+    right: 15px;
+
     width: 7px;
     height: 7px;
 
-    flex: 0 0 7px;
-
-    margin-top: 7px;
-
     border-radius: 50%;
 
-    background: var(--team-primary);
+    background: #ef3340;
+    box-shadow: 0 0 10px rgba(239, 51, 64, 0.45);
+}
+
+
+/* ============================================================
+   MY COMMENTS
+   ============================================================ */
+
+.community-my-comments {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+
+.community-my-comment {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+
+    padding: 15px;
+
+    cursor: pointer;
+
+    transition: background 0.2s ease;
+}
+
+
+.community-my-comment:hover {
+    background: rgba(255, 255, 255, 0.035);
+}
+
+
+.community-my-comment-body {
+    min-width: 0;
+    flex: 1;
+}
+
+
+.community-my-comment-article {
+    color: #ffffff;
+
+    font-size: 13px;
+    font-weight: 700;
+}
+
+
+.community-my-comment-text {
+    display: -webkit-box;
+
+    margin-top: 5px;
+
+    overflow: hidden;
+
+    color: #a0a7b4;
+
+    font-size: 12px;
+    line-height: 1.45;
+
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+}
+
+
+.community-my-comment-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    margin-top: 8px;
+
+    color: #626a77;
+
+    font-size: 10px;
+}
+
+
+.community-my-comment-stats {
+    display: flex;
+    gap: 8px;
 }
 
 
@@ -305,23 +475,23 @@
    ============================================================ */
 
 .favorite-people {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 
 .favorite-person {
     display: flex;
     align-items: center;
-    gap: 11px;
+    gap: 12px;
 
-    padding: 13px;
+    padding: 13px 15px;
 
-    background: var(--surface);
+    border: 1px solid rgba(255, 255, 255, 0.065);
+    border-radius: 16px;
 
-    border: 1px solid var(--border);
-    border-radius: 14px;
+    background: rgba(17, 19, 24, 0.88);
 }
 
 
@@ -334,35 +504,45 @@
 .favorite-person-name {
     overflow: hidden;
 
-    color: white;
+    color: #ffffff;
 
     font-size: 13px;
     font-weight: 700;
-
-    white-space: nowrap;
     text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 
 .favorite-person-username {
     margin-top: 3px;
 
-    color: var(--muted);
+    color: #727a87;
 
-    font-size: 10px;
+    font-size: 11px;
 }
 
 
 .favorite-remove {
-    border: 0;
-    background: transparent;
+    flex: 0 0 auto;
 
-    color: var(--team-primary);
+    padding: 7px 11px;
 
-    font-size: 11px;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 999px;
+
+    background: rgba(255, 255, 255, 0.04);
+    color: #aab1bd;
+
+    font-size: 10px;
     font-weight: 700;
 
     cursor: pointer;
+}
+
+
+.favorite-remove:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
 }
 
 
@@ -370,21 +550,33 @@
    CONVERSATIONS
    ============================================================ */
 
-.community-conversation {
+.community-conversations {
     display: flex;
-    align-items: center;
-    gap: 13px;
-
-    padding: 15px;
-
-    border-bottom: 1px solid var(--border);
-
-    cursor: pointer;
+    flex-direction: column;
+    gap: 8px;
 }
 
 
-.community-conversation:last-child {
-    border-bottom: 0;
+.community-conversation {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    padding: 15px;
+
+    cursor: pointer;
+
+    transition: background 0.2s ease;
+}
+
+
+.community-conversation + .community-conversation {
+    border-top: 1px solid rgba(255, 255, 255, 0.055);
+}
+
+
+.community-conversation:hover {
+    background: rgba(255, 255, 255, 0.035);
 }
 
 
@@ -395,29 +587,24 @@
 
 
 .community-conversation-title {
-    color: white;
+    color: #ffffff;
 
     font-size: 13px;
     font-weight: 700;
-
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
 }
 
 
 .community-conversation-meta {
     margin-top: 5px;
 
-    color: var(--muted);
+    color: #6f7784;
 
     font-size: 11px;
 }
 
 
 .community-conversation-arrow {
-    color: var(--faint);
-
+    color: #646c79;
     font-size: 18px;
 }
 
@@ -426,21 +613,31 @@
    MESSAGES
    ============================================================ */
 
+.community-messages {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+
 .community-message {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 12px;
 
     padding: 15px;
-
-    border-bottom: 1px solid var(--border);
 
     cursor: pointer;
 }
 
 
-.community-message:last-child {
-    border-bottom: 0;
+.community-message + .community-message {
+    border-top: 1px solid rgba(255, 255, 255, 0.055);
+}
+
+
+.community-message.unread {
+    background: rgba(255, 255, 255, 0.035);
 }
 
 
@@ -451,7 +648,7 @@
 
 
 .community-message-name {
-    color: white;
+    color: #ffffff;
 
     font-size: 13px;
     font-weight: 700;
@@ -459,30 +656,29 @@
 
 
 .community-message-subject {
+    overflow: hidden;
+
     margin-top: 3px;
 
-    color: var(--muted);
+    color: #969eab;
 
     font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 
 .community-message-time {
-    margin-top: 6px;
+    margin-top: 5px;
 
-    color: var(--faint);
+    color: #626a77;
 
     font-size: 10px;
 }
 
 
-.community-message.unread {
-    background: var(--team-glow);
-}
-
-
 /* ============================================================
-   BOTTOM NAV
+   GLOBAL BOTTOM NAV OVERRIDES
    ============================================================ */
 
 .community-page .bottom-nav {
@@ -491,51 +687,76 @@
     right: 0;
     bottom: 0;
 
-    z-index: 200;
-
-    height: 72px;
+    z-index: 100;
 
     display: flex;
-    align-items: center;
-    justify-content: space-around;
 
-    background: rgba(12, 13, 17, 0.96);
+    min-height: 70px;
 
-    border-top: 1px solid var(--border);
+    padding:
+        8px
+        max(12px, env(safe-area-inset-left))
+        calc(8px + env(safe-area-inset-bottom))
+        max(12px, env(safe-area-inset-right));
 
-    backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+
+    background: rgba(10, 11, 15, 0.96);
+
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
 }
 
 
-.community-page .nav-item {
+.community-page .bottom-nav .nav-item {
     position: relative;
 
-    min-width: 65px;
+    flex: 1;
+
+    min-width: 0;
 
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 5px;
+    justify-content: center;
+    gap: 4px;
 
     border: 0;
+
     background: transparent;
 
-    color: var(--muted);
+    color: #68707d;
 
     font-size: 10px;
+    font-weight: 600;
 
     cursor: pointer;
+
+    transition:
+        color 0.2s ease,
+        transform 0.2s ease;
 }
 
 
-.community-page .nav-item.active {
-    color: var(--team-primary);
+.community-page .bottom-nav .nav-item:hover {
+    color: #aeb5c1;
 }
 
 
-.community-page .nav-icon {
-    font-size: 19px;
-    line-height: 1;
+.community-page .bottom-nav .nav-item.active {
+    color: #ffffff;
+}
+
+
+.community-page .bottom-nav .nav-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 25px;
+    height: 25px;
+
+    font-size: 18px;
 }
 
 
@@ -547,61 +768,85 @@
 .fan-notification-badge {
     position: absolute;
 
-    top: -8px;
-    right: -12px;
+    top: -7px;
+    right: -11px;
 
-    min-width: 16px;
-    height: 16px;
+    min-width: 17px;
+    height: 17px;
+    padding: 0 4px;
 
-    display: inline-flex;
+    display: flex;
     align-items: center;
     justify-content: center;
 
-    padding: 0 4px;
+    border-radius: 999px;
 
-    border-radius: 20px;
+    background: #ef3340;
+    color: #ffffff;
 
-    background: #e50914;
-    color: white;
+    font-size: 9px;
+    font-weight: 900;
 
-    font-size: 8px;
-    font-weight: 800;
+    box-shadow:
+        0 0 0 2px rgba(10, 11, 15, 1);
 }
 
 
 /* ============================================================
-   DESKTOP
+   RESPONSIVE
    ============================================================ */
 
-@media (min-width: 768px) {
+@media (min-width: 700px) {
 
     .community-content {
-        width: min(calc(100% - 80px), 900px);
+        padding-top: 28px;
     }
 
-    .favorite-people {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+
+    .community-section-header h2 {
+        font-size: 22px;
+    }
+
+
+    .community-page .bottom-nav {
+        left: 50%;
+        right: auto;
+
+        width: min(100%, 700px);
+
+        transform: translateX(-50%);
+
+        border-left: 1px solid rgba(255, 255, 255, 0.07);
+        border-right: 1px solid rgba(255, 255, 255, 0.07);
+
+        border-radius: 18px 18px 0 0;
     }
 
 }
 
 
-/* ============================================================
-   MOBILE
-   ============================================================ */
-
-@media (max-width: 500px) {
+@media (max-width: 420px) {
 
     .community-topbar {
-        padding: 0 12px;
+        grid-template-columns: 40px 1fr auto;
+        padding-left: 12px;
+        padding-right: 12px;
     }
+
+
+    .community-title {
+        font-size: 17px;
+    }
+
 
     .community-read-button {
         font-size: 11px;
     }
 
-    .favorite-people {
-        grid-template-columns: 1fr;
+
+    .community-content {
+        padding-left: 12px;
+        padding-right: 12px;
     }
 
 }
