@@ -1,1754 +1,1588 @@
 /* ============================================================
-   BARÇA REAL
-   COMMUNITY
+   BARÇA REAL — COMUNIDADE
    ============================================================ */
 
-"use strict";
+(function () {
+
+    "use strict";
 
 
-/* ============================================================
-   STATE
-   ============================================================ */
+    /* ========================================================
+       STATE
+       ======================================================== */
 
-let communityUser = null;
-let communityProfile = null;
-let communityTeam = null;
-
-let communityPosts = [];
-
-let activeCommunityCategory = null;
-
-
-/* ============================================================
-   DOM HELPERS
-   ============================================================ */
-
-function $(selector) {
-    return document.querySelector(selector);
-}
-
-function $$(selector) {
-    return [...document.querySelectorAll(selector)];
-}
+    const state = {
+        user: null,
+        profile: null,
+        notifications: [],
+        favorites: [],
+        conversations: [],
+        messages: [],
+        profiles: new Map()
+    };
 
 
-/* ============================================================
-   SUPABASE
-   ============================================================ */
+    /* ========================================================
+       HELPERS
+       ======================================================== */
 
-function getSupabase() {
-
-    if (
-        typeof supabaseClient !== "undefined" &&
-        supabaseClient
-    ) {
-        return supabaseClient;
-    }
-
-    if (
-        window.supabaseClient
-    ) {
-        return window.supabaseClient;
-    }
-
-    if (
-        window.supabase
-    ) {
-        return window.supabase;
-    }
-
-    return null;
-}
+    const $ = (selector) =>
+        document.querySelector(selector);
 
 
-/* ============================================================
-   INIT
-   ============================================================ */
+    function getSupabase() {
 
-document.addEventListener(
-    "DOMContentLoaded",
-    async () => {
-
-        setupCommunityInteractions();
-
-        await loadCommunity();
-
-    }
-);
-
-
-/* ============================================================
-   LOAD COMMUNITY
-   ============================================================ */
-
-async function loadCommunity() {
-
-    const client = getSupabase();
-
-    if (!client) {
-        console.error(
-            "BR: Supabase não disponível."
+        return (
+            window.supabaseClient ||
+            window.supabase ||
+            window.supabaseClient
         );
-        return;
+
     }
 
 
-    try {
+    function escapeHTML(value) {
+
+        if (value === null || value === undefined) {
+            return "";
+        }
+
+        return String(value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+
+    }
+
+
+    function initials(profile) {
+
+        const name =
+            profile?.display_name ||
+            profile?.username ||
+            "A";
+
+        return name
+            .trim()
+            .split(/\s+/)
+            .slice(0, 2)
+            .map(part => part.charAt(0))
+            .join("")
+            .toUpperCase();
+
+    }
+
+
+    function avatarHTML(profile, className) {
+
+        if (profile?.avatar_url) {
+
+            return `
+                <img
+                    class="${className}"
+                    src="${escapeHTML(profile.avatar_url)}"
+                    alt=""
+                >
+            `;
+
+        }
+
+        return `
+            <div class="${className}">
+                ${escapeHTML(initials(profile))}
+            </div>
+        `;
+
+    }
+
+
+    function relativeTime(dateValue) {
+
+        if (!dateValue) {
+            return "";
+        }
+
+        const date = new Date(dateValue);
+        const now = new Date();
+
+        const seconds =
+            Math.floor((now - date) / 1000);
+
+        if (seconds < 60) {
+            return "Agora mesmo";
+        }
+
+        const minutes =
+            Math.floor(seconds / 60);
+
+        if (minutes < 60) {
+            return `Há ${minutes} min`;
+        }
+
+        const hours =
+            Math.floor(minutes / 60);
+
+        if (hours < 24) {
+            return `Há ${hours} h`;
+        }
+
+        const days =
+            Math.floor(hours / 24);
+
+        if (days < 7) {
+            return `Há ${days} ${days === 1 ? "dia" : "dias"}`;
+        }
+
+        return date.toLocaleDateString(
+            "pt-PT",
+            {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric"
+            }
+        );
+
+    }
+
+
+    function setHTML(selector, html) {
+
+        const element = $(selector);
+
+        if (element) {
+            element.innerHTML = html;
+        }
+
+    }
+
+
+    /* ========================================================
+       PROFILE CACHE
+       ======================================================== */
+
+    async function loadProfiles(ids) {
+
+        const supabase = getSupabase();
+
+        const uniqueIds = [
+            ...new Set(
+                ids.filter(Boolean)
+            )
+        ];
+
+        const missingIds = uniqueIds.filter(
+            id => !state.profiles.has(id)
+        );
+
+        if (!missingIds.length) {
+            return;
+        }
+
+        const { data, error } = await supabase
+            .from("profiles")
+            .select(`
+                id,
+                username,
+                display_name,
+                avatar_url,
+                bio
+            `)
+            .in("id", missingIds);
+
+        if (error) {
+            console.error(
+                "BR Comunidade: erro ao carregar perfis.",
+                error
+            );
+            return;
+        }
+
+        (data || []).forEach(profile => {
+
+            state.profiles.set(
+                profile.id,
+                profile
+            );
+
+        });
+
+    }
+
+
+    function getProfile(id) {
+
+        return state.profiles.get(id) || {
+            id,
+            display_name: "Utilizador",
+            username: "",
+            avatar_url: null
+        };
+
+    }
+
+
+    /* ========================================================
+       AUTH
+       ======================================================== */
+
+    async function loadCurrentUser() {
+
+        const supabase = getSupabase();
+
+        if (!supabase) {
+            throw new Error(
+                "Supabase não está disponível."
+            );
+        }
 
         const {
             data: {
                 user
             },
-            error: userError
-        } = await client.auth.getUser();
+            error
+        } = await supabase.auth.getUser();
 
+        if (error || !user) {
 
-        if (
-            userError ||
-            !user
-        ) {
+            window.location.href = "login.html";
 
-            window.location.href =
-                "login.html";
-
-            return;
-
+            return false;
         }
 
-
-        communityUser = user;
-
-
-        /* ====================================================
-           PROFILE
-           ==================================================== */
+        state.user = user;
 
         const {
-            data: profile,
-            error: profileError
-        } = await client
+            data: profile
+        } = await supabase
             .from("profiles")
-            .select("*")
-            .eq(
-                "id",
-                user.id
-            )
+            .select(`
+                id,
+                username,
+                display_name,
+                avatar_url,
+                bio,
+                supported_team_id
+            `)
+            .eq("id", user.id)
             .maybeSingle();
 
+        state.profile = profile || {
+            id: user.id,
+            display_name:
+                user.email?.split("@")[0] ||
+                "Utilizador"
+        };
 
-        if (profileError) {
-
-            console.warn(
-                "BR: perfil da comunidade não carregado:",
-                profileError
-            );
-
-        }
-
-
-        communityProfile =
-            profile || null;
-
-
-        /* ====================================================
-           TEAM
-           ==================================================== */
-
-        if (
-            communityProfile &&
-            communityProfile.supported_team_id
-        ) {
-
-            const {
-                data: team
-            } = await client
-                .from("teams")
-                .select(
-                    "id,name,slug,short_name,primary_color,secondary_color,loading_player"
-                )
-                .eq(
-                    "id",
-                    communityProfile.supported_team_id
-                )
-                .maybeSingle();
-
-
-            communityTeam =
-                team || null;
-
-        }
-
-
-        if (communityTeam) {
-
-            applyCommunityTeamTheme(
-                communityTeam
-            );
-
-            await updateCommunityBrand(
-                communityTeam
-            );
-
-        }
-
-
-        updateCommunityProfileButton();
-
-        renderCommunityUser();
-
-        await loadCommunityFeed();
-
-        await loadCommunityNotificationCount();
-
-    } catch (error) {
-
-        console.error(
-            "BR: erro ao carregar comunidade:",
-            error
-        );
-
-    }
-
-}
-
-
-/* ============================================================
-   TEAM THEME
-   ============================================================ */
-
-function applyCommunityTeamTheme(team) {
-
-    const root =
-        document.documentElement;
-
-    root.style.setProperty(
-        "--team-primary",
-        team.primary_color ||
-        "#a50044"
-    );
-
-    root.style.setProperty(
-        "--team-secondary",
-        team.secondary_color ||
-        "#004d98"
-    );
-
-    root.style.setProperty(
-        "--team-glow",
-        hexToRGBA(
-            team.primary_color ||
-            "#a50044",
-            0.18
-        )
-    );
-
-}
-
-
-/* ============================================================
-   TEAM BRAND
-   ============================================================ */
-
-async function updateCommunityBrand(team) {
-
-    const logo =
-        $("#team-brand-logo");
-
-    if (!logo) return;
-
-
-    const slug =
-        normalize(
-            team.slug ||
-            team.name ||
-            ""
-        );
-
-
-    let providerTeamId =
-        null;
-
-
-    if (
-        slug.includes("barcelona") ||
-        slug.includes("barca")
-    ) {
-
-        providerTeamId = 81;
-
-    } else if (
-        slug.includes("real madrid")
-    ) {
-
-        providerTeamId = 86;
+        return true;
 
     }
 
 
-    if (!providerTeamId) {
-        return;
-    }
+    /* ========================================================
+       FAN NOTIFICATIONS
+       ======================================================== */
 
+    async function loadFanNotifications() {
 
-    const client =
-        getSupabase();
-
-    if (!client) return;
-
-
-    try {
-
-        const {
-            data
-        } = await client
-            .from("football_matches")
-            .select(
-                "home_team_logo,away_team_logo,home_provider_team_id,away_provider_team_id,match_date"
-            )
-            .or(
-                `home_provider_team_id.eq.${providerTeamId},away_provider_team_id.eq.${providerTeamId}`
-            )
-            .order(
-                "match_date",
-                {
-                    ascending: false
-                }
-            )
-            .limit(20);
-
-
-        const match =
-            (data || []).find(
-                item =>
-                    Number(
-                        item.home_provider_team_id
-                    ) === providerTeamId ||
-                    Number(
-                        item.away_provider_team_id
-                    ) === providerTeamId
-            );
-
-
-        if (!match) return;
-
-
-        const logoURL =
-            Number(
-                match.home_provider_team_id
-            ) === providerTeamId
-                ? match.home_team_logo
-                : match.away_team_logo;
-
-
-        if (logoURL) {
-
-            logo.src =
-                logoURL;
-
-            logo.alt =
-                team.name ||
-                team.short_name ||
-                "Equipa";
-
-        }
-
-    } catch (error) {
-
-        console.warn(
-            "BR: erro ao carregar emblema:",
-            error
-        );
-
-    }
-
-}
-
-
-/* ============================================================
-   PROFILE BUTTON
-   ============================================================ */
-
-function updateCommunityProfileButton() {
-
-    const button =
-        $("#profile-button");
-
-    if (!button) return;
-
-
-    const email =
-        communityUser?.email ||
-        "";
-
-
-    const name =
-        getProfileName();
-
-
-    const value =
-        name ||
-        email;
-
-
-    button.textContent =
-        value
-            ? value.charAt(0).toUpperCase()
-            : "•";
-
-}
-
-
-/* ============================================================
-   USER DISPLAY
-   ============================================================ */
-
-function renderCommunityUser() {
-
-    const name =
-        getProfileName();
-
-
-    const email =
-        communityUser?.email ||
-        "";
-
-
-    const displayName =
-        name ||
-        email.split("@")[0] ||
-        "Adepto";
-
-
-    const avatar =
-        $("#community-user-avatar");
-
-
-    const nameElement =
-        $("#community-user-name");
-
-
-    if (avatar) {
-
-        avatar.textContent =
-            displayName
-                .charAt(0)
-                .toUpperCase();
-
-    }
-
-
-    if (nameElement) {
-
-        nameElement.textContent =
-            displayName;
-
-    }
-
-}
-
-
-function getProfileName() {
-
-    if (!communityProfile) {
-        return "";
-    }
-
-
-    return (
-        communityProfile.display_name ||
-        communityProfile.full_name ||
-        communityProfile.name ||
-        communityProfile.username ||
-        ""
-    );
-
-}
-
-
-/* ============================================================
-   FEED
-   ============================================================ */
-
-async function loadCommunityFeed(
-    category = null
-) {
-
-    const client =
-        getSupabase();
-
-    const feed =
-        $("#community-feed-list");
-
-    if (!client || !feed) {
-        return;
-    }
-
-
-    feed.innerHTML = `
-        <div class="community-loading">
-            A carregar...
-        </div>
-    `;
-
-
-    try {
-
-        let query =
-            client
-                .from("community_posts")
-                .select("*")
-                .order(
-                    "created_at",
-                    {
-                        ascending: false
-                    }
-                )
-                .limit(30);
-
-
-        if (category) {
-
-            query =
-                query.eq(
-                    "category",
-                    category
-                );
-
-        }
-
+        const supabase = getSupabase();
 
         const {
             data,
             error
-        } = await query;
-
+        } = await supabase
+            .from("fan_notifications")
+            .select(`
+                id,
+                recipient_id,
+                actor_id,
+                type,
+                article_key,
+                comment_id,
+                created_at,
+                read_at
+            `)
+            .eq("recipient_id", state.user.id)
+            .order("created_at", {
+                ascending: false
+            })
+            .limit(50);
 
         if (error) {
 
-            console.warn(
-                "BR: community_posts não disponível:",
+            console.error(
+                "BR Comunidade: fan_notifications.",
                 error
             );
 
+            return [];
 
-            feed.innerHTML = `
-                <div class="community-empty">
-                    Ainda não existem publicações na comunidade.
+        }
+
+        return data || [];
+
+    }
+
+
+    /* ========================================================
+       GENERAL NOTIFICATIONS
+       ======================================================== */
+
+    async function loadGeneralNotifications() {
+
+        const supabase = getSupabase();
+
+        const {
+            data,
+            error
+        } = await supabase
+            .from("notifications")
+            .select(`
+                id,
+                user_id,
+                type,
+                title,
+                message,
+                related_id,
+                read,
+                created_at
+            `)
+            .eq("user_id", state.user.id)
+            .order("created_at", {
+                ascending: false
+            })
+            .limit(50);
+
+        if (error) {
+
+            console.error(
+                "BR Comunidade: notifications.",
+                error
+            );
+
+            return [];
+
+        }
+
+        return data || [];
+
+    }
+
+
+    function fanNotificationText(notification) {
+
+        const actor =
+            getProfile(notification.actor_id);
+
+        const name =
+            actor.display_name ||
+            actor.username ||
+            "Alguém";
+
+
+        switch (notification.type) {
+
+            case "comment_reply":
+            case "reply":
+
+                return {
+                    title:
+                        `${name} respondeu ao teu comentário`,
+                    message:
+                        "Toca para entrar na conversa."
+                };
+
+
+            case "comment_like":
+            case "like":
+
+                return {
+                    title:
+                        `${name} gostou do teu comentário`,
+                    message:
+                        "Toca para ver a conversa."
+                };
+
+
+            case "comment_dislike":
+            case "dislike":
+
+                return {
+                    title:
+                        `${name} não gostou do teu comentário`,
+                    message:
+                        "Toca para ver a conversa."
+                };
+
+
+            case "favorite_activity":
+
+                return {
+                    title:
+                        `${name} publicou um novo comentário`,
+                    message:
+                        "Uma pessoa que segues esteve ativa."
+                };
+
+
+            default:
+
+                return {
+                    title:
+                        `${name} interagiu contigo`,
+                    message:
+                        "Toca para ver a atividade."
+                };
+
+        }
+
+    }
+
+
+    async function loadNotifications() {
+
+        const [
+            fanNotifications,
+            generalNotifications
+        ] = await Promise.all([
+            loadFanNotifications(),
+            loadGeneralNotifications()
+        ]);
+
+
+        await loadProfiles(
+            fanNotifications.map(
+                notification => notification.actor_id
+            )
+        );
+
+
+        const fanItems =
+            fanNotifications.map(notification => {
+
+                const text =
+                    fanNotificationText(
+                        notification
+                    );
+
+                return {
+                    source: "fan",
+                    id: notification.id,
+                    type: notification.type,
+                    actor_id: notification.actor_id,
+                    article_key: notification.article_key,
+                    comment_id: notification.comment_id,
+                    created_at: notification.created_at,
+                    read: Boolean(notification.read_at),
+                    title: text.title,
+                    message: text.message
+                };
+
+            });
+
+
+        const generalItems =
+            generalNotifications.map(notification => {
+
+                return {
+                    source: "general",
+                    id: notification.id,
+                    type: notification.type,
+                    related_id: notification.related_id,
+                    created_at: notification.created_at,
+                    read: notification.read,
+                    title:
+                        notification.title ||
+                        "Nova atividade",
+                    message:
+                        notification.message ||
+                        ""
+                };
+
+            });
+
+
+        state.notifications = [
+            ...fanItems,
+            ...generalItems
+        ]
+            .sort(
+                (a, b) =>
+                    new Date(b.created_at) -
+                    new Date(a.created_at)
+            )
+            .slice(0, 50);
+
+
+        renderNotifications();
+
+    }
+
+
+    /* ========================================================
+       RENDER NOTIFICATIONS
+       ======================================================== */
+
+    function renderNotifications() {
+
+        const container =
+            $("#community-notifications");
+
+        if (!container) {
+            return;
+        }
+
+
+        if (!state.notifications.length) {
+
+            container.innerHTML = `
+                <div class="community-card">
+                    <div class="community-empty">
+                        Não tens notificações novas.
+                    </div>
                 </div>
             `;
 
+            updateUnreadCount();
 
             return;
 
         }
 
 
-        communityPosts =
-            data || [];
+        const html =
+            state.notifications
+                .map(notification => {
+
+                    const actor =
+                        notification.actor_id
+                            ? getProfile(
+                                notification.actor_id
+                            )
+                            : state.profile;
 
 
-        renderCommunityPosts(
-            communityPosts,
-            feed
-        );
+                    return `
+                        <div
+                            class="
+                                community-card
+                                community-notification
+                                ${notification.read
+                                    ? ""
+                                    : "unread"}
+                            "
+                            data-notification-source="${escapeHTML(notification.source)}"
+                            data-notification-id="${escapeHTML(notification.id)}"
+                            data-article-key="${escapeHTML(notification.article_key || "")}"
+                            data-comment-id="${notification.comment_id || ""}"
+                        >
+
+                            ${avatarHTML(
+                                actor,
+                                "community-notification-avatar"
+                            )}
+
+                            <div class="community-notification-body">
+
+                                <div class="community-notification-title">
+                                    ${escapeHTML(notification.title)}
+                                </div>
+
+                                <div class="community-notification-message">
+                                    ${escapeHTML(notification.message)}
+                                </div>
+
+                                <div class="community-notification-time">
+                                    ${escapeHTML(
+                                        relativeTime(
+                                            notification.created_at
+                                        )
+                                    )}
+                                </div>
+
+                            </div>
+
+                            ${
+                                notification.read
+                                    ? ""
+                                    : `<span class="community-unread-dot"></span>`
+                            }
+
+                        </div>
+                    `;
+
+                })
+                .join("");
 
 
-    } catch (error) {
+        container.innerHTML = html;
 
-        console.warn(
-            "BR: erro ao carregar comunidade:",
-            error
-        );
-
-
-        feed.innerHTML = `
-            <div class="community-empty">
-                Não foi possível carregar a comunidade.
-            </div>
-        `;
+        updateUnreadCount();
 
     }
 
-}
+
+    function updateUnreadCount() {
+
+        const count =
+            state.notifications.filter(
+                notification => !notification.read
+            ).length;
 
 
-/* ============================================================
-   POSTS
-   ============================================================ */
+        const topCount =
+            $("#community-unread-count");
 
-function renderCommunityPosts(
-    posts,
-    container
-) {
-
-    if (!container) return;
+        const badge =
+            $("#fan-notification-badge");
 
 
-    if (!posts.length) {
+        if (topCount) {
 
-        container.innerHTML = `
-            <div class="community-empty">
-                Ainda não existem publicações aqui.
-            </div>
-        `;
+            topCount.textContent = count;
 
-        return;
+            topCount.hidden =
+                count === 0;
+
+        }
+
+
+        if (badge) {
+
+            badge.textContent =
+                count > 99
+                    ? "99+"
+                    : count;
+
+            badge.hidden =
+                count === 0;
+
+        }
 
     }
 
 
-    container.innerHTML =
-        posts
-            .map(
-                post =>
-                    renderCommunityPost(
-                        post
-                    )
-            )
-            .join("");
+    /* ========================================================
+       MARK NOTIFICATION READ
+       ======================================================== */
+
+    async function markNotificationRead(notification) {
+
+        if (notification.read) {
+            return;
+        }
+
+        const supabase = getSupabase();
 
 
-    setupPostActions();
-
-}
-
-
-function renderCommunityPost(post) {
-
-    const author =
-        post.author_name ||
-        post.display_name ||
-        post.username ||
-        "Adepto";
-
-
-    const category =
-        getCommunityCategoryLabel(
-            post.category
-        );
-
-
-    const body =
-        post.body ||
-        post.content ||
-        post.message ||
-        "";
-
-
-    const likes =
-        Number(
-            post.likes_count ||
-            post.like_count ||
-            0
-        );
-
-
-    const replies =
-        Number(
-            post.replies_count ||
-            post.reply_count ||
-            0
-        );
-
-
-    const isLiked =
-        Boolean(
-            post.viewer_liked
-        );
-
-
-    const time =
-        formatRelativeTime(
-            post.created_at
-        );
-
-
-    return `
-        <article
-            class="community-post"
-            data-post-id="${escapeAttribute(post.id)}"
-        >
-
-            <div class="community-post-header">
-
-                <span class="community-avatar">
-                    ${escapeHTML(
-                        author
-                            .charAt(0)
-                            .toUpperCase()
-                    )}
-                </span>
-
-                <div class="community-post-user">
-
-                    <strong>
-                        ${escapeHTML(author)}
-                    </strong>
-
-                    <span>
-                        ${escapeHTML(time)}
-                    </span>
-
-                </div>
-
-                <span class="community-post-category">
-                    ${escapeHTML(category)}
-                </span>
-
-            </div>
-
-
-            <div class="community-post-body">
-                ${escapeHTML(body)}
-            </div>
-
-
-            <div class="community-post-footer">
-
-                <button
-                    type="button"
-                    class="community-post-action post-like-button ${isLiked ? "active" : ""}"
-                    data-action="like"
-                    data-post-id="${escapeAttribute(post.id)}"
-                >
-                    ♥ ${likes}
-                </button>
-
-                <button
-                    type="button"
-                    class="community-post-action"
-                    data-action="reply"
-                    data-post-id="${escapeAttribute(post.id)}"
-                >
-                    💬 ${replies}
-                </button>
-
-            </div>
-
-        </article>
-    `;
-
-}
-
-
-/* ============================================================
-   POST ACTIONS
-   ============================================================ */
-
-function setupPostActions() {
-
-    $$(".community-post-action")
-        .forEach(button => {
-
-            button.addEventListener(
-                "click",
-                async () => {
-
-                    const action =
-                        button.dataset.action;
-
-                    const postId =
-                        button.dataset.postId;
-
-
-                    if (
-                        action === "like"
-                    ) {
-
-                        await togglePostLike(
-                            postId,
-                            button
-                        );
-
-                    }
-
-                }
-            );
-
-        });
-
-}
-
-
-/* ============================================================
-   LIKE
-   ============================================================ */
-
-async function togglePostLike(
-    postId,
-    button
-) {
-
-    const client =
-        getSupabase();
-
-    if (
-        !client ||
-        !communityUser ||
-        !postId
-    ) {
-        return;
-    }
-
-
-    try {
-
-        const {
-            data: existing
-        } = await client
-            .from("community_post_reactions")
-            .select("id")
-            .eq(
-                "post_id",
-                postId
-            )
-            .eq(
-                "user_id",
-                communityUser.id
-            )
-            .maybeSingle();
-
-
-        if (existing) {
+        if (notification.source === "fan") {
 
             const {
                 error
-            } = await client
-                .from(
-                    "community_post_reactions"
-                )
-                .delete()
-                .eq(
-                    "id",
-                    existing.id
-                );
+            } = await supabase
+                .from("fan_notifications")
+                .update({
+                    read_at: new Date().toISOString()
+                })
+                .eq("id", notification.id)
+                .eq("recipient_id", state.user.id);
 
 
             if (error) {
-                throw error;
+                console.error(error);
+                return;
             }
-
-
-            button.classList.remove(
-                "active"
-            );
-
-
-            updateLikeButtonCount(
-                button,
-                -1
-            );
-
 
         } else {
 
             const {
                 error
-            } = await client
-                .from(
-                    "community_post_reactions"
-                )
-                .insert({
-                    post_id: postId,
-                    user_id: communityUser.id,
-                    reaction: "like"
-                });
+            } = await supabase
+                .from("notifications")
+                .update({
+                    read: true
+                })
+                .eq("id", notification.id)
+                .eq("user_id", state.user.id);
 
 
             if (error) {
-                throw error;
+                console.error(error);
+                return;
             }
 
-
-            button.classList.add(
-                "active"
-            );
-
-
-            updateLikeButtonCount(
-                button,
-                1
-            );
-
         }
 
-    } catch (error) {
 
-        console.warn(
-            "BR: erro reação:",
-            error
-        );
+        notification.read = true;
+
+        renderNotifications();
 
     }
 
-}
+
+    async function markAllNotificationsRead() {
+
+        const supabase = getSupabase();
+
+        const now =
+            new Date().toISOString();
 
 
-function updateLikeButtonCount(
-    button,
-    difference
-) {
+        await Promise.all([
 
-    if (!button) return;
+            supabase
+                .from("fan_notifications")
+                .update({
+                    read_at: now
+                })
+                .eq("recipient_id", state.user.id)
+                .is("read_at", null),
+
+            supabase
+                .from("notifications")
+                .update({
+                    read: true
+                })
+                .eq("user_id", state.user.id)
+                .eq("read", false)
+
+        ]);
 
 
-    const match =
-        button.textContent.match(
-            /(\d+)$/
-        );
-
-
-    const current =
-        match
-            ? Number(match[1])
-            : 0;
-
-
-    const next =
-        Math.max(
-            0,
-            current + difference
+        state.notifications.forEach(
+            notification => {
+                notification.read = true;
+            }
         );
 
 
-    button.textContent =
-        `♥ ${next}`;
-
-}
-
-
-/* ============================================================
-   CREATE POST
-   ============================================================ */
-
-async function submitCommunityPost() {
-
-    const client =
-        getSupabase();
-
-    const input =
-        $("#community-post-input");
-
-    const message =
-        $("#community-post-message");
-
-    if (
-        !client ||
-        !communityUser ||
-        !input
-    ) {
-        return;
-    }
-
-
-    const body =
-        input.value.trim();
-
-
-    if (!body) {
-
-        if (message) {
-            message.textContent =
-                "Escreve alguma coisa antes de publicar.";
-        }
-
-        return;
+        renderNotifications();
 
     }
 
 
-    if (!activeCommunityCategory) {
+    /* ========================================================
+       FAVOURITE PEOPLE
+       ======================================================== */
 
-        if (message) {
-            message.textContent =
-                "Escolhe primeiro um espaço da comunidade.";
-        }
+    async function loadFavorites() {
 
-        return;
-
-    }
-
-
-    const submit =
-        $("#community-post-submit");
-
-
-    if (submit) {
-        submit.disabled = true;
-    }
-
-
-    try {
-
-        const payload = {
-
-            user_id:
-                communityUser.id,
-
-            category:
-                activeCommunityCategory,
-
-            body:
-                body
-
-        };
-
-
-        if (
-            communityTeam &&
-            communityTeam.id
-        ) {
-
-            payload.team_id =
-                communityTeam.id;
-
-        }
-
+        const supabase = getSupabase();
 
         const {
             data,
             error
-        } = await client
-            .from("community_posts")
-            .insert(payload)
-            .select("*")
-            .single();
+        } = await supabase
+            .from("favorite_people")
+            .select(`
+                follower_id,
+                followed_id,
+                created_at
+            `)
+            .eq("follower_id", state.user.id)
+            .order("created_at", {
+                ascending: false
+            });
 
 
         if (error) {
-            throw error;
-        }
 
-
-        input.value =
-            "";
-
-
-        updateCharacterCount();
-
-
-        if (message) {
-
-            message.textContent =
-                "Publicação criada.";
-
-        }
-
-
-        if (data) {
-
-            communityPosts.unshift(
-                data
+            console.error(
+                "BR Comunidade: favorite_people.",
+                error
             );
-
-        }
-
-
-        await loadCommunityFeed(
-            activeCommunityCategory
-        );
-
-
-    } catch (error) {
-
-        console.error(
-            "BR: erro ao publicar:",
-            error
-        );
-
-
-        if (message) {
-
-            message.textContent =
-                "Não foi possível publicar.";
-
-        }
-
-    } finally {
-
-        if (submit) {
-            submit.disabled = false;
-        }
-
-    }
-
-}
-
-
-/* ============================================================
-   ROOM NAVIGATION
-   ============================================================ */
-
-function openCommunityRoom(
-    category
-) {
-
-    activeCommunityCategory =
-        category;
-
-
-    const room =
-        getCommunityRoom(category);
-
-
-    if (!room) return;
-
-
-    const feed =
-        $("#community-feed");
-
-    const roomView =
-        $("#community-room-view");
-
-
-    if (feed) {
-        feed.hidden = true;
-    }
-
-
-    if (roomView) {
-        roomView.hidden = false;
-    }
-
-
-    setText(
-        "#community-room-label",
-        room.label
-    );
-
-
-    setText(
-        "#community-room-title",
-        room.title
-    );
-
-
-    const input =
-        $("#community-post-input");
-
-
-    if (input) {
-
-        input.placeholder =
-            getRoomPlaceholder(
-                category
-            );
-
-    }
-
-
-    const message =
-        $("#community-post-message");
-
-
-    if (message) {
-        message.textContent =
-            "";
-    }
-
-
-    loadCommunityFeed(
-        category
-    );
-
-
-    window.scrollTo({
-        top: 0,
-        behavior: "instant"
-    });
-
-}
-
-
-function closeCommunityRoom() {
-
-    activeCommunityCategory =
-        null;
-
-
-    const feed =
-        $("#community-feed");
-
-    const roomView =
-        $("#community-room-view");
-
-
-    if (roomView) {
-        roomView.hidden = true;
-    }
-
-
-    if (feed) {
-        feed.hidden = false;
-    }
-
-
-    loadCommunityFeed();
-
-
-    window.scrollTo({
-        top: 0,
-        behavior: "instant"
-    });
-
-}
-
-
-function getCommunityRoom(
-    category
-) {
-
-    const rooms = {
-
-        general: {
-            label: "FUTEBOL GERAL",
-            title: "Futebol Geral"
-        },
-
-        debate: {
-            label: "DEBATE DA SEMANA",
-            title: "Debate da Semana"
-        },
-
-        fan_talk: {
-            label: "FAN TALK",
-            title: "Fan Talk"
-        },
-
-        match: {
-            label: "DISCUSSÕES DOS JOGOS",
-            title: "Discussões dos Jogos"
-        },
-
-        el_clasico: {
-            label: "EL CLÁSICO",
-            title: "El Clásico"
-        }
-
-    };
-
-
-    return rooms[category] ||
-        null;
-
-}
-
-
-function getRoomPlaceholder(
-    category
-) {
-
-    switch (category) {
-
-        case "general":
-            return "Fala de futebol com a comunidade...";
-
-        case "debate":
-            return "Partilha a tua opinião sobre o debate...";
-
-        case "fan_talk":
-            return "O que estás a pensar?";
-
-        case "match":
-            return "Comenta o jogo...";
-
-        case "el_clasico":
-            return "Fala sobre Barça x Real...";
-
-        default:
-            return "O que estás a pensar?";
-
-    }
-
-}
-
-
-/* ============================================================
-   INTERACTIONS
-   ============================================================ */
-
-function setupCommunityInteractions() {
-
-    $$(".community-room")
-        .forEach(button => {
-
-            button.addEventListener(
-                "click",
-                () => {
-
-                    openCommunityRoom(
-                        button.dataset.category
-                    );
-
-                }
-            );
-
-        });
-
-
-    const back =
-        $("#community-room-back");
-
-
-    if (back) {
-
-        back.addEventListener(
-            "click",
-            closeCommunityRoom
-        );
-
-    }
-
-
-    const submit =
-        $("#community-post-submit");
-
-
-    if (submit) {
-
-        submit.addEventListener(
-            "click",
-            submitCommunityPost
-        );
-
-    }
-
-
-    const input =
-        $("#community-post-input");
-
-
-    if (input) {
-
-        input.addEventListener(
-            "input",
-            updateCharacterCount
-        );
-
-        input.addEventListener(
-            "keydown",
-            event => {
-
-                if (
-                    event.key === "Enter" &&
-                    (event.ctrlKey ||
-                     event.metaKey)
-                ) {
-
-                    event.preventDefault();
-
-                    submitCommunityPost();
-
-                }
-
-            }
-        );
-
-    }
-
-
-    const communityNav =
-        $("#community-nav");
-
-
-    if (communityNav) {
-
-        communityNav.addEventListener(
-            "click",
-            event => {
-
-                event.preventDefault();
-
-                window.scrollTo({
-                    top: 0,
-                    behavior: "smooth"
-                });
-
-            }
-        );
-
-    }
-
-}
-
-
-/* ============================================================
-   CHARACTER COUNT
-   ============================================================ */
-
-function updateCharacterCount() {
-
-    const input =
-        $("#community-post-input");
-
-    const count =
-        $("#community-character-count");
-
-
-    if (
-        !input ||
-        !count
-    ) {
-        return;
-    }
-
-
-    count.textContent =
-        `${input.value.length}/1000`;
-
-}
-
-
-/* ============================================================
-   NOTIFICATIONS
-   ============================================================ */
-
-async function loadCommunityNotificationCount() {
-
-    const client =
-        getSupabase();
-
-    const badge =
-        $("#fan-notification-badge");
-
-
-    if (
-        !client ||
-        !communityUser ||
-        !badge
-    ) {
-        return;
-    }
-
-
-    try {
-
-        const {
-            count,
-            error
-        } = await client
-            .from("notifications")
-            .select(
-                "id",
-                {
-                    count: "exact",
-                    head: true
-                }
-            )
-            .eq(
-                "user_id",
-                communityUser.id
-            )
-            .eq(
-                "read",
-                false
-            );
-
-
-        if (error) {
-
-            badge.hidden =
-                true;
 
             return;
 
         }
 
 
-        const total =
-            Number(count || 0);
+        state.favorites =
+            data || [];
 
 
-        if (total > 0) {
+        await loadProfiles(
+            state.favorites.map(
+                favorite =>
+                    favorite.followed_id
+            )
+        );
 
-            badge.textContent =
-                total > 99
-                    ? "99+"
-                    : String(total);
 
-            badge.hidden =
-                false;
+        renderFavorites();
 
-        } else {
+    }
 
-            badge.hidden =
-                true;
+
+    function renderFavorites() {
+
+        const container =
+            $("#favorite-people");
+
+        if (!container) {
+            return;
+        }
+
+
+        if (!state.favorites.length) {
+
+            container.innerHTML = `
+                <div class="community-card">
+                    <div class="community-empty">
+                        Ainda não tens pessoas favoritas.
+                    </div>
+                </div>
+            `;
+
+            return;
 
         }
 
-    } catch (error) {
 
-        badge.hidden =
-            true;
+        container.innerHTML =
+            state.favorites
+                .map(favorite => {
 
-    }
-
-}
-
-
-/* ============================================================
-   CATEGORY LABEL
-   ============================================================ */
-
-function getCommunityCategoryLabel(
-    category
-) {
-
-    const labels = {
-
-        general:
-            "FUTEBOL GERAL",
-
-        debate:
-            "DEBATE",
-
-        fan_talk:
-            "FAN TALK",
-
-        match:
-            "JOGOS",
-
-        el_clasico:
-            "EL CLÁSICO"
-
-    };
+                    const profile =
+                        getProfile(
+                            favorite.followed_id
+                        );
 
 
-    return labels[category] ||
-        "COMUNIDADE";
+                    return `
+                        <div class="favorite-person">
 
-}
+                            ${avatarHTML(
+                                profile,
+                                "favorite-avatar"
+                            )}
 
+                            <div class="favorite-person-info">
 
-/* ============================================================
-   RELATIVE TIME
-   ============================================================ */
+                                <div class="favorite-person-name">
+                                    ${escapeHTML(
+                                        profile.display_name ||
+                                        profile.username ||
+                                        "Utilizador"
+                                    )}
+                                </div>
 
-function formatRelativeTime(
-    value
-) {
+                                ${
+                                    profile.username
+                                        ? `
+                                            <div class="favorite-person-username">
+                                                @${escapeHTML(
+                                                    profile.username
+                                                )}
+                                            </div>
+                                        `
+                                        : ""
+                                }
 
-    if (!value) {
-        return "";
-    }
+                            </div>
 
+                            <button
+                                class="favorite-remove"
+                                type="button"
+                                data-remove-favorite="${escapeHTML(
+                                    favorite.followed_id
+                                )}"
+                            >
+                                Seguindo
+                            </button>
 
-    const date =
-        new Date(value);
+                        </div>
+                    `;
 
-
-    if (
-        Number.isNaN(
-            date.getTime()
-        )
-    ) {
-        return "";
-    }
-
-
-    const seconds =
-        Math.floor(
-            (
-                Date.now() -
-                date.getTime()
-            ) / 1000
-        );
-
-
-    if (seconds < 60) {
-        return "agora";
-    }
-
-
-    const minutes =
-        Math.floor(
-            seconds / 60
-        );
-
-
-    if (minutes < 60) {
-
-        return minutes === 1
-            ? "há 1 minuto"
-            : `há ${minutes} minutos`;
-
-    }
-
-
-    const hours =
-        Math.floor(
-            minutes / 60
-        );
-
-
-    if (hours < 24) {
-
-        return hours === 1
-            ? "há 1 hora"
-            : `há ${hours} horas`;
-
-    }
-
-
-    const days =
-        Math.floor(
-            hours / 24
-        );
-
-
-    if (days < 7) {
-
-        return days === 1
-            ? "ontem"
-            : `há ${days} dias`;
-
-    }
-
-
-    return new Intl.DateTimeFormat(
-        "pt-PT",
-        {
-            day: "2-digit",
-            month: "short"
-        }
-    ).format(date);
-
-}
-
-
-/* ============================================================
-   UTILITIES
-   ============================================================ */
-
-function hexToRGBA(
-    hex,
-    alpha
-) {
-
-    let value =
-        String(hex || "")
-            .replace(
-                "#",
-                ""
-            );
-
-
-    if (value.length === 3) {
-
-        value =
-            value
-                .split("")
-                .map(
-                    char =>
-                        char + char
-                )
+                })
                 .join("");
 
     }
 
 
-    const number =
-        parseInt(
-            value,
-            16
+    async function unfollowPerson(userId) {
+
+        const supabase = getSupabase();
+
+        const {
+            error
+        } = await supabase
+            .from("favorite_people")
+            .delete()
+            .eq("follower_id", state.user.id)
+            .eq("followed_id", userId);
+
+
+        if (error) {
+
+            console.error(
+                "BR Comunidade: erro ao deixar de seguir.",
+                error
+            );
+
+            return;
+
+        }
+
+
+        state.favorites =
+            state.favorites.filter(
+                favorite =>
+                    favorite.followed_id !== userId
+            );
+
+
+        renderFavorites();
+
+    }
+
+
+    /* ========================================================
+       RECENT CONVERSATIONS
+       ======================================================== */
+
+    async function loadConversations() {
+
+        const supabase = getSupabase();
+
+
+        const {
+            data,
+            error
+        } = await supabase
+            .from("fan_comments")
+            .select(`
+                article_key,
+                created_at
+            `)
+            .order("created_at", {
+                ascending: false
+            })
+            .limit(100);
+
+
+        if (error) {
+
+            console.error(
+                "BR Comunidade: conversas.",
+                error
+            );
+
+            return;
+
+        }
+
+
+        const groups =
+            new Map();
+
+
+        (data || []).forEach(comment => {
+
+            if (!groups.has(comment.article_key)) {
+
+                groups.set(
+                    comment.article_key,
+                    {
+                        article_key:
+                            comment.article_key,
+                        latest:
+                            comment.created_at,
+                        count: 0
+                    }
+                );
+
+            }
+
+            groups.get(
+                comment.article_key
+            ).count++;
+
+        });
+
+
+        state.conversations =
+            [...groups.values()]
+                .slice(0, 10);
+
+
+        renderConversations();
+
+    }
+
+
+    function renderConversations() {
+
+        const container =
+            $("#community-conversations");
+
+        if (!container) {
+            return;
+        }
+
+
+        if (!state.conversations.length) {
+
+            container.innerHTML = `
+                <div class="community-card">
+                    <div class="community-empty">
+                        Ainda não existem conversas.
+                    </div>
+                </div>
+            `;
+
+            return;
+
+        }
+
+
+        container.innerHTML = `
+            <div class="community-card">
+
+                ${
+                    state.conversations
+                        .map(conversation => {
+
+                            return `
+                                <div
+                                    class="community-conversation"
+                                    data-conversation-key="${escapeHTML(
+                                        conversation.article_key
+                                    )}"
+                                >
+
+                                    <div class="community-conversation-info">
+
+                                        <div class="community-conversation-title">
+                                            Conversa sobre esta publicação
+                                        </div>
+
+                                        <div class="community-conversation-meta">
+                                            ${conversation.count}
+                                            ${
+                                                conversation.count === 1
+                                                    ? "comentário"
+                                                    : "comentários"
+                                            }
+                                            ·
+                                            ${escapeHTML(
+                                                relativeTime(
+                                                    conversation.latest
+                                                )
+                                            )}
+                                        </div>
+
+                                    </div>
+
+                                    <div class="community-conversation-arrow">
+                                        →
+                                    </div>
+
+                                </div>
+                            `;
+
+                        })
+                        .join("")
+                }
+
+            </div>
+        `;
+
+    }
+
+
+    /* ========================================================
+       PRIVATE MESSAGES
+       ======================================================== */
+
+    async function loadMessages() {
+
+        const supabase = getSupabase();
+
+
+        const {
+            data,
+            error
+        } = await supabase
+            .from("private_messages")
+            .select(`
+                id,
+                sender_id,
+                recipient_id,
+                subject,
+                body,
+                message_type,
+                sent_at,
+                read_at,
+                created_at
+            `)
+            .eq("recipient_id", state.user.id)
+            .order("sent_at", {
+                ascending: false
+            })
+            .limit(10);
+
+
+        if (error) {
+
+            console.error(
+                "BR Comunidade: mensagens.",
+                error
+            );
+
+            return;
+
+        }
+
+
+        state.messages =
+            data || [];
+
+
+        await loadProfiles(
+            state.messages.map(
+                message =>
+                    message.sender_id
+            )
         );
+
+
+        renderMessages();
+
+    }
+
+
+    function renderMessages() {
+
+        const container =
+            $("#community-messages");
+
+        if (!container) {
+            return;
+        }
+
+
+        if (!state.messages.length) {
+
+            container.innerHTML = `
+                <div class="community-card">
+                    <div class="community-empty">
+                        Não tens mensagens privadas.
+                    </div>
+                </div>
+            `;
+
+            return;
+
+        }
+
+
+        container.innerHTML = `
+            <div class="community-card">
+
+                ${
+                    state.messages
+                        .map(message => {
+
+                            const sender =
+                                getProfile(
+                                    message.sender_id
+                                );
+
+
+                            return `
+                                <div
+                                    class="
+                                        community-message
+                                        ${
+                                            message.read_at
+                                                ? ""
+                                                : "unread"
+                                        }
+                                    "
+                                    data-message-id="${escapeHTML(
+                                        message.id
+                                    )}"
+                                >
+
+                                    ${avatarHTML(
+                                        sender,
+                                        "message-avatar"
+                                    )}
+
+                                    <div class="community-message-info">
+
+                                        <div class="community-message-name">
+                                            ${escapeHTML(
+                                                sender.display_name ||
+                                                sender.username ||
+                                                "Utilizador"
+                                            )}
+                                        </div>
+
+                                        <div class="community-message-subject">
+                                            ${escapeHTML(
+                                                message.subject
+                                            )}
+                                        </div>
+
+                                        <div class="community-message-time">
+                                            ${escapeHTML(
+                                                relativeTime(
+                                                    message.sent_at
+                                                )
+                                            )}
+                                        </div>
+
+                                    </div>
+
+                                </div>
+                            `;
+
+                        })
+                        .join("")
+                }
+
+            </div>
+        `;
+
+    }
+
+
+    /* ========================================================
+       OPEN ARTICLE / COMMENT
+       ======================================================== */
+
+    function openConversation(
+        articleKey,
+        commentId
+    ) {
+
+        if (!articleKey) {
+            return;
+        }
+
+
+        /*
+         * Phase 4 will consume these values and open
+         * the exact article/comment.
+         */
+
+        localStorage.setItem(
+            "br_pending_article_key",
+            articleKey
+        );
+
+
+        if (commentId) {
+
+            localStorage.setItem(
+                "br_pending_comment_id",
+                String(commentId)
+            );
+
+        } else {
+
+            localStorage.removeItem(
+                "br_pending_comment_id"
+            );
+
+        }
+
+
+        window.location.href =
+            "home.html";
+
+    }
+
+
+    /* ========================================================
+       FIND PEOPLE
+       ======================================================== */
+
+    function openPeopleSearch() {
+
+        /*
+         * Public profile/search screen belongs to the
+         * profile/community expansion.
+         *
+         * For now, navigate to profile.
+         */
+
+        window.location.href =
+            "perfil.html";
+
+    }
+
+
+    /* ========================================================
+       EVENT HANDLERS
+       ======================================================== */
+
+    function bindEvents() {
+
+        const back =
+            $("#community-back");
+
+        if (back) {
+
+            back.addEventListener(
+                "click",
+                () => {
+                    window.location.href =
+                        "home.html";
+                }
+            );
+
+        }
+
+
+        const home =
+            $("#home-nav");
+
+        if (home) {
+
+            home.addEventListener(
+                "click",
+                () => {
+                    window.location.href =
+                        "home.html";
+                }
+            );
+
+        }
+
+
+        const matches =
+            $("#matches-nav");
+
+        if (matches) {
+
+            matches.addEventListener(
+                "click",
+                () => {
+                    window.location.href =
+                        "home.html";
+                }
+            );
+
+        }
+
+
+        const profile =
+            $("#profile-nav");
+
+        if (profile) {
+
+            profile.addEventListener(
+                "click",
+                () => {
+                    window.location.href =
+                        "perfil.html";
+                }
+            );
+
+        }
+
+
+        const markRead =
+            $("#community-mark-read");
+
+        if (markRead) {
+
+            markRead.addEventListener(
+                "click",
+                markAllNotificationsRead
+            );
+
+        }
+
+
+        const findPeople =
+            $("#find-people-button");
+
+        if (findPeople) {
+
+            findPeople.addEventListener(
+                "click",
+                openPeopleSearch
+            );
+
+        }
+
+
+        document.addEventListener(
+            "click",
+            async event => {
+
+                const notification =
+                    event.target.closest(
+                        "[data-notification-id]"
+                    );
+
+
+                if (notification) {
+
+                    const id =
+                        notification.dataset
+                            .notificationId;
+
+                    const source =
+                        notification.dataset
+                            .notificationSource;
+
+
+                    const item =
+                        state.notifications.find(
+                            notificationItem =>
+                                notificationItem.id === id &&
+                                notificationItem.source === source
+                        );
+
+
+                    if (!item) {
+                        return;
+                    }
+
+
+                    await markNotificationRead(
+                        item
+                    );
+
+
+                    if (item.article_key) {
+
+                        openConversation(
+                            item.article_key,
+                            item.comment_id
+                        );
+
+                    }
+
+                    return;
+
+                }
+
+
+                const favoriteButton =
+                    event.target.closest(
+                        "[data-remove-favorite]"
+                    );
+
+
+                if (favoriteButton) {
+
+                    event.stopPropagation();
+
+                    await unfollowPerson(
+                        favoriteButton.dataset
+                            .removeFavorite
+                    );
+
+                    return;
+
+                }
+
+
+                const conversation =
+                    event.target.closest(
+                        "[data-conversation-key]"
+                    );
+
+
+                if (conversation) {
+
+                    openConversation(
+                        conversation.dataset
+                            .conversationKey
+                    );
+
+                }
+
+            }
+        );
+
+    }
+
+
+    /* ========================================================
+       INITIAL LOAD
+       ======================================================== */
+
+    async function init() {
+
+        try {
+
+            const authenticated =
+                await loadCurrentUser();
+
+
+            if (!authenticated) {
+                return;
+            }
+
+
+            bindEvents();
+
+
+            await Promise.all([
+                loadNotifications(),
+                loadFavorites(),
+                loadConversations(),
+                loadMessages()
+            ]);
+
+
+        } catch (error) {
+
+            console.error(
+                "BR Comunidade: erro de inicialização.",
+                error
+            );
+
+
+            setHTML(
+                "#community-notifications",
+                `
+                    <div class="community-card">
+                        <div class="community-empty">
+                            Não foi possível carregar a comunidade.
+                        </div>
+                    </div>
+                `
+            );
+
+        }
+
+    }
 
 
     if (
-        Number.isNaN(
-            number
-        )
+        document.readyState ===
+        "loading"
     ) {
 
-        return `rgba(165,0,68,${alpha})`;
+        document.addEventListener(
+            "DOMContentLoaded",
+            init
+        );
+
+    } else {
+
+        init();
 
     }
 
 
-    const r =
-        (number >> 16) & 255;
+    /* ========================================================
+       PUBLIC API
+       ======================================================== */
 
-    const g =
-        (number >> 8) & 255;
-
-    const b =
-        number & 255;
-
-
-    return `rgba(${r},${g},${b},${alpha})`;
-
-}
+    window.BarcaRealCommunity = {
+        reload: init
+    };
 
 
-function normalize(value) {
-
-    return String(
-        value || ""
-    )
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(
-            /[\u0300-\u036f]/g,
-            ""
-        );
-
-}
-
-
-function escapeHTML(value) {
-
-    return String(
-        value ?? ""
-    )
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-        .replace(
-            /</g,
-            "&lt;"
-        )
-        .replace(
-            />/g,
-            "&gt;"
-        )
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-        .replace(
-            /'/g,
-            "&#039;"
-        );
-
-}
-
-
-function escapeAttribute(value) {
-
-    return escapeHTML(value)
-        .replace(
-            /`/g,
-            "&#096;"
-        );
-
-}
-
-
-function setText(
-    selector,
-    value
-) {
-
-    const element =
-        $(selector);
-
-
-    if (element) {
-
-        element.textContent =
-            value ?? "";
-
-    }
-
-}
+})();
