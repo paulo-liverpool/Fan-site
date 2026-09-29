@@ -2693,6 +2693,25 @@ async function saveFeaturedEdit(
 
 async function loadNewsLibrary() {
 
+    /* ========================================================
+       PRESERVE CURRENT NEWS FILTERS
+       ======================================================== */
+
+    const currentStatusFilter =
+        document.getElementById(
+            "news-status-filter"
+        )?.value || "all";
+
+    const currentTeamFilter =
+        document.getElementById(
+            "news-team-filter"
+        )?.value || "all";
+
+
+    /* ========================================================
+       NEWS LIST
+       ======================================================== */
+
     const list =
         document.getElementById(
             "news-list"
@@ -2706,6 +2725,7 @@ async function loadNewsLibrary() {
         </div>
     `;
 
+
     try {
 
         const {
@@ -2714,27 +2734,27 @@ async function loadNewsLibrary() {
         } = await supabaseClient
             .from("news")
             .select(`
-                      id,
-        team_id,
-        title,
-        description,
-        image_url,
-        article_url,
-        source_name,
-        source_url,
-        author,
-        published_at,
-        imported_at,
-        external_id,
-        category,
-        status,
-        editorial_locked,
-        is_featured,
-        sort_order,
-        created_at,
-        article_body,
-        translated_title,
-        translated_description
+                id,
+                team_id,
+                title,
+                description,
+                image_url,
+                article_url,
+                source_name,
+                source_url,
+                author,
+                published_at,
+                imported_at,
+                external_id,
+                category,
+                status,
+                editorial_locked,
+                is_featured,
+                sort_order,
+                created_at,
+                article_body,
+                translated_title,
+                translated_description
             `)
             .order(
                 "created_at",
@@ -2745,9 +2765,56 @@ async function loadNewsLibrary() {
 
         if (error) throw error;
 
+
         await renderNewsLibrary(
             data || []
         );
+
+
+        /* ====================================================
+           RESTORE PREVIOUS FILTERS
+           ==================================================== */
+
+        const statusSelect =
+            document.getElementById(
+                "news-status-filter"
+            );
+
+        const teamSelect =
+            document.getElementById(
+                "news-team-filter"
+            );
+
+
+        if (statusSelect) {
+            statusSelect.value =
+                currentStatusFilter;
+        }
+
+        if (teamSelect) {
+            teamSelect.value =
+                currentTeamFilter;
+        }
+
+
+        /* ====================================================
+           RE-APPLY FILTERS
+           ==================================================== */
+
+        if (
+            statusSelect &&
+            teamSelect
+        ) {
+
+            const teamMap =
+                await loadNewsTeams();
+
+            applyNewsLibraryFilters(
+                data || [],
+                teamMap
+            );
+        }
+
 
     } catch (error) {
 
@@ -2774,8 +2841,6 @@ async function loadNewsLibrary() {
         `;
     }
 }
-
-
 // ============================================================
 // 14. RENDER NEWS LIBRARY
 // ============================================================
