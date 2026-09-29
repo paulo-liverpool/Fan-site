@@ -1,5 +1,6 @@
 /* ============================================================
    BARÇA REAL — COMUNIDADE
+   Central activity / notifications hub
    ============================================================ */
 
 (function () {
@@ -12,13 +13,23 @@
        ======================================================== */
 
     const state = {
+
         user: null,
+
         profile: null,
+
         notifications: [],
+
         favorites: [],
+
+        comments: [],
+
         conversations: [],
+
         messages: [],
+
         profiles: new Map()
+
     };
 
 
@@ -26,7 +37,7 @@
        HELPERS
        ======================================================== */
 
-    const $ = (selector) =>
+    const $ = selector =>
         document.querySelector(selector);
 
 
@@ -35,7 +46,7 @@
         return (
             window.supabaseClient ||
             window.supabase ||
-            window.supabaseClient
+            null
         );
 
     }
@@ -43,7 +54,10 @@
 
     function escapeHTML(value) {
 
-        if (value === null || value === undefined) {
+        if (
+            value === null ||
+            value === undefined
+        ) {
             return "";
         }
 
@@ -68,14 +82,19 @@
             .trim()
             .split(/\s+/)
             .slice(0, 2)
-            .map(part => part.charAt(0))
+            .map(part =>
+                part.charAt(0)
+            )
             .join("")
             .toUpperCase();
 
     }
 
 
-    function avatarHTML(profile, className) {
+    function avatarHTML(
+        profile,
+        className
+    ) {
 
         if (profile?.avatar_url) {
 
@@ -91,7 +110,9 @@
 
         return `
             <div class="${className}">
-                ${escapeHTML(initials(profile))}
+                ${escapeHTML(
+                    initials(profile)
+                )}
             </div>
         `;
 
@@ -104,36 +125,55 @@
             return "";
         }
 
-        const date = new Date(dateValue);
-        const now = new Date();
+        const date =
+            new Date(dateValue);
+
+        const now =
+            new Date();
 
         const seconds =
-            Math.floor((now - date) / 1000);
+            Math.floor(
+                (now - date) / 1000
+            );
+
 
         if (seconds < 60) {
             return "Agora mesmo";
         }
 
+
         const minutes =
             Math.floor(seconds / 60);
+
 
         if (minutes < 60) {
             return `Há ${minutes} min`;
         }
 
+
         const hours =
             Math.floor(minutes / 60);
+
 
         if (hours < 24) {
             return `Há ${hours} h`;
         }
 
+
         const days =
             Math.floor(hours / 24);
 
+
         if (days < 7) {
-            return `Há ${days} ${days === 1 ? "dia" : "dias"}`;
+
+            return `Há ${days} ${
+                days === 1
+                    ? "dia"
+                    : "dias"
+            }`;
+
         }
+
 
         return date.toLocaleDateString(
             "pt-PT",
@@ -147,9 +187,13 @@
     }
 
 
-    function setHTML(selector, html) {
+    function setHTML(
+        selector,
+        html
+    ) {
 
-        const element = $(selector);
+        const element =
+            $(selector);
 
         if (element) {
             element.innerHTML = html;
@@ -164,23 +208,32 @@
 
     async function loadProfiles(ids) {
 
-        const supabase = getSupabase();
+        const supabase =
+            getSupabase();
 
         const uniqueIds = [
             ...new Set(
-                ids.filter(Boolean)
+                (ids || []).filter(Boolean)
             )
         ];
 
-        const missingIds = uniqueIds.filter(
-            id => !state.profiles.has(id)
-        );
+
+        const missingIds =
+            uniqueIds.filter(
+                id =>
+                    !state.profiles.has(id)
+            );
+
 
         if (!missingIds.length) {
             return;
         }
 
-        const { data, error } = await supabase
+
+        const {
+            data,
+            error
+        } = await supabase
             .from("profiles")
             .select(`
                 id,
@@ -189,36 +242,49 @@
                 avatar_url,
                 bio
             `)
-            .in("id", missingIds);
+            .in(
+                "id",
+                missingIds
+            );
+
 
         if (error) {
+
             console.error(
                 "BR Comunidade: erro ao carregar perfis.",
                 error
             );
+
             return;
+
         }
 
-        (data || []).forEach(profile => {
 
-            state.profiles.set(
-                profile.id,
-                profile
-            );
+        (data || []).forEach(
+            profile => {
 
-        });
+                state.profiles.set(
+                    profile.id,
+                    profile
+                );
+
+            }
+        );
 
     }
 
 
     function getProfile(id) {
 
-        return state.profiles.get(id) || {
-            id,
-            display_name: "Utilizador",
-            username: "",
-            avatar_url: null
-        };
+        return (
+            state.profiles.get(id) ||
+            {
+                id,
+                display_name: "Utilizador",
+                username: "",
+                avatar_url: null
+            }
+        );
 
     }
 
@@ -229,51 +295,80 @@
 
     async function loadCurrentUser() {
 
-        const supabase = getSupabase();
+        const supabase =
+            getSupabase();
+
 
         if (!supabase) {
+
             throw new Error(
                 "Supabase não está disponível."
             );
+
         }
+
 
         const {
             data: {
                 user
             },
             error
-        } = await supabase.auth.getUser();
+        } =
+            await supabase.auth.getUser();
 
-        if (error || !user) {
 
-            window.location.href = "login.html";
+        if (
+            error ||
+            !user
+        ) {
+
+            window.location.href =
+                "login.html";
 
             return false;
+
         }
 
-        state.user = user;
+
+        state.user =
+            user;
+
 
         const {
             data: profile
-        } = await supabase
-            .from("profiles")
-            .select(`
-                id,
-                username,
-                display_name,
-                avatar_url,
-                bio,
-                supported_team_id
-            `)
-            .eq("id", user.id)
-            .maybeSingle();
+        } =
+            await supabase
+                .from("profiles")
+                .select(`
+                    id,
+                    username,
+                    display_name,
+                    avatar_url,
+                    bio,
+                    supported_team_id
+                `)
+                .eq(
+                    "id",
+                    user.id
+                )
+                .maybeSingle();
 
-        state.profile = profile || {
-            id: user.id,
-            display_name:
-                user.email?.split("@")[0] ||
-                "Utilizador"
-        };
+
+        state.profile =
+            profile ||
+            {
+                id: user.id,
+                display_name:
+                    user.email?.split("@")[0] ||
+                    "Utilizador"
+            };
+
+
+        state.profiles.set(
+            state.user.id,
+            state.profile
+        );
+
 
         return true;
 
@@ -286,28 +381,38 @@
 
     async function loadFanNotifications() {
 
-        const supabase = getSupabase();
+        const supabase =
+            getSupabase();
+
 
         const {
             data,
             error
-        } = await supabase
-            .from("fan_notifications")
-            .select(`
-                id,
-                recipient_id,
-                actor_id,
-                type,
-                article_key,
-                comment_id,
-                created_at,
-                read_at
-            `)
-            .eq("recipient_id", state.user.id)
-            .order("created_at", {
-                ascending: false
-            })
-            .limit(50);
+        } =
+            await supabase
+                .from("fan_notifications")
+                .select(`
+                    id,
+                    recipient_id,
+                    actor_id,
+                    type,
+                    article_key,
+                    comment_id,
+                    created_at,
+                    read_at
+                `)
+                .eq(
+                    "recipient_id",
+                    state.user.id
+                )
+                .order(
+                    "created_at",
+                    {
+                        ascending: false
+                    }
+                )
+                .limit(100);
+
 
         if (error) {
 
@@ -320,6 +425,7 @@
 
         }
 
+
         return data || [];
 
     }
@@ -331,28 +437,38 @@
 
     async function loadGeneralNotifications() {
 
-        const supabase = getSupabase();
+        const supabase =
+            getSupabase();
+
 
         const {
             data,
             error
-        } = await supabase
-            .from("notifications")
-            .select(`
-                id,
-                user_id,
-                type,
-                title,
-                message,
-                related_id,
-                read,
-                created_at
-            `)
-            .eq("user_id", state.user.id)
-            .order("created_at", {
-                ascending: false
-            })
-            .limit(50);
+        } =
+            await supabase
+                .from("notifications")
+                .select(`
+                    id,
+                    user_id,
+                    type,
+                    title,
+                    message,
+                    related_id,
+                    read,
+                    created_at
+                `)
+                .eq(
+                    "user_id",
+                    state.user.id
+                )
+                .order(
+                    "created_at",
+                    {
+                        ascending: false
+                    }
+                )
+                .limit(100);
+
 
         if (error) {
 
@@ -365,15 +481,21 @@
 
         }
 
+
         return data || [];
 
     }
 
 
-    function fanNotificationText(notification) {
+    function fanNotificationText(
+        notification
+    ) {
 
         const actor =
-            getProfile(notification.actor_id);
+            getProfile(
+                notification.actor_id
+            );
+
 
         const name =
             actor.display_name ||
@@ -381,7 +503,9 @@
             "Alguém";
 
 
-        switch (notification.type) {
+        switch (
+            notification.type
+        ) {
 
             case "comment_reply":
             case "reply":
@@ -446,73 +570,125 @@
             fanNotifications,
             generalNotifications
         ] = await Promise.all([
+
             loadFanNotifications(),
+
             loadGeneralNotifications()
+
         ]);
 
 
         await loadProfiles(
             fanNotifications.map(
-                notification => notification.actor_id
+                item =>
+                    item.actor_id
             )
         );
 
 
         const fanItems =
-            fanNotifications.map(notification => {
+            fanNotifications.map(
+                notification => {
 
-                const text =
-                    fanNotificationText(
-                        notification
-                    );
+                    const text =
+                        fanNotificationText(
+                            notification
+                        );
 
-                return {
-                    source: "fan",
-                    id: notification.id,
-                    type: notification.type,
-                    actor_id: notification.actor_id,
-                    article_key: notification.article_key,
-                    comment_id: notification.comment_id,
-                    created_at: notification.created_at,
-                    read: Boolean(notification.read_at),
-                    title: text.title,
-                    message: text.message
-                };
 
-            });
+                    return {
+
+                        source: "fan",
+
+                        id:
+                            notification.id,
+
+                        type:
+                            notification.type,
+
+                        actor_id:
+                            notification.actor_id,
+
+                        article_key:
+                            notification.article_key,
+
+                        comment_id:
+                            notification.comment_id,
+
+                        created_at:
+                            notification.created_at,
+
+                        read:
+                            Boolean(
+                                notification.read_at
+                            ),
+
+                        title:
+                            text.title,
+
+                        message:
+                            text.message
+
+                    };
+
+                }
+            );
 
 
         const generalItems =
-            generalNotifications.map(notification => {
+            generalNotifications.map(
+                notification => {
 
-                return {
-                    source: "general",
-                    id: notification.id,
-                    type: notification.type,
-                    related_id: notification.related_id,
-                    created_at: notification.created_at,
-                    read: notification.read,
-                    title:
-                        notification.title ||
-                        "Nova atividade",
-                    message:
-                        notification.message ||
-                        ""
-                };
+                    return {
 
-            });
+                        source: "general",
+
+                        id:
+                            notification.id,
+
+                        type:
+                            notification.type,
+
+                        related_id:
+                            notification.related_id,
+
+                        created_at:
+                            notification.created_at,
+
+                        read:
+                            Boolean(
+                                notification.read
+                            ),
+
+                        title:
+                            notification.title ||
+                            "Nova atividade",
+
+                        message:
+                            notification.message ||
+                            ""
+
+                    };
+
+                }
+            );
 
 
-        state.notifications = [
-            ...fanItems,
-            ...generalItems
-        ]
-            .sort(
-                (a, b) =>
-                    new Date(b.created_at) -
-                    new Date(a.created_at)
-            )
-            .slice(0, 50);
+        state.notifications =
+            [
+                ...fanItems,
+                ...generalItems
+            ]
+                .sort(
+                    (a, b) =>
+                        new Date(
+                            b.created_at
+                        ) -
+                        new Date(
+                            a.created_at
+                        )
+                )
+                .slice(0, 100);
 
 
         renderNotifications();
@@ -521,104 +697,17 @@
 
 
     /* ========================================================
-       RENDER NOTIFICATIONS
+       NOTIFICATION COUNT
        ======================================================== */
 
-    function renderNotifications() {
+    function getUnreadCount() {
 
-        const container =
-            $("#community-notifications");
-
-        if (!container) {
-            return;
-        }
-
-
-        if (!state.notifications.length) {
-
-            container.innerHTML = `
-                <div class="community-card">
-                    <div class="community-empty">
-                        Não tens notificações novas.
-                    </div>
-                </div>
-            `;
-
-            updateUnreadCount();
-
-            return;
-
-        }
-
-
-        const html =
-            state.notifications
-                .map(notification => {
-
-                    const actor =
-                        notification.actor_id
-                            ? getProfile(
-                                notification.actor_id
-                            )
-                            : state.profile;
-
-
-                    return `
-                        <div
-                            class="
-                                community-card
-                                community-notification
-                                ${notification.read
-                                    ? ""
-                                    : "unread"}
-                            "
-                            data-notification-source="${escapeHTML(notification.source)}"
-                            data-notification-id="${escapeHTML(notification.id)}"
-                            data-article-key="${escapeHTML(notification.article_key || "")}"
-                            data-comment-id="${notification.comment_id || ""}"
-                        >
-
-                            ${avatarHTML(
-                                actor,
-                                "community-notification-avatar"
-                            )}
-
-                            <div class="community-notification-body">
-
-                                <div class="community-notification-title">
-                                    ${escapeHTML(notification.title)}
-                                </div>
-
-                                <div class="community-notification-message">
-                                    ${escapeHTML(notification.message)}
-                                </div>
-
-                                <div class="community-notification-time">
-                                    ${escapeHTML(
-                                        relativeTime(
-                                            notification.created_at
-                                        )
-                                    )}
-                                </div>
-
-                            </div>
-
-                            ${
-                                notification.read
-                                    ? ""
-                                    : `<span class="community-unread-dot"></span>`
-                            }
-
-                        </div>
-                    `;
-
-                })
-                .join("");
-
-
-        container.innerHTML = html;
-
-        updateUnreadCount();
+        return state.notifications
+            .filter(
+                notification =>
+                    !notification.read
+            )
+            .length;
 
     }
 
@@ -626,13 +715,12 @@
     function updateUnreadCount() {
 
         const count =
-            state.notifications.filter(
-                notification => !notification.read
-            ).length;
+            getUnreadCount();
 
 
         const topCount =
             $("#community-unread-count");
+
 
         const badge =
             $("#fan-notification-badge");
@@ -640,7 +728,10 @@
 
         if (topCount) {
 
-            topCount.textContent = count;
+            topCount.textContent =
+                count > 99
+                    ? "99+"
+                    : count;
 
             topCount.hidden =
                 count === 0;
@@ -660,62 +751,265 @@
 
         }
 
+
+        /*
+         * Also expose the count to the shared
+         * notification badge system.
+         */
+
+        window.dispatchEvent(
+            new CustomEvent(
+                "barcaRealUnreadChanged",
+                {
+                    detail: {
+                        count
+                    }
+                }
+            )
+        );
+
     }
 
 
     /* ========================================================
-       MARK NOTIFICATION READ
+       RENDER NOTIFICATIONS
        ======================================================== */
 
-    async function markNotificationRead(notification) {
+    function renderNotifications() {
 
-        if (notification.read) {
+        const container =
+            $("#community-notifications");
+
+
+        if (!container) {
             return;
         }
 
-        const supabase = getSupabase();
+
+        if (!state.notifications.length) {
+
+            container.innerHTML = `
+                <div class="community-card">
+                    <div class="community-empty">
+                        Ainda não tens notificações.
+                    </div>
+                </div>
+            `;
+
+            updateUnreadCount();
+
+            return;
+
+        }
 
 
-        if (notification.source === "fan") {
+        container.innerHTML =
+            state.notifications
+                .map(
+                    notification => {
+
+                        const actor =
+                            notification.actor_id
+                                ? getProfile(
+                                    notification.actor_id
+                                )
+                                : state.profile;
+
+
+                        return `
+                            <div
+                                class="
+                                    community-card
+                                    community-notification
+                                    ${
+                                        notification.read
+                                            ? ""
+                                            : "unread"
+                                    }
+                                "
+                                data-notification-source="${escapeHTML(
+                                    notification.source
+                                )}"
+                                data-notification-id="${escapeHTML(
+                                    notification.id
+                                )}"
+                                data-article-key="${escapeHTML(
+                                    notification.article_key || ""
+                                )}"
+                                data-comment-id="${
+                                    notification.comment_id || ""
+                                }"
+                            >
+
+                                ${avatarHTML(
+                                    actor,
+                                    "community-notification-avatar"
+                                )}
+
+                                <div
+                                    class="
+                                        community-notification-body
+                                    "
+                                >
+
+                                    <div
+                                        class="
+                                            community-notification-title
+                                        "
+                                    >
+                                        ${escapeHTML(
+                                            notification.title
+                                        )}
+                                    </div>
+
+
+                                    <div
+                                        class="
+                                            community-notification-message
+                                        "
+                                    >
+                                        ${escapeHTML(
+                                            notification.message
+                                        )}
+                                    </div>
+
+
+                                    <div
+                                        class="
+                                            community-notification-time
+                                        "
+                                    >
+                                        ${escapeHTML(
+                                            relativeTime(
+                                                notification.created_at
+                                            )
+                                        )}
+                                    </div>
+
+                                </div>
+
+
+                                ${
+                                    notification.read
+                                        ? ""
+                                        :
+                                        `
+                                            <span
+                                                class="
+                                                    community-unread-dot
+                                                "
+                                            ></span>
+                                        `
+                                }
+
+                            </div>
+                        `;
+
+                    }
+                )
+                .join("");
+
+
+        updateUnreadCount();
+
+    }
+
+
+    /* ========================================================
+       MARK READ
+       ======================================================== */
+
+    async function markNotificationRead(
+        notification
+    ) {
+
+        if (
+            !notification ||
+            notification.read
+        ) {
+            return;
+        }
+
+
+        const supabase =
+            getSupabase();
+
+
+        if (
+            notification.source ===
+            "fan"
+        ) {
 
             const {
                 error
-            } = await supabase
-                .from("fan_notifications")
-                .update({
-                    read_at: new Date().toISOString()
-                })
-                .eq("id", notification.id)
-                .eq("recipient_id", state.user.id);
+            } =
+                await supabase
+                    .from("fan_notifications")
+                    .update({
+                        read_at:
+                            new Date()
+                                .toISOString()
+                    })
+                    .eq(
+                        "id",
+                        notification.id
+                    )
+                    .eq(
+                        "recipient_id",
+                        state.user.id
+                    );
 
 
             if (error) {
-                console.error(error);
+
+                console.error(
+                    "BR Comunidade: erro ao marcar notificação.",
+                    error
+                );
+
                 return;
+
             }
 
         } else {
 
             const {
                 error
-            } = await supabase
-                .from("notifications")
-                .update({
-                    read: true
-                })
-                .eq("id", notification.id)
-                .eq("user_id", state.user.id);
+            } =
+                await supabase
+                    .from("notifications")
+                    .update({
+                        read: true
+                    })
+                    .eq(
+                        "id",
+                        notification.id
+                    )
+                    .eq(
+                        "user_id",
+                        state.user.id
+                    );
 
 
             if (error) {
-                console.error(error);
+
+                console.error(
+                    "BR Comunidade: erro ao marcar notificação.",
+                    error
+                );
+
                 return;
+
             }
 
         }
 
 
-        notification.read = true;
+        notification.read =
+            true;
+
+
+        updateUnreadCount();
 
         renderNotifications();
 
@@ -724,36 +1018,76 @@
 
     async function markAllNotificationsRead() {
 
-        const supabase = getSupabase();
+        const supabase =
+            getSupabase();
+
 
         const now =
             new Date().toISOString();
 
 
-        await Promise.all([
+        const [
+            fanResult,
+            generalResult
+        ] = await Promise.all([
 
             supabase
                 .from("fan_notifications")
                 .update({
                     read_at: now
                 })
-                .eq("recipient_id", state.user.id)
-                .is("read_at", null),
+                .eq(
+                    "recipient_id",
+                    state.user.id
+                )
+                .is(
+                    "read_at",
+                    null
+                ),
 
             supabase
                 .from("notifications")
                 .update({
                     read: true
                 })
-                .eq("user_id", state.user.id)
-                .eq("read", false)
+                .eq(
+                    "user_id",
+                    state.user.id
+                )
+                .eq(
+                    "read",
+                    false
+                )
 
         ]);
 
 
+        if (fanResult.error) {
+
+            console.error(
+                "BR Comunidade: erro ao marcar fan notifications.",
+                fanResult.error
+            );
+
+        }
+
+
+        if (generalResult.error) {
+
+            console.error(
+                "BR Comunidade: erro ao marcar notifications.",
+                generalResult.error
+            );
+
+        }
+
+
         state.notifications.forEach(
             notification => {
-                notification.read = true;
+
+                notification.read =
+                    true;
+
             }
         );
 
@@ -764,27 +1098,279 @@
 
 
     /* ========================================================
-       FAVOURITE PEOPLE
+       MY COMMENTS
        ======================================================== */
 
-    async function loadFavorites() {
+    async function loadMyComments() {
 
-        const supabase = getSupabase();
+        const supabase =
+            getSupabase();
+
 
         const {
             data,
             error
-        } = await supabase
-            .from("favorite_people")
-            .select(`
-                follower_id,
-                followed_id,
-                created_at
-            `)
-            .eq("follower_id", state.user.id)
-            .order("created_at", {
-                ascending: false
-            });
+        } =
+            await supabase
+                .from("fan_comments")
+                .select(`
+                    id,
+                    article_key,
+                    user_id,
+                    parent_id,
+                    body,
+                    created_at
+                `)
+                .eq(
+                    "user_id",
+                    state.user.id
+                )
+                .order(
+                    "created_at",
+                    {
+                        ascending: false
+                    }
+                )
+                .limit(200);
+
+
+        if (error) {
+
+            console.error(
+                "BR Comunidade: meus comentários.",
+                error
+            );
+
+            state.comments = [];
+
+            renderMyComments();
+
+            return;
+
+        }
+
+
+        state.comments =
+            data || [];
+
+
+        renderMyComments();
+
+    }
+
+
+    function commentArticleLabel(
+        articleKey
+    ) {
+
+        if (!articleKey) {
+            return "Publicação";
+        }
+
+
+        if (
+            articleKey.startsWith(
+                "news:"
+            )
+        ) {
+            return "Notícia";
+        }
+
+
+        if (
+            articleKey.startsWith(
+                "content:"
+            )
+        ) {
+            return "Conteúdo";
+        }
+
+
+        if (
+            articleKey.startsWith(
+                "standings:"
+            )
+        ) {
+            return "Classificação";
+        }
+
+
+        return "Publicação";
+
+    }
+
+
+    function renderMyComments() {
+
+        const container =
+            $("#community-my-comments");
+
+
+        const count =
+            $("#my-comments-count");
+
+
+        if (count) {
+
+            count.textContent =
+                state.comments.length;
+
+        }
+
+
+        if (!container) {
+            return;
+        }
+
+
+        if (!state.comments.length) {
+
+            container.innerHTML = `
+                <div class="community-card">
+                    <div class="community-empty">
+                        Ainda não fizeste nenhum comentário.
+                    </div>
+                </div>
+            `;
+
+            return;
+
+        }
+
+
+        container.innerHTML = `
+
+            <div class="community-card">
+
+                ${
+                    state.comments
+                        .map(
+                            comment => {
+
+                                return `
+                                    <div
+                                        class="
+                                            community-my-comment
+                                        "
+                                        data-my-comment-key="${escapeHTML(
+                                            comment.article_key
+                                        )}"
+                                        data-my-comment-id="${
+                                            comment.id
+                                        }"
+                                    >
+
+                                        ${avatarHTML(
+                                            state.profile,
+                                            "community-my-comment-avatar"
+                                        )}
+
+
+                                        <div
+                                            class="
+                                                community-my-comment-body
+                                            "
+                                        >
+
+                                            <div
+                                                class="
+                                                    community-my-comment-article
+                                                "
+                                            >
+                                                ${escapeHTML(
+                                                    commentArticleLabel(
+                                                        comment.article_key
+                                                    )
+                                                )}
+                                            </div>
+
+
+                                            <div
+                                                class="
+                                                    community-my-comment-text
+                                                "
+                                            >
+                                                ${escapeHTML(
+                                                    comment.body
+                                                )}
+                                            </div>
+
+
+                                            <div
+                                                class="
+                                                    community-my-comment-meta
+                                                "
+                                            >
+
+                                                <span>
+                                                    ${escapeHTML(
+                                                        relativeTime(
+                                                            comment.created_at
+                                                        )
+                                                    )}
+                                                </span>
+
+
+                                                ${
+                                                    comment.parent_id
+                                                        ? `
+                                                            <span>
+                                                                · Resposta
+                                                            </span>
+                                                        `
+                                                        : ""
+                                                }
+
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+                                `;
+
+                            }
+                        )
+                        .join("")
+                }
+
+            </div>
+
+        `;
+
+    }
+
+
+    /* ========================================================
+       FAVORITE PEOPLE
+       ======================================================== */
+
+    async function loadFavorites() {
+
+        const supabase =
+            getSupabase();
+
+
+        const {
+            data,
+            error
+        } =
+            await supabase
+                .from("favorite_people")
+                .select(`
+                    follower_id,
+                    followed_id,
+                    created_at
+                `)
+                .eq(
+                    "follower_id",
+                    state.user.id
+                )
+                .order(
+                    "created_at",
+                    {
+                        ascending: false
+                    }
+                );
 
 
         if (error) {
@@ -793,6 +1379,10 @@
                 "BR Comunidade: favorite_people.",
                 error
             );
+
+            state.favorites = [];
+
+            renderFavorites();
 
             return;
 
@@ -821,6 +1411,7 @@
         const container =
             $("#favorite-people");
 
+
         if (!container) {
             return;
         }
@@ -843,76 +1434,104 @@
 
         container.innerHTML =
             state.favorites
-                .map(favorite => {
+                .map(
+                    favorite => {
 
-                    const profile =
-                        getProfile(
-                            favorite.followed_id
-                        );
+                        const profile =
+                            getProfile(
+                                favorite.followed_id
+                            );
 
 
-                    return `
-                        <div class="favorite-person">
+                        return `
+                            <div class="favorite-person">
 
-                            ${avatarHTML(
-                                profile,
-                                "favorite-avatar"
-                            )}
+                                ${avatarHTML(
+                                    profile,
+                                    "favorite-avatar"
+                                )}
 
-                            <div class="favorite-person-info">
 
-                                <div class="favorite-person-name">
-                                    ${escapeHTML(
-                                        profile.display_name ||
-                                        profile.username ||
-                                        "Utilizador"
-                                    )}
+                                <div
+                                    class="
+                                        favorite-person-info
+                                    "
+                                >
+
+                                    <div
+                                        class="
+                                            favorite-person-name
+                                        "
+                                    >
+                                        ${escapeHTML(
+                                            profile.display_name ||
+                                            profile.username ||
+                                            "Utilizador"
+                                        )}
+                                    </div>
+
+
+                                    ${
+                                        profile.username
+                                            ? `
+                                                <div
+                                                    class="
+                                                        favorite-person-username
+                                                    "
+                                                >
+                                                    @${escapeHTML(
+                                                        profile.username
+                                                    )}
+                                                </div>
+                                            `
+                                            : ""
+                                    }
+
                                 </div>
 
-                                ${
-                                    profile.username
-                                        ? `
-                                            <div class="favorite-person-username">
-                                                @${escapeHTML(
-                                                    profile.username
-                                                )}
-                                            </div>
-                                        `
-                                        : ""
-                                }
+
+                                <button
+                                    class="favorite-remove"
+                                    type="button"
+                                    data-remove-favorite="${escapeHTML(
+                                        favorite.followed_id
+                                    )}"
+                                >
+                                    Seguindo
+                                </button>
 
                             </div>
+                        `;
 
-                            <button
-                                class="favorite-remove"
-                                type="button"
-                                data-remove-favorite="${escapeHTML(
-                                    favorite.followed_id
-                                )}"
-                            >
-                                Seguindo
-                            </button>
-
-                        </div>
-                    `;
-
-                })
+                    }
+                )
                 .join("");
 
     }
 
 
-    async function unfollowPerson(userId) {
+    async function unfollowPerson(
+        userId
+    ) {
 
-        const supabase = getSupabase();
+        const supabase =
+            getSupabase();
+
 
         const {
             error
-        } = await supabase
-            .from("favorite_people")
-            .delete()
-            .eq("follower_id", state.user.id)
-            .eq("followed_id", userId);
+        } =
+            await supabase
+                .from("favorite_people")
+                .delete()
+                .eq(
+                    "follower_id",
+                    state.user.id
+                )
+                .eq(
+                    "followed_id",
+                    userId
+                );
 
 
         if (error) {
@@ -930,7 +1549,8 @@
         state.favorites =
             state.favorites.filter(
                 favorite =>
-                    favorite.followed_id !== userId
+                    favorite.followed_id !==
+                    userId
             );
 
 
@@ -940,27 +1560,32 @@
 
 
     /* ========================================================
-       RECENT CONVERSATIONS
+       CONVERSATIONS
        ======================================================== */
 
     async function loadConversations() {
 
-        const supabase = getSupabase();
+        const supabase =
+            getSupabase();
 
 
         const {
             data,
             error
-        } = await supabase
-            .from("fan_comments")
-            .select(`
-                article_key,
-                created_at
-            `)
-            .order("created_at", {
-                ascending: false
-            })
-            .limit(100);
+        } =
+            await supabase
+                .from("fan_comments")
+                .select(`
+                    article_key,
+                    created_at
+                `)
+                .order(
+                    "created_at",
+                    {
+                        ascending: false
+                    }
+                )
+                .limit(200);
 
 
         if (error) {
@@ -969,6 +1594,10 @@
                 "BR Comunidade: conversas.",
                 error
             );
+
+            state.conversations = [];
+
+            renderConversations();
 
             return;
 
@@ -979,33 +1608,52 @@
             new Map();
 
 
-        (data || []).forEach(comment => {
+        (data || []).forEach(
+            comment => {
 
-            if (!groups.has(comment.article_key)) {
+                if (
+                    !groups.has(
+                        comment.article_key
+                    )
+                ) {
 
-                groups.set(
-                    comment.article_key,
-                    {
-                        article_key:
-                            comment.article_key,
-                        latest:
-                            comment.created_at,
-                        count: 0
-                    }
-                );
+                    groups.set(
+                        comment.article_key,
+                        {
+                            article_key:
+                                comment.article_key,
+                            latest:
+                                comment.created_at,
+                            count: 0
+                        }
+                    );
+
+                }
+
+
+                groups.get(
+                    comment.article_key
+                ).count++;
 
             }
-
-            groups.get(
-                comment.article_key
-            ).count++;
-
-        });
+        );
 
 
         state.conversations =
             [...groups.values()]
-                .slice(0, 10);
+                .sort(
+                    (a, b) =>
+                        new Date(
+                            b.latest
+                        ) -
+                        new Date(
+                            a.latest
+                        )
+                )
+                .slice(
+                    0,
+                    10
+                );
 
 
         renderConversations();
@@ -1017,6 +1665,7 @@
 
         const container =
             $("#community-conversations");
+
 
         if (!container) {
             return;
@@ -1039,55 +1688,83 @@
 
 
         container.innerHTML = `
+
             <div class="community-card">
 
                 ${
                     state.conversations
-                        .map(conversation => {
+                        .map(
+                            conversation => {
 
-                            return `
-                                <div
-                                    class="community-conversation"
-                                    data-conversation-key="${escapeHTML(
-                                        conversation.article_key
-                                    )}"
-                                >
+                                return `
+                                    <div
+                                        class="
+                                            community-conversation
+                                        "
+                                        data-conversation-key="${escapeHTML(
+                                            conversation.article_key
+                                        )}"
+                                    >
 
-                                    <div class="community-conversation-info">
+                                        <div
+                                            class="
+                                                community-conversation-info
+                                            "
+                                        >
 
-                                        <div class="community-conversation-title">
-                                            Conversa sobre esta publicação
+                                            <div
+                                                class="
+                                                    community-conversation-title
+                                                "
+                                            >
+                                                Conversa sobre esta publicação
+                                            </div>
+
+
+                                            <div
+                                                class="
+                                                    community-conversation-meta
+                                                "
+                                            >
+                                                ${
+                                                    conversation.count
+                                                }
+                                                ${
+                                                    conversation.count === 1
+                                                        ? "comentário"
+                                                        : "comentários"
+                                                }
+
+                                                ·
+
+                                                ${escapeHTML(
+                                                    relativeTime(
+                                                        conversation.latest
+                                                    )
+                                                )}
+                                            </div>
+
                                         </div>
 
-                                        <div class="community-conversation-meta">
-                                            ${conversation.count}
-                                            ${
-                                                conversation.count === 1
-                                                    ? "comentário"
-                                                    : "comentários"
-                                            }
-                                            ·
-                                            ${escapeHTML(
-                                                relativeTime(
-                                                    conversation.latest
-                                                )
-                                            )}
+
+                                        <div
+                                            class="
+                                                community-conversation-arrow
+                                            "
+                                        >
+                                            →
                                         </div>
 
                                     </div>
+                                `;
 
-                                    <div class="community-conversation-arrow">
-                                        →
-                                    </div>
-
-                                </div>
-                            `;
-
-                        })
+                            }
+                        )
                         .join("")
                 }
 
             </div>
+
         `;
 
     }
@@ -1099,30 +1776,38 @@
 
     async function loadMessages() {
 
-        const supabase = getSupabase();
+        const supabase =
+            getSupabase();
 
 
         const {
             data,
             error
-        } = await supabase
-            .from("private_messages")
-            .select(`
-                id,
-                sender_id,
-                recipient_id,
-                subject,
-                body,
-                message_type,
-                sent_at,
-                read_at,
-                created_at
-            `)
-            .eq("recipient_id", state.user.id)
-            .order("sent_at", {
-                ascending: false
-            })
-            .limit(10);
+        } =
+            await supabase
+                .from("private_messages")
+                .select(`
+                    id,
+                    sender_id,
+                    recipient_id,
+                    subject,
+                    body,
+                    message_type,
+                    sent_at,
+                    read_at,
+                    created_at
+                `)
+                .eq(
+                    "recipient_id",
+                    state.user.id
+                )
+                .order(
+                    "sent_at",
+                    {
+                        ascending: false
+                    }
+                )
+                .limit(20);
 
 
         if (error) {
@@ -1131,6 +1816,10 @@
                 "BR Comunidade: mensagens.",
                 error
             );
+
+            state.messages = [];
+
+            renderMessages();
 
             return;
 
@@ -1159,6 +1848,7 @@
         const container =
             $("#community-messages");
 
+
         if (!container) {
             return;
         }
@@ -1180,72 +1870,95 @@
 
 
         container.innerHTML = `
+
             <div class="community-card">
 
                 ${
                     state.messages
-                        .map(message => {
+                        .map(
+                            message => {
 
-                            const sender =
-                                getProfile(
-                                    message.sender_id
-                                );
+                                const sender =
+                                    getProfile(
+                                        message.sender_id
+                                    );
 
 
-                            return `
-                                <div
-                                    class="
-                                        community-message
-                                        ${
-                                            message.read_at
-                                                ? ""
-                                                : "unread"
-                                        }
-                                    "
-                                    data-message-id="${escapeHTML(
-                                        message.id
-                                    )}"
-                                >
+                                return `
+                                    <div
+                                        class="
+                                            community-message
+                                            ${
+                                                message.read_at
+                                                    ? ""
+                                                    : "unread"
+                                            }
+                                        "
+                                        data-message-id="${escapeHTML(
+                                            message.id
+                                        )}"
+                                    >
 
-                                    ${avatarHTML(
-                                        sender,
-                                        "message-avatar"
-                                    )}
+                                        ${avatarHTML(
+                                            sender,
+                                            "message-avatar"
+                                        )}
 
-                                    <div class="community-message-info">
 
-                                        <div class="community-message-name">
-                                            ${escapeHTML(
-                                                sender.display_name ||
-                                                sender.username ||
-                                                "Utilizador"
-                                            )}
-                                        </div>
+                                        <div
+                                            class="
+                                                community-message-info
+                                            "
+                                        >
 
-                                        <div class="community-message-subject">
-                                            ${escapeHTML(
-                                                message.subject
-                                            )}
-                                        </div>
+                                            <div
+                                                class="
+                                                    community-message-name
+                                                "
+                                            >
+                                                ${escapeHTML(
+                                                    sender.display_name ||
+                                                    sender.username ||
+                                                    "Utilizador"
+                                                )}
+                                            </div>
 
-                                        <div class="community-message-time">
-                                            ${escapeHTML(
-                                                relativeTime(
-                                                    message.sent_at
-                                                )
-                                            )}
+
+                                            <div
+                                                class="
+                                                    community-message-subject
+                                                "
+                                            >
+                                                ${escapeHTML(
+                                                    message.subject
+                                                )}
+                                            </div>
+
+
+                                            <div
+                                                class="
+                                                    community-message-time
+                                                "
+                                            >
+                                                ${escapeHTML(
+                                                    relativeTime(
+                                                        message.sent_at
+                                                    )
+                                                )}
+                                            </div>
+
                                         </div>
 
                                     </div>
+                                `;
 
-                                </div>
-                            `;
-
-                        })
+                            }
+                        )
                         .join("")
                 }
 
             </div>
+
         `;
 
     }
@@ -1264,11 +1977,6 @@
             return;
         }
 
-
-        /*
-         * Phase 4 will consume these values and open
-         * the exact article/comment.
-         */
 
         localStorage.setItem(
             "br_pending_article_key",
@@ -1299,17 +2007,43 @@
 
 
     /* ========================================================
+       BACK NAVIGATION
+       ======================================================== */
+
+    function goBack() {
+
+        const referrer =
+            document.referrer || "";
+
+
+        if (
+            referrer &&
+            referrer.includes(
+                window.location.origin
+            ) &&
+            !referrer.includes(
+                "comunidade.html"
+            )
+        ) {
+
+            window.history.back();
+
+            return;
+
+        }
+
+
+        window.location.href =
+            "home.html";
+
+    }
+
+
+    /* ========================================================
        FIND PEOPLE
        ======================================================== */
 
     function openPeopleSearch() {
-
-        /*
-         * Public profile/search screen belongs to the
-         * profile/community expansion.
-         *
-         * For now, navigate to profile.
-         */
 
         window.location.href =
             "perfil.html";
@@ -1326,14 +2060,12 @@
         const back =
             $("#community-back");
 
+
         if (back) {
 
             back.addEventListener(
                 "click",
-                () => {
-                    window.location.href =
-                        "home.html";
-                }
+                goBack
             );
 
         }
@@ -1342,13 +2074,36 @@
         const home =
             $("#home-nav");
 
+
         if (home) {
 
             home.addEventListener(
                 "click",
                 () => {
+
                     window.location.href =
                         "home.html";
+
+                }
+            );
+
+        }
+
+
+        const community =
+            $("#community-nav");
+
+
+        if (community) {
+
+            community.addEventListener(
+                "click",
+                event => {
+
+                    event.preventDefault();
+
+                    window.location.reload();
+
                 }
             );
 
@@ -1358,13 +2113,16 @@
         const matches =
             $("#matches-nav");
 
+
         if (matches) {
 
             matches.addEventListener(
                 "click",
                 () => {
+
                     window.location.href =
-                        "home.html";
+                        "home.html#fixtures-section";
+
                 }
             );
 
@@ -1374,13 +2132,16 @@
         const profile =
             $("#profile-nav");
 
+
         if (profile) {
 
             profile.addEventListener(
                 "click",
                 () => {
+
                     window.location.href =
                         "perfil.html";
+
                 }
             );
 
@@ -1389,6 +2150,7 @@
 
         const markRead =
             $("#community-mark-read");
+
 
         if (markRead) {
 
@@ -1402,6 +2164,7 @@
 
         const findPeople =
             $("#find-people-button");
+
 
         if (findPeople) {
 
@@ -1417,28 +2180,38 @@
             "click",
             async event => {
 
-                const notification =
+
+                /* ============================================
+                   NOTIFICATION
+                   ============================================ */
+
+                const notificationElement =
                     event.target.closest(
                         "[data-notification-id]"
                     );
 
 
-                if (notification) {
+                if (
+                    notificationElement
+                ) {
 
                     const id =
-                        notification.dataset
+                        notificationElement
+                            .dataset
                             .notificationId;
 
+
                     const source =
-                        notification.dataset
+                        notificationElement
+                            .dataset
                             .notificationSource;
 
 
                     const item =
                         state.notifications.find(
-                            notificationItem =>
-                                notificationItem.id === id &&
-                                notificationItem.source === source
+                            notification =>
+                                notification.id === id &&
+                                notification.source === source
                         );
 
 
@@ -1452,7 +2225,9 @@
                     );
 
 
-                    if (item.article_key) {
+                    if (
+                        item.article_key
+                    ) {
 
                         openConversation(
                             item.article_key,
@@ -1461,10 +2236,40 @@
 
                     }
 
+
                     return;
 
                 }
 
+
+                /* ============================================
+                   MY COMMENT
+                   ============================================ */
+
+                const myComment =
+                    event.target.closest(
+                        "[data-my-comment-id]"
+                    );
+
+
+                if (myComment) {
+
+                    openConversation(
+                        myComment.dataset
+                            .myCommentKey,
+
+                        myComment.dataset
+                            .myCommentId
+                    );
+
+                    return;
+
+                }
+
+
+                /* ============================================
+                   FAVORITE
+                   ============================================ */
 
                 const favoriteButton =
                     event.target.closest(
@@ -1476,15 +2281,21 @@
 
                     event.stopPropagation();
 
+
                     await unfollowPerson(
                         favoriteButton.dataset
                             .removeFavorite
                     );
 
+
                     return;
 
                 }
 
+
+                /* ============================================
+                   CONVERSATION
+                   ============================================ */
 
                 const conversation =
                     event.target.closest(
@@ -1498,6 +2309,8 @@
                         conversation.dataset
                             .conversationKey
                     );
+
+                    return;
 
                 }
 
@@ -1528,11 +2341,21 @@
 
 
             await Promise.all([
+
                 loadNotifications(),
+
+                loadMyComments(),
+
                 loadFavorites(),
+
                 loadConversations(),
+
                 loadMessages()
+
             ]);
+
+
+            updateUnreadCount();
 
 
         } catch (error) {
@@ -1581,7 +2404,11 @@
        ======================================================== */
 
     window.BarcaRealCommunity = {
-        reload: init
+
+        reload: init,
+
+        getUnreadCount
+
     };
 
 
