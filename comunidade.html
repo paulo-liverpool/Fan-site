@@ -45,6 +45,7 @@
             ←
         </button>
 
+
         <div class="community-heading">
 
             <span class="community-title">
@@ -60,6 +61,7 @@
             </span>
 
         </div>
+
 
         <button
             id="community-mark-read"
@@ -80,7 +82,7 @@
 
 
         <!-- ====================================================
-             NOTIFICAÇÕES
+             ATIVIDADE
              ==================================================== -->
 
         <section class="community-section">
@@ -109,6 +111,50 @@
 
                 <div class="community-loading">
                     A carregar notificações...
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ====================================================
+             MINHA ATIVIDADE
+             ==================================================== -->
+
+        <section class="community-section">
+
+            <div class="community-section-header">
+
+                <div>
+
+                    <span class="community-section-label">
+                        A TUA ATIVIDADE
+                    </span>
+
+                    <h2>
+                        Os meus comentários
+                    </h2>
+
+                </div>
+
+                <span
+                    id="my-comments-count"
+                    class="community-section-count"
+                >
+                    0
+                </span>
+
+            </div>
+
+
+            <div
+                id="community-my-comments"
+                class="community-my-comments"
+            >
+
+                <div class="community-loading">
+                    A carregar os teus comentários...
                 </div>
 
             </div>
@@ -244,11 +290,13 @@
 
     <nav class="bottom-nav">
 
+
         <button
             class="nav-item"
             id="home-nav"
             type="button"
         >
+
             <span class="nav-icon">
                 ⌂
             </span>
@@ -256,6 +304,7 @@
             <span>
                 Início
             </span>
+
         </button>
 
 
@@ -291,6 +340,7 @@
             id="matches-nav"
             type="button"
         >
+
             <span class="nav-icon">
                 ⚽
             </span>
@@ -298,6 +348,7 @@
             <span>
                 Jogos
             </span>
+
         </button>
 
 
@@ -306,6 +357,7 @@
             id="profile-nav"
             type="button"
         >
+
             <span class="nav-icon">
                 ●
             </span>
@@ -313,7 +365,9 @@
             <span>
                 Perfil
             </span>
+
         </button>
+
 
     </nav>
 
@@ -322,6 +376,7 @@
 
 
 <script src="js/supabase.js"></script>
+<script src="js/fan-notifications.js"></script>
 <script src="js/comunidade.js"></script>
 
 </body>
