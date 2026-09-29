@@ -2219,12 +2219,79 @@
 
     }
 
+/* ============================================================
+   FOCUS COMMENT
+   ============================================================ */
 
+function focusComment(commentId) {
+
+    if (
+        commentId === null ||
+        commentId === undefined
+    ) {
+        return;
+    }
+
+    const targetId =
+        String(commentId);
+
+    const comment =
+        document.querySelector(
+            `#fan-comments [data-comment-id="${CSS.escape(targetId)}"]`
+        );
+
+    if (!comment) {
+
+        console.warn(
+            "BR: comentário não encontrado para foco:",
+            targetId
+        );
+
+        return;
+    }
+
+    /*
+     * Give the browser a moment to finish
+     * painting the comments before scrolling.
+     */
+    requestAnimationFrame(() => {
+
+        setTimeout(() => {
+
+            comment.scrollIntoView({
+                behavior: "smooth",
+                block: "center"
+            });
+
+            comment.classList.add(
+                "fan-comment-focused"
+            );
+
+            /*
+             * Remove the highlight after a few
+             * seconds while leaving the user
+             * exactly where the comment is.
+             */
+            setTimeout(() => {
+
+                comment.classList.remove(
+                    "fan-comment-focused"
+                );
+
+            }, 4500);
+
+        }, 120);
+
+    });
+}
     /* ========================================================
        PUBLIC COMPONENT
        ======================================================== */
 
-    async function init(articleKey) {
+    async function init(
+    articleKey,
+    focusCommentId = null
+) {
 
         const host =
             document.querySelector(
@@ -2303,6 +2370,13 @@
 
 
         await loadComments(
+                   if (focusCommentId) {
+
+            focusComment(
+                focusCommentId
+            );
+
+        }
             host
         );
 
@@ -2314,10 +2388,11 @@
        ======================================================== */
 
     window.FanComments = {
-        init,
-        updateNotificationBadge,
-        getBlockedUserIds
-    };
+    init,
+    focusComment,
+    updateNotificationBadge,
+    getBlockedUserIds
+};
 
 
     /* ========================================================
