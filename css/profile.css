@@ -715,6 +715,11 @@
    MODAL
    ============================================================ */
 
+
+/* ============================================================
+   MODAL
+   ============================================================ */
+
 .profile-modal {
     position: fixed;
 
@@ -723,8 +728,17 @@
     z-index: 500;
 
     display: flex;
-    align-items: flex-end;
+
+    align-items: center;
     justify-content: center;
+
+    padding:
+        20px
+        14px;
+
+    box-sizing: border-box;
+
+    overflow: hidden;
 }
 
 
@@ -749,17 +763,17 @@
         100%
     );
 
-    max-height: 88vh;
+    max-height:
+        calc(100vh - 40px);
+
+    box-sizing: border-box;
 
     overflow-y: auto;
+    overflow-x: hidden;
 
     padding: 24px;
 
-    border-radius:
-        22px
-        22px
-        0
-        0;
+    border-radius: 22px;
 
     background:
         #111318;
@@ -769,8 +783,12 @@
         rgba(255,255,255,0.08);
 
     box-shadow:
-        0 -20px 70px
+        0 20px 70px
         rgba(0,0,0,0.5);
+
+    overscroll-behavior: contain;
+
+    -webkit-overflow-scrolling: touch;
 }
 
 
@@ -794,11 +812,15 @@
     font-size: 22px;
 
     cursor: pointer;
+
+    z-index: 2;
 }
 
 
 .modal-content {
     padding-top: 10px;
+
+    padding-right: 2px;
 }
 
 
@@ -807,6 +829,8 @@
         0
         0
         18px;
+
+    padding-right: 42px;
 
     font-size: 20px;
 }
@@ -871,6 +895,7 @@
 
 .form-group textarea {
     min-height: 100px;
+
     resize: vertical;
 }
 
@@ -895,6 +920,7 @@
 
 .modal-actions {
     display: flex;
+
     gap: 9px;
 
     margin-top: 20px;
@@ -945,7 +971,9 @@
 
 .preference-row {
     display: flex;
+
     align-items: center;
+
     gap: 12px;
 
     padding: 12px 0;
@@ -1050,6 +1078,10 @@
    TOAST
    ============================================================ */
 
+/* ============================================================
+   TOAST
+   ============================================================ */
+
 .profile-toast {
     position: fixed;
 
@@ -1144,18 +1176,71 @@
 
 }
 
+@media (max-width: 560px) {
 
-@media (min-width: 700px) {
+    .profile-main {
+        width: calc(100% - 20px);
+
+        padding-top: 15px;
+    }
+
+
+    .profile-hero {
+        padding: 17px;
+
+        align-items: flex-start;
+    }
+
+
+    .profile-avatar {
+        width: 70px;
+        height: 70px;
+
+        font-size: 24px;
+    }
+
+
+    .profile-identity h1 {
+        font-size: 19px;
+    }
+
+
+    .profile-edit-button {
+        position: static;
+
+        align-self: flex-end;
+
+        margin-left: auto;
+
+        white-space: nowrap;
+    }
+
+
+    .profile-section {
+        padding: 16px;
+    }
+
 
     .profile-modal {
-        align-items: center;
+        padding:
+            14px
+            10px;
     }
 
 
     .profile-modal-card {
-        border-radius: 20px;
+        width: 100%;
 
-        max-height: 82vh;
+        max-height:
+            calc(100vh - 28px);
+
+        padding:
+            22px
+            17px
+            28px;
+
+        border-radius: 20px;
     }
 
 }
+
