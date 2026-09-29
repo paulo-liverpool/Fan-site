@@ -455,3 +455,16 @@
         margin-left: 14px;
     }
 }
+/* ============================================================
+   DEEP-LINK COMMENT HIGHLIGHT
+   ============================================================ */
+
+.fan-comment-focused {
+    outline: 2px solid var(--team-primary, #a50044);
+    outline-offset: 2px;
+    box-shadow:
+        0 0 0 4px var(--team-glow, rgba(165, 0, 68, 0.18));
+    transition:
+        outline 0.25s ease,
+        box-shadow 0.25s ease;
+}
