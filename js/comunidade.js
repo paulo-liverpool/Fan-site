@@ -201,12 +201,11 @@
 
     }
 
-
     /* ========================================================
        PROFILE CACHE
        ======================================================== */
 
-       async function loadProfiles(ids) {
+    async function loadProfiles(ids) {
 
         const supabase =
             getSupabase();
@@ -264,6 +263,10 @@
         );
 
     }
+
+
+    function getProfile(id) {
+
         return (
             state.profiles.get(id) ||
             {
@@ -275,7 +278,7 @@
         );
 
     }
-
+    
 
     /* ========================================================
        AUTH
