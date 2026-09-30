@@ -1,8 +1,6 @@
-```javascript
 /* ============================================================
    BARÇA REAL — COMUNIDADE
    Central activity / notifications hub
-   Quick comment interactions included
    ============================================================ */
 
 (function () {
@@ -30,11 +28,7 @@
 
         messages: [],
 
-        profiles: new Map(),
-
-        reactions: new Map(),
-
-        replyOpen: null
+        profiles: new Map()
 
     };
 
@@ -207,199 +201,6 @@
 
     }
 
-
-    /* ========================================================
-       QUICK INTERACTION STYLES
-       ======================================================== */
-
-    function injectQuickInteractionStyles() {
-
-        if (
-            document.getElementById(
-                "br-community-quick-styles"
-            )
-        ) {
-            return;
-        }
-
-
-        const style =
-            document.createElement("style");
-
-
-        style.id =
-            "br-community-quick-styles";
-
-
-        style.textContent = `
-
-            .community-comment-actions {
-                display: flex;
-                flex-wrap: wrap;
-                align-items: center;
-                gap: 8px;
-                margin-top: 10px;
-            }
-
-            .community-comment-action {
-                border: 0;
-                border-radius: 999px;
-                padding: 7px 11px;
-                background: rgba(255,255,255,.06);
-                color: inherit;
-                font: inherit;
-                font-size: 12px;
-                cursor: pointer;
-                transition:
-                    background .2s ease,
-                    transform .15s ease;
-            }
-
-            .community-comment-action:hover {
-                background: rgba(255,255,255,.11);
-            }
-
-            .community-comment-action:active {
-                transform: scale(.97);
-            }
-
-            .community-comment-action.active {
-                background:
-                    var(--team-primary, #a50044);
-                color: #fff;
-            }
-
-            .community-comment-action.danger.active {
-                background: #8f3030;
-                color: #fff;
-            }
-
-            .community-comment-reply {
-                display: none;
-                margin-top: 10px;
-            }
-
-            .community-comment-reply.open {
-                display: block;
-            }
-
-            .community-comment-reply textarea {
-                width: 100%;
-                min-height: 78px;
-                resize: vertical;
-                box-sizing: border-box;
-                border: 1px solid rgba(255,255,255,.10);
-                border-radius: 12px;
-                padding: 10px 12px;
-                background: rgba(255,255,255,.04);
-                color: inherit;
-                font: inherit;
-                outline: none;
-            }
-
-            .community-comment-reply textarea:focus {
-                border-color:
-                    var(--team-primary, #a50044);
-            }
-
-            .community-comment-reply-footer {
-                display: flex;
-                justify-content: flex-end;
-                gap: 8px;
-                margin-top: 8px;
-            }
-
-            .community-comment-reply-button {
-                border: 0;
-                border-radius: 999px;
-                padding: 8px 14px;
-                background:
-                    var(--team-primary, #a50044);
-                color: #fff;
-                font: inherit;
-                font-size: 12px;
-                cursor: pointer;
-            }
-
-            .community-comment-cancel-button {
-                border: 0;
-                border-radius: 999px;
-                padding: 8px 14px;
-                background: rgba(255,255,255,.06);
-                color: inherit;
-                font: inherit;
-                font-size: 12px;
-                cursor: pointer;
-            }
-
-            .community-comment-status {
-                margin-top: 8px;
-                font-size: 12px;
-                opacity: .75;
-            }
-
-            .community-comment-preview {
-                margin-top: 6px;
-                line-height: 1.45;
-            }
-
-            .community-comment-author {
-                font-weight: 600;
-            }
-
-            .community-conversation-comment {
-                padding: 14px 0;
-                border-bottom:
-                    1px solid rgba(255,255,255,.06);
-            }
-
-            .community-conversation-comment:last-child {
-                border-bottom: 0;
-            }
-
-            .community-conversation-comment-head {
-                display: flex;
-                align-items: center;
-                gap: 9px;
-            }
-
-            .community-conversation-comment-avatar {
-                width: 34px;
-                height: 34px;
-                border-radius: 50%;
-                object-fit: cover;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background: rgba(255,255,255,.08);
-                font-size: 11px;
-                font-weight: 700;
-                flex-shrink: 0;
-            }
-
-            .community-conversation-comment-info {
-                min-width: 0;
-            }
-
-            .community-conversation-comment-name {
-                font-size: 13px;
-                font-weight: 600;
-            }
-
-            .community-conversation-comment-time {
-                margin-top: 2px;
-                font-size: 11px;
-                opacity: .55;
-            }
-
-        `;
-
-
-        document.head.appendChild(style);
-
-    }
-
-
     /* ========================================================
        PROFILE CACHE
        ======================================================== */
@@ -425,6 +226,11 @@
             return;
         }
 
+        /*
+         * Public profiles must be loaded through the
+         * secure RPC because normal users cannot directly
+         * read other users' profiles through RLS.
+         */
         const {
             data,
             error
@@ -472,7 +278,7 @@
         );
 
     }
-
+    
 
     /* ========================================================
        AUTH
@@ -556,655 +362,6 @@
 
 
         return true;
-
-    }
-
-
-    /* ========================================================
-       COMMENT REACTIONS
-       ======================================================== */
-
-    async function loadReactions(
-        commentIds
-    ) {
-
-        const supabase =
-            getSupabase();
-
-
-        const ids = [
-            ...new Set(
-                (commentIds || [])
-                    .filter(Boolean)
-            )
-        ];
-
-
-        state.reactions.clear();
-
-
-        if (!ids.length) {
-            return;
-        }
-
-
-        const {
-            data,
-            error
-        } =
-            await supabase
-                .from("fan_comment_reactions")
-                .select(`
-                    comment_id,
-                    user_id,
-                    reaction
-                `)
-                .in(
-                    "comment_id",
-                    ids
-                );
-
-
-        if (error) {
-
-            console.error(
-                "BR Comunidade: erro ao carregar reações.",
-                error
-            );
-
-            return;
-
-        }
-
-
-        (data || []).forEach(
-            reaction => {
-
-                if (
-                    !state.reactions.has(
-                        reaction.comment_id
-                    )
-                ) {
-
-                    state.reactions.set(
-                        reaction.comment_id,
-                        []
-                    );
-
-                }
-
-
-                state.reactions
-                    .get(reaction.comment_id)
-                    .push(reaction);
-
-            }
-        );
-
-    }
-
-
-    function getReactionData(
-        commentId
-    ) {
-
-        const reactions =
-            state.reactions.get(
-                commentId
-            ) || [];
-
-
-        let likes = 0;
-        let dislikes = 0;
-        let mine = null;
-
-
-        reactions.forEach(
-            reaction => {
-
-                if (
-                    reaction.reaction ===
-                    "like"
-                ) {
-                    likes++;
-                }
-
-                if (
-                    reaction.reaction ===
-                    "dislike"
-                ) {
-                    dislikes++;
-                }
-
-                if (
-                    reaction.user_id ===
-                    state.user?.id
-                ) {
-                    mine =
-                        reaction.reaction;
-                }
-
-            }
-        );
-
-
-        return {
-            likes,
-            dislikes,
-            mine
-        };
-
-    }
-
-
-    async function toggleReaction(
-        commentId,
-        reactionType
-    ) {
-
-        const supabase =
-            getSupabase();
-
-
-        if (!state.user) {
-            return;
-        }
-
-
-        const current =
-            getReactionData(
-                commentId
-            );
-
-
-        if (
-            current.mine ===
-            reactionType
-        ) {
-
-            const {
-                error
-            } =
-                await supabase
-                    .from(
-                        "fan_comment_reactions"
-                    )
-                    .delete()
-                    .eq(
-                        "comment_id",
-                        commentId
-                    )
-                    .eq(
-                        "user_id",
-                        state.user.id
-                    );
-
-
-            if (error) {
-
-                console.error(
-                    "BR Comunidade: erro ao remover reação.",
-                    error
-                );
-
-                return;
-
-            }
-
-        } else {
-
-            const {
-                error
-            } =
-                await supabase
-                    .from(
-                        "fan_comment_reactions"
-                    )
-                    .upsert(
-                        {
-                            comment_id:
-                                commentId,
-
-                            user_id:
-                                state.user.id,
-
-                            reaction:
-                                reactionType
-
-                        },
-                        {
-                            onConflict:
-                                "comment_id,user_id"
-                        }
-                    );
-
-
-            if (error) {
-
-                console.error(
-                    "BR Comunidade: erro ao guardar reação.",
-                    error
-                );
-
-                return;
-
-            }
-
-        }
-
-
-        await refreshCommentReaction(
-            commentId
-        );
-
-
-        renderInteractiveAreas();
-
-    }
-
-
-    async function refreshCommentReaction(
-        commentId
-    ) {
-
-        const supabase =
-            getSupabase();
-
-
-        const {
-            data,
-            error
-        } =
-            await supabase
-                .from(
-                    "fan_comment_reactions"
-                )
-                .select(`
-                    comment_id,
-                    user_id,
-                    reaction
-                `)
-                .eq(
-                    "comment_id",
-                    commentId
-                );
-
-
-        if (error) {
-
-            console.error(
-                "BR Comunidade: erro ao atualizar reação.",
-                error
-            );
-
-            return;
-
-        }
-
-
-        state.reactions.set(
-            commentId,
-            data || []
-        );
-
-    }
-
-
-    /* ========================================================
-       COMMENT REPLY
-       ======================================================== */
-
-    function toggleReplyBox(
-        commentId
-    ) {
-
-        state.replyOpen =
-            state.replyOpen ===
-            commentId
-                ? null
-                : commentId;
-
-
-        renderInteractiveAreas();
-
-
-        if (
-            state.replyOpen !==
-            commentId
-        ) {
-            return;
-        }
-
-
-        requestAnimationFrame(
-            () => {
-
-                const textarea =
-                    document.querySelector(
-                        `[data-reply-textarea="${commentId}"]`
-                    );
-
-
-                if (textarea) {
-                    textarea.focus();
-                }
-
-            }
-        );
-
-    }
-
-
-    async function submitReply(
-        commentId
-    ) {
-
-        const textarea =
-            document.querySelector(
-                `[data-reply-textarea="${commentId}"]`
-            );
-
-
-        if (!textarea) {
-            return;
-        }
-
-
-        const body =
-            textarea.value.trim();
-
-
-        if (!body) {
-            textarea.focus();
-            return;
-        }
-
-
-        if (body.length > 5000) {
-
-            alert(
-                "A resposta não pode ultrapassar 5000 caracteres."
-            );
-
-            return;
-
-        }
-
-
-        const button =
-            document.querySelector(
-                `[data-submit-reply="${commentId}"]`
-            );
-
-
-        if (button) {
-            button.disabled = true;
-            button.textContent = "A publicar...";
-        }
-
-
-        const supabase =
-            getSupabase();
-
-
-        const {
-            data,
-            error
-        } =
-            await supabase
-                .from("fan_comments")
-                .insert({
-                    article_key:
-                        getCommentArticleKey(
-                            commentId
-                        ),
-
-                    user_id:
-                        state.user.id,
-
-                    parent_id:
-                        commentId,
-
-                    body
-                })
-                .select(`
-                    id,
-                    article_key,
-                    user_id,
-                    parent_id,
-                    body,
-                    created_at
-                `)
-                .single();
-
-
-        if (error) {
-
-            console.error(
-                "BR Comunidade: erro ao publicar resposta.",
-                error
-            );
-
-
-            if (button) {
-                button.disabled = false;
-                button.textContent = "Responder";
-            }
-
-
-            return;
-
-        }
-
-
-        state.comments.push(data);
-
-
-        state.replyOpen =
-            null;
-
-
-        /*
-         * Refresh the affected conversation so the new
-         * reply is immediately visible.
-         */
-        await loadConversations();
-
-
-        await loadMyComments();
-
-
-        /*
-         * The database trigger will create the
-         * comment_reply notification automatically.
-         */
-
-    }
-
-
-    function getCommentArticleKey(
-        commentId
-    ) {
-
-        const comment =
-            findComment(
-                commentId
-            );
-
-
-        return comment?.article_key || "";
-
-    }
-
-
-    function findComment(
-        commentId
-    ) {
-
-        const numericId =
-            Number(commentId);
-
-
-        const fromComments =
-            state.comments.find(
-                comment =>
-                    Number(comment.id) ===
-                    numericId
-            );
-
-
-        if (fromComments) {
-            return fromComments;
-        }
-
-
-        for (
-            const conversation
-            of state.conversations
-        ) {
-
-            const comment =
-                conversation.comments?.find(
-                    item =>
-                        Number(item.id) ===
-                        numericId
-                );
-
-
-            if (comment) {
-                return comment;
-            }
-
-        }
-
-
-        return null;
-
-    }
-
-
-    /* ========================================================
-       COMMENT ACTION HTML
-       ======================================================== */
-
-    function commentActionsHTML(
-        comment
-    ) {
-
-        const reaction =
-            getReactionData(
-                comment.id
-            );
-
-
-        const isLike =
-            reaction.mine === "like";
-
-
-        const isDislike =
-            reaction.mine === "dislike";
-
-
-        return `
-
-            <div
-                class="community-comment-actions"
-                data-comment-actions="${comment.id}"
-            >
-
-                <button
-                    type="button"
-                    class="
-                        community-comment-action
-                        ${isLike ? "active" : ""}
-                    "
-                    data-community-like="${comment.id}"
-                >
-                    👍 ${reaction.likes}
-                </button>
-
-
-                <button
-                    type="button"
-                    class="
-                        community-comment-action
-                        danger
-                        ${isDislike ? "active" : ""}
-                    "
-                    data-community-dislike="${comment.id}"
-                >
-                    👎 ${reaction.dislikes}
-                </button>
-
-
-                <button
-                    type="button"
-                    class="community-comment-action"
-                    data-community-reply="${comment.id}"
-                >
-                    💬 Responder
-                </button>
-
-
-                <button
-                    type="button"
-                    class="community-comment-action"
-                    data-community-open="${comment.id}"
-                    data-article-key="${escapeHTML(
-                        comment.article_key
-                    )}"
-                >
-                    ↗ Abrir conversa
-                </button>
-
-            </div>
-
-
-            <div
-                class="
-                    community-comment-reply
-                    ${
-                        state.replyOpen === comment.id
-                            ? "open"
-                            : ""
-                    }
-                "
-                data-reply-box="${comment.id}"
-            >
-
-                <textarea
-                    data-reply-textarea="${comment.id}"
-                    maxlength="5000"
-                    placeholder="Escreve a tua resposta..."
-                ></textarea>
-
-
-                <div
-                    class="community-comment-reply-footer"
-                >
-
-                    <button
-                        type="button"
-                        class="community-comment-cancel-button"
-                        data-cancel-reply="${comment.id}"
-                    >
-                        Cancelar
-                    </button>
-
-
-                    <button
-                        type="button"
-                        class="community-comment-reply-button"
-                        data-submit-reply="${comment.id}"
-                    >
-                        Responder
-                    </button>
-
-                </div>
-
-            </div>
-
-        `;
 
     }
 
@@ -1348,7 +505,7 @@
                     title:
                         `${name} respondeu ao teu comentário`,
                     message:
-                        "Podes responder diretamente aqui ou abrir a conversa."
+                        "Toca para entrar na conversa."
                 };
 
 
@@ -1359,7 +516,7 @@
                     title:
                         `${name} gostou do teu comentário`,
                     message:
-                        "Podes abrir a conversa para continuar."
+                        "Toca para ver a conversa."
                 };
 
 
@@ -1370,7 +527,7 @@
                     title:
                         `${name} não gostou do teu comentário`,
                     message:
-                        "Podes abrir a conversa para continuar."
+                        "Toca para ver a conversa."
                 };
 
 
@@ -1418,80 +575,6 @@
                     item.actor_id
             )
         );
-
-
-        /*
-         * Load the referenced comments so notifications
-         * can expose quick actions.
-         */
-        const commentIds =
-            fanNotifications
-                .map(
-                    item =>
-                        item.comment_id
-                )
-                .filter(Boolean);
-
-
-        if (commentIds.length) {
-
-            const supabase =
-                getSupabase();
-
-
-            const {
-                data
-            } =
-                await supabase
-                    .from("fan_comments")
-                    .select(`
-                        id,
-                        article_key,
-                        user_id,
-                        parent_id,
-                        body,
-                        created_at
-                    `)
-                    .in(
-                        "id",
-                        commentIds
-                    );
-
-
-            (data || []).forEach(
-                comment => {
-
-                    const exists =
-                        state.comments.some(
-                            item =>
-                                Number(item.id) ===
-                                Number(comment.id)
-                        );
-
-
-                    if (!exists) {
-                        state.comments.push(
-                            comment
-                        );
-                    }
-
-                }
-            );
-
-
-            await loadProfiles(
-                (data || []).map(
-                    comment =>
-                        comment.user_id
-                )
-            );
-
-
-            await loadReactions(
-                commentIds
-            );
-
-        }
 
 
         const fanItems =
@@ -1660,6 +743,11 @@
         }
 
 
+        /*
+         * Also expose the count to the shared
+         * notification badge system.
+         */
+
         window.dispatchEvent(
             new CustomEvent(
                 "barcaRealUnreadChanged",
@@ -1719,14 +807,6 @@
                                 : state.profile;
 
 
-                        const comment =
-                            notification.comment_id
-                                ? findComment(
-                                    notification.comment_id
-                                )
-                                : null;
-
-
                         return `
                             <div
                                 class="
@@ -1783,42 +863,6 @@
                                             notification.message
                                         )}
                                     </div>
-
-
-                                    ${
-                                        comment
-                                            ? `
-                                                <div
-                                                    class="
-                                                        community-comment-preview
-                                                    "
-                                                >
-                                                    <span
-                                                        class="
-                                                            community-comment-author
-                                                        "
-                                                    >
-                                                        ${escapeHTML(
-                                                            getProfile(
-                                                                comment.user_id
-                                                            ).display_name ||
-                                                            "Utilizador"
-                                                        )}
-                                                    </span>
-
-                                                    ·
-
-                                                    ${escapeHTML(
-                                                        comment.body
-                                                    )}
-                                                </div>
-
-                                                ${commentActionsHTML(
-                                                    comment
-                                                )}
-                                            `
-                                            : ""
-                                    }
 
 
                                     <div
@@ -2097,47 +1141,8 @@
         }
 
 
-        /*
-         * Preserve comments already loaded from notifications.
-         */
-        const merged =
-            new Map();
-
-
-        state.comments.forEach(
-            comment => {
-
-                merged.set(
-                    Number(comment.id),
-                    comment
-                );
-
-            }
-        );
-
-
-        (data || []).forEach(
-            comment => {
-
-                merged.set(
-                    Number(comment.id),
-                    comment
-                );
-
-            }
-        );
-
-
         state.comments =
-            [...merged.values()];
-
-
-        await loadReactions(
-            state.comments.map(
-                comment =>
-                    comment.id
-            )
-        );
+            data || [];
 
 
         renderMyComments();
@@ -2198,16 +1203,8 @@
 
         if (count) {
 
-            const myComments =
-                state.comments.filter(
-                    comment =>
-                        comment.user_id ===
-                        state.user.id
-                );
-
-
             count.textContent =
-                myComments.length;
+                state.comments.length;
 
         }
 
@@ -2217,25 +1214,7 @@
         }
 
 
-        const myComments =
-            state.comments
-                .filter(
-                    comment =>
-                        comment.user_id ===
-                        state.user.id
-                )
-                .sort(
-                    (a, b) =>
-                        new Date(
-                            b.created_at
-                        ) -
-                        new Date(
-                            a.created_at
-                        )
-                );
-
-
-        if (!myComments.length) {
+        if (!state.comments.length) {
 
             container.innerHTML = `
                 <div class="community-card">
@@ -2255,7 +1234,7 @@
             <div class="community-card">
 
                 ${
-                    myComments
+                    state.comments
                         .map(
                             comment => {
 
@@ -2263,7 +1242,6 @@
                                     <div
                                         class="
                                             community-my-comment
-                                            community-conversation-comment
                                         "
                                         data-my-comment-key="${escapeHTML(
                                             comment.article_key
@@ -2335,11 +1313,6 @@
                                                 }
 
                                             </div>
-
-
-                                            ${commentActionsHTML(
-                                                comment
-                                            )}
 
                                         </div>
 
@@ -2594,11 +1567,7 @@
             await supabase
                 .from("fan_comments")
                 .select(`
-                    id,
                     article_key,
-                    user_id,
-                    parent_id,
-                    body,
                     created_at
                 `)
                 .order(
@@ -2626,26 +1595,6 @@
         }
 
 
-        await loadProfiles(
-            (data || []).map(
-                comment =>
-                    comment.user_id
-            )
-        );
-
-
-        const commentIds =
-            (data || []).map(
-                comment =>
-                    comment.id
-            );
-
-
-        await loadReactions(
-            commentIds
-        );
-
-
         const groups =
             new Map();
 
@@ -2664,38 +1613,18 @@
                         {
                             article_key:
                                 comment.article_key,
-
                             latest:
                                 comment.created_at,
-
-                            count: 0,
-
-                            comments: []
+                            count: 0
                         }
                     );
 
                 }
 
 
-                const group =
-                    groups.get(
-                        comment.article_key
-                    );
-
-
-                group.count++;
-
-
-                if (
-                    group.comments.length <
-                    3
-                ) {
-
-                    group.comments.push(
-                        comment
-                    );
-
-                }
+                groups.get(
+                    comment.article_key
+                ).count++;
 
             }
         );
@@ -2809,108 +1738,12 @@
                                         </div>
 
 
-                                        ${
-                                            (conversation.comments || [])
-                                                .map(
-                                                    comment => {
-
-                                                        const profile =
-                                                            getProfile(
-                                                                comment.user_id
-                                                            );
-
-
-                                                        return `
-                                                            <div
-                                                                class="
-                                                                    community-conversation-comment
-                                                                "
-                                                                data-conversation-comment-id="${
-                                                                    comment.id
-                                                                }"
-                                                            >
-
-                                                                <div
-                                                                    class="
-                                                                        community-conversation-comment-head
-                                                                    "
-                                                                >
-
-                                                                    ${avatarHTML(
-                                                                        profile,
-                                                                        "community-conversation-comment-avatar"
-                                                                    )}
-
-
-                                                                    <div
-                                                                        class="
-                                                                            community-conversation-comment-info
-                                                                        "
-                                                                    >
-
-                                                                        <div
-                                                                            class="
-                                                                                community-conversation-comment-name
-                                                                            "
-                                                                        >
-                                                                            ${escapeHTML(
-                                                                                profile.display_name ||
-                                                                                profile.username ||
-                                                                                "Utilizador"
-                                                                            )}
-                                                                        </div>
-
-
-                                                                        <div
-                                                                            class="
-                                                                                community-conversation-comment-time
-                                                                            "
-                                                                        >
-                                                                            ${escapeHTML(
-                                                                                relativeTime(
-                                                                                    comment.created_at
-                                                                                )
-                                                                            )}
-                                                                        </div>
-
-                                                                    </div>
-
-                                                                </div>
-
-
-                                                                <div
-                                                                    class="
-                                                                        community-comment-preview
-                                                                    "
-                                                                >
-                                                                    ${escapeHTML(
-                                                                        comment.body
-                                                                    )}
-                                                                </div>
-
-
-                                                                ${commentActionsHTML(
-                                                                    comment
-                                                                )}
-
-                                                            </div>
-                                                        `;
-
-                                                    }
-                                                )
-                                                .join("")
-                                        }
-
-
                                         <div
                                             class="
                                                 community-conversation-arrow
                                             "
-                                            data-conversation-open="${escapeHTML(
-                                                conversation.article_key
-                                            )}"
                                         >
-                                            ↗ Abrir conversa completa
+                                            →
                                         </div>
 
                                     </div>
@@ -3142,11 +1975,7 @@
         );
 
 
-        if (
-            commentId !== null &&
-            commentId !== undefined &&
-            commentId !== ""
-        ) {
+        if (commentId) {
 
             localStorage.setItem(
                 "br_pending_comment_id",
@@ -3164,21 +1993,6 @@
 
         window.location.href =
             "home.html";
-
-    }
-
-
-    /* ========================================================
-       RENDER REFRESH
-       ======================================================== */
-
-    function renderInteractiveAreas() {
-
-        renderNotifications();
-
-        renderMyComments();
-
-        renderConversations();
 
     }
 
@@ -3357,217 +2171,6 @@
             "click",
             async event => {
 
-                /* ============================================
-                   LIKE
-                   ============================================ */
-
-                const likeButton =
-                    event.target.closest(
-                        "[data-community-like]"
-                    );
-
-
-                if (likeButton) {
-
-                    event.preventDefault();
-                    event.stopPropagation();
-
-
-                    await toggleReaction(
-                        Number(
-                            likeButton.dataset
-                                .communityLike
-                        ),
-                        "like"
-                    );
-
-
-                    return;
-
-                }
-
-
-                /* ============================================
-                   DISLIKE
-                   ============================================ */
-
-                const dislikeButton =
-                    event.target.closest(
-                        "[data-community-dislike]"
-                    );
-
-
-                if (dislikeButton) {
-
-                    event.preventDefault();
-                    event.stopPropagation();
-
-
-                    await toggleReaction(
-                        Number(
-                            dislikeButton.dataset
-                                .communityDislike
-                        ),
-                        "dislike"
-                    );
-
-
-                    return;
-
-                }
-
-
-                /* ============================================
-                   REPLY
-                   ============================================ */
-
-                const replyButton =
-                    event.target.closest(
-                        "[data-community-reply]"
-                    );
-
-
-                if (replyButton) {
-
-                    event.preventDefault();
-                    event.stopPropagation();
-
-
-                    toggleReplyBox(
-                        Number(
-                            replyButton.dataset
-                                .communityReply
-                        )
-                    );
-
-
-                    return;
-
-                }
-
-
-                /* ============================================
-                   CANCEL REPLY
-                   ============================================ */
-
-                const cancelReply =
-                    event.target.closest(
-                        "[data-cancel-reply]"
-                    );
-
-
-                if (cancelReply) {
-
-                    event.preventDefault();
-                    event.stopPropagation();
-
-
-                    state.replyOpen =
-                        null;
-
-
-                    renderInteractiveAreas();
-
-
-                    return;
-
-                }
-
-
-                /* ============================================
-                   SUBMIT REPLY
-                   ============================================ */
-
-                const submitReplyButton =
-                    event.target.closest(
-                        "[data-submit-reply]"
-                    );
-
-
-                if (submitReplyButton) {
-
-                    event.preventDefault();
-                    event.stopPropagation();
-
-
-                    await submitReply(
-                        Number(
-                            submitReplyButton.dataset
-                                .submitReply
-                        )
-                    );
-
-
-                    return;
-
-                }
-
-
-                /* ============================================
-                   OPEN CONVERSATION FROM COMMENT
-                   ============================================ */
-
-                const openComment =
-                    event.target.closest(
-                        "[data-community-open]"
-                    );
-
-
-                if (openComment) {
-
-                    event.preventDefault();
-                    event.stopPropagation();
-
-
-                    const commentId =
-                        Number(
-                            openComment.dataset
-                                .communityOpen
-                        );
-
-
-                    const articleKey =
-                        openComment.dataset
-                            .articleKey;
-
-
-                    openConversation(
-                        articleKey,
-                        commentId
-                    );
-
-
-                    return;
-
-                }
-
-
-                /* ============================================
-                   OPEN FULL CONVERSATION
-                   ============================================ */
-
-                const openFullConversation =
-                    event.target.closest(
-                        "[data-conversation-open]"
-                    );
-
-
-                if (openFullConversation) {
-
-                    event.preventDefault();
-                    event.stopPropagation();
-
-
-                    openConversation(
-                        openFullConversation.dataset
-                            .conversationOpen
-                    );
-
-
-                    return;
-
-                }
-
 
                 /* ============================================
                    NOTIFICATION
@@ -3580,13 +2183,7 @@
 
 
                 if (
-                    notificationElement &&
-                    !event.target.closest(
-                        ".community-comment-actions"
-                    ) &&
-                    !event.target.closest(
-                        ".community-comment-reply"
-                    )
+                    notificationElement
                 ) {
 
                     const id =
@@ -3646,15 +2243,7 @@
                     );
 
 
-                if (
-                    myComment &&
-                    !event.target.closest(
-                        ".community-comment-actions"
-                    ) &&
-                    !event.target.closest(
-                        ".community-comment-reply"
-                    )
-                ) {
+                if (myComment) {
 
                     openConversation(
                         myComment.dataset
@@ -3705,24 +2294,12 @@
                     );
 
 
-                if (
-                    conversation &&
-                    !event.target.closest(
-                        ".community-comment-actions"
-                    ) &&
-                    !event.target.closest(
-                        ".community-comment-reply"
-                    ) &&
-                    !event.target.closest(
-                        "[data-conversation-open]"
-                    )
-                ) {
+                if (conversation) {
 
                     openConversation(
                         conversation.dataset
                             .conversationKey
                     );
-
 
                     return;
 
@@ -3741,9 +2318,6 @@
     async function init() {
 
         try {
-
-            injectQuickInteractionStyles();
-
 
             const authenticated =
                 await loadCurrentUser();
@@ -3770,14 +2344,6 @@
                 loadMessages()
 
             ]);
-
-
-            /*
-             * loadMyComments and loadConversations can
-             * refresh the reaction cache, so render once
-             * more after all data is available.
-             */
-            renderInteractiveAreas();
 
 
             updateUnreadCount();
@@ -3838,4 +2404,3 @@
 
 
 })();
-```
