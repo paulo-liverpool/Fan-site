@@ -3509,6 +3509,1691 @@ document.addEventListener(
 
 
 /* ============================================================
+   BARÇA REAL — ACCOUNT MANAGEMENT
+   ============================================================ */
+
+
+/* ============================================================
+   STATE
+   ============================================================ */
+
+const accountManagementState = {
+
+    users: [],
+
+    selectedUser: null,
+
+    waivers: [],
+
+    suspensions: [],
+
+    auditLog: [],
+
+    initialized: false
+
+};
+
+
+/* ============================================================
+   ELEMENT HELPER
+   ============================================================ */
+
+function accountElement(id) {
+
+    return document.getElementById(id);
+
+}
+
+
+/* ============================================================
+   SEARCH USERS
+   ============================================================ */
+
+async function searchAccountManagementUsers(
+    searchTerm
+) {
+
+    const results =
+        accountElement(
+            "account-management-user-results"
+        );
+
+
+    if (!results) {
+        return;
+    }
+
+
+    const search =
+        String(searchTerm || "")
+            .trim();
+
+
+    if (search.length < 2) {
+
+        results.innerHTML = "";
+
+        return;
+
+    }
+
+
+    const {
+        data,
+        error
+    } = await supabase
+        .from("profiles")
+        .select(
+            "id, display_name, username"
+        )
+        .or(
+            `display_name.ilike.%${search}%,username.ilike.%${search}%`
+        )
+        .limit(10);
+
+
+    if (error) {
+
+        console.error(
+            "Erro ao pesquisar utilizadores:",
+            error
+        );
+
+        results.innerHTML = `
+            <div class="admin-empty-state">
+                Não foi possível pesquisar.
+            </div>
+        `;
+
+        return;
+
+    }
+
+
+    const users =
+        Array.isArray(data)
+            ? data
+            : [];
+
+
+    if (!users.length) {
+
+        results.innerHTML = `
+            <div class="admin-empty-state">
+                Nenhum utilizador encontrado.
+            </div>
+        `;
+
+        return;
+
+    }
+
+
+    results.innerHTML =
+        users
+            .map(
+                user => `
+
+                    <button
+                        type="button"
+                        class="account-management-user-result"
+                        data-account-user-id="${escapeAttributeLocal(user.id)}"
+                    >
+
+                        <strong>
+                            ${
+                                escapeHTMLLocal(
+                                    user.display_name ||
+                                    user.username ||
+                                    "Utilizador"
+                                )
+                            }
+                        </strong>
+
+                        ${
+                            user.username
+                                ? `
+                                    <span>
+                                        @${escapeHTMLLocal(
+                                            user.username
+                                        )}
+                                    </span>
+                                  `
+                                : ""
+                        }
+
+                    </button>
+
+                `
+            )
+            .join("");
+
+
+    results
+        .querySelectorAll(
+            "[data-account-user-id]"
+        )
+        .forEach(button => {
+
+            button.addEventListener(
+                "click",
+                async () => {
+
+                    await selectAccountManagementUser(
+                        button.dataset.accountUserId
+                    );
+
+                }
+            );
+
+        });
+
+}
+
+
+/* ============================================================
+   SELECT USER
+   ============================================================ */
+
+async function selectAccountManagementUser(
+    userId
+) {
+
+    if (!userId) {
+        return;
+    }
+
+
+    const {
+        data,
+        error
+    } = await supabase.rpc(
+        "admin_get_user_details",
+        {
+            target_user_id:
+                userId
+        }
+    );
+
+
+    if (error) {
+
+        console.error(
+            "Erro ao carregar utilizador:",
+            error
+        );
+
+        return;
+
+    }
+
+
+    accountManagementState.selectedUser =
+        data;
+
+
+    renderSelectedAccountUser();
+
+}
+
+
+/* ============================================================
+   RENDER SELECTED USER
+   ============================================================ */
+
+function renderSelectedAccountUser() {
+
+    const user =
+        accountManagementState.selectedUser;
+
+
+    if (!user) {
+        return;
+    }
+
+
+    const container =
+        accountElement(
+            "account-management-selected-user"
+        );
+
+
+    if (!container) {
+        return;
+    }
+
+
+    container.style.display =
+        "block";
+
+
+    const name =
+        accountElement(
+            "account-management-user-name"
+        );
+
+
+    const id =
+        accountElement(
+            "account-management-user-id"
+        );
+
+
+    const status =
+        accountElement(
+            "account-management-user-status"
+        );
+
+
+    if (name) {
+
+        name.textContent =
+            user.profile?.display_name ||
+            user.profile?.username ||
+            user.display_name ||
+            user.username ||
+            "Utilizador";
+
+    }
+
+
+    if (id) {
+
+        id.textContent =
+            user.profile?.username
+                ? `@${user.profile.username}`
+                : user.user_id || "";
+
+    }
+
+
+    const subscription =
+        user.subscription || {};
+
+
+    if (status) {
+
+        status.textContent =
+            formatSubscriptionManagementStatus(
+                subscription.status
+            );
+
+    }
+
+
+    renderAccountGrace(
+        subscription
+    );
+
+
+    renderAccountWaiver();
+
+
+    renderAccountSuspension();
+
+}
+
+
+/* ============================================================
+   SUBSCRIPTION STATUS
+   ============================================================ */
+
+function formatSubscriptionManagementStatus(
+    status
+) {
+
+    const values = {
+
+        active: "Activa",
+
+        free: "Grátis",
+
+        past_due: "Pagamento em atraso",
+
+        cancelled: "Cancelada",
+
+        expired: "Expirada",
+
+        suspended: "Suspensa"
+
+    };
+
+
+    return (
+        values[status] ||
+        status ||
+        "Sem subscrição"
+    );
+
+}
+
+
+/* ============================================================
+   GRACE
+   ============================================================ */
+
+function renderAccountGrace(
+    subscription
+) {
+
+    const element =
+        accountElement(
+            "account-grace-current"
+        );
+
+
+    if (!element) {
+        return;
+    }
+
+
+    if (
+        !subscription.grace_until
+    ) {
+
+        element.textContent =
+            "Nenhum período activo.";
+
+        return;
+
+    }
+
+
+    element.textContent =
+        "Válido até "
+        + formatPaymentDate(
+            subscription.grace_until
+        );
+
+}
+
+
+/* ============================================================
+   WAIVER
+   ============================================================ */
+
+function renderAccountWaiver() {
+
+    const element =
+        accountElement(
+            "account-waiver-current"
+        );
+
+
+    if (!element) {
+        return;
+
+    }
+
+
+    const user =
+        accountManagementState.selectedUser;
+
+
+    if (!user) {
+        return;
+    }
+
+
+    const waiver =
+        accountManagementState.waivers
+            .find(
+                item =>
+                    item.user_id ===
+                    (
+                        user.user_id ||
+                        user.id
+                    )
+                    &&
+                    item.active
+            );
+
+
+    if (!waiver) {
+
+        element.textContent =
+            "Nenhuma isenção activa.";
+
+        return;
+
+    }
+
+
+    element.textContent =
+        waiver.expires_at
+            ? "Válida até "
+              + formatPaymentDate(
+                    waiver.expires_at
+                )
+            : "Isenção permanente.";
+
+}
+
+
+/* ============================================================
+   SUSPENSION
+   ============================================================ */
+
+function renderAccountSuspension() {
+
+    const element =
+        accountElement(
+            "account-suspension-current"
+        );
+
+
+    if (!element) {
+        return;
+    }
+
+
+    const user =
+        accountManagementState.selectedUser;
+
+
+    if (!user) {
+        return;
+    }
+
+
+    const suspension =
+        accountManagementState.suspensions
+            .find(
+                item =>
+                    item.user_id ===
+                    (
+                        user.user_id ||
+                        user.id
+                    )
+                    &&
+                    item.active
+            );
+
+
+    if (!suspension) {
+
+        element.textContent =
+            "Conta activa.";
+
+        return;
+
+    }
+
+
+    element.textContent =
+        suspension.expires_at
+            ? "Suspensa até "
+              + formatPaymentDate(
+                    suspension.expires_at
+                )
+            : "Suspensão permanente.";
+
+}
+
+
+/* ============================================================
+   LOAD ACCOUNT MANAGEMENT DATA
+   ============================================================ */
+
+async function loadAccountManagement() {
+
+    await loadAccountManagementStates();
+
+    await loadAuditLog();
+
+}
+
+
+/* ============================================================
+   LOAD STATES
+   ============================================================ */
+
+async function loadAccountManagementStates() {
+
+    const {
+        data,
+        error
+    } = await supabase.rpc(
+        "admin_get_payment_account_data"
+    );
+
+
+    if (error) {
+
+        console.error(
+            "Erro ao carregar estados:",
+            error
+        );
+
+        return;
+
+    }
+
+
+    accountManagementState.waivers =
+        Array.isArray(data?.waivers)
+            ? data.waivers
+            : [];
+
+
+    accountManagementState.suspensions =
+        Array.isArray(data?.suspensions)
+            ? data.suspensions
+            : [];
+
+
+    renderAccountWaiver();
+
+    renderAccountSuspension();
+
+}
+
+
+/* ============================================================
+   GRANT GRACE
+   ============================================================ */
+
+async function grantAccountGrace() {
+
+    const user =
+        accountManagementState.selectedUser;
+
+
+    if (!user) {
+        return;
+    }
+
+
+    const days =
+        Number(
+            accountElement(
+                "account-grace-days"
+            )?.value
+        );
+
+
+    const reason =
+        accountElement(
+            "account-grace-reason"
+        )?.value.trim();
+
+
+    if (
+        !Number.isInteger(days) ||
+        days < 0
+    ) {
+
+        alert(
+            "Indica um número válido de dias."
+        );
+
+        return;
+
+    }
+
+
+    if (!reason) {
+
+        alert(
+            "Indica o motivo."
+        );
+
+        return;
+
+    }
+
+
+    const userId =
+        user.user_id ||
+        user.id;
+
+
+    const {
+        error
+    } = await supabase.rpc(
+        "admin_grant_grace_period",
+        {
+            target_user_id:
+                userId,
+
+            grace_days:
+                days,
+
+            grace_reason:
+                reason
+        }
+    );
+
+
+    if (error) {
+
+        console.error(error);
+
+        alert(
+            "Não foi possível aplicar o período de tolerância."
+        );
+
+        return;
+
+    }
+
+
+    alert(
+        "Período de tolerância aplicado."
+    );
+
+
+    await loadAccountManagement();
+
+    await selectAccountManagementUser(
+        userId
+    );
+
+}
+
+
+/* ============================================================
+   REMOVE GRACE
+   ============================================================ */
+
+async function removeAccountGrace() {
+
+    const user =
+        accountManagementState.selectedUser;
+
+
+    if (!user) {
+        return;
+    }
+
+
+    const userId =
+        user.user_id ||
+        user.id;
+
+
+    const {
+        error
+    } = await supabase.rpc(
+        "admin_remove_grace_period",
+        {
+            target_user_id:
+                userId
+        }
+    );
+
+
+    if (error) {
+
+        console.error(error);
+
+        alert(
+            "Não foi possível remover o período."
+        );
+
+        return;
+
+    }
+
+
+    await loadAccountManagement();
+
+    await selectAccountManagementUser(
+        userId
+    );
+
+}
+
+
+/* ============================================================
+   CREATE WAIVER
+   ============================================================ */
+
+async function createAccountWaiver() {
+
+    const user =
+        accountManagementState.selectedUser;
+
+
+    if (!user) {
+        return;
+    }
+
+
+    const days =
+        Number(
+            accountElement(
+                "account-waiver-days"
+            )?.value
+        );
+
+
+    const reason =
+        accountElement(
+            "account-waiver-reason"
+        )?.value.trim();
+
+
+    if (
+        !Number.isInteger(days) ||
+        days < 0
+    ) {
+
+        alert(
+            "Indica um número válido de dias."
+        );
+
+        return;
+
+    }
+
+
+    if (!reason) {
+
+        alert(
+            "Indica o motivo da isenção."
+        );
+
+        return;
+
+    }
+
+
+    const {
+        error
+    } = await supabase.rpc(
+        "admin_create_payment_waiver",
+        {
+            target_user_id:
+                user.user_id ||
+                user.id,
+
+            waiver_reason:
+                reason,
+
+            waiver_days:
+                days
+        }
+    );
+
+
+    if (error) {
+
+        console.error(error);
+
+        alert(
+            "Não foi possível criar a isenção."
+        );
+
+        return;
+
+    }
+
+
+    await loadAccountManagement();
+
+    await selectAccountManagementUser(
+        user.user_id ||
+        user.id
+    );
+
+}
+
+
+/* ============================================================
+   REMOVE WAIVER
+   ============================================================ */
+
+async function removeAccountWaiver() {
+
+    const user =
+        accountManagementState.selectedUser;
+
+
+    if (!user) {
+        return;
+    }
+
+
+    const waiver =
+        accountManagementState.waivers
+            .find(
+                item =>
+                    item.user_id ===
+                    (
+                        user.user_id ||
+                        user.id
+                    )
+                    &&
+                    item.active
+            );
+
+
+    if (!waiver) {
+        return;
+    }
+
+
+    const {
+        error
+    } = await supabase.rpc(
+        "admin_remove_payment_waiver",
+        {
+            target_waiver_id:
+                waiver.id
+        }
+    );
+
+
+    if (error) {
+
+        console.error(error);
+
+        alert(
+            "Não foi possível remover a isenção."
+        );
+
+        return;
+
+    }
+
+
+    await loadAccountManagement();
+
+    await selectAccountManagementUser(
+        user.user_id ||
+        user.id
+    );
+
+}
+
+
+/* ============================================================
+   MANUAL PAYMENT
+   ============================================================ */
+
+async function createManualPayment() {
+
+    const user =
+        accountManagementState.selectedUser;
+
+
+    if (!user) {
+        return;
+    }
+
+
+    const amount =
+        Number(
+            accountElement(
+                "manual-payment-amount"
+            )?.value
+        );
+
+
+    const method =
+        accountElement(
+            "manual-payment-method"
+        )?.value;
+
+
+    const reference =
+        accountElement(
+            "manual-payment-reference"
+        )?.value.trim();
+
+
+    const dateValue =
+        accountElement(
+            "manual-payment-date"
+        )?.value;
+
+
+    const note =
+        accountElement(
+            "manual-payment-note"
+        )?.value.trim();
+
+
+    if (
+        !amount ||
+        amount <= 0
+    ) {
+
+        alert(
+            "Indica um valor válido."
+        );
+
+        return;
+
+    }
+
+
+    if (!dateValue) {
+
+        alert(
+            "Indica a data do pagamento."
+        );
+
+        return;
+
+    }
+
+
+    const {
+        error
+    } = await supabase.rpc(
+        "admin_create_manual_payment",
+        {
+            target_user_id:
+                user.user_id ||
+                user.id,
+
+            payment_amount:
+                amount,
+
+            payment_method_value:
+                method,
+
+            payment_reference:
+                reference || null,
+
+            payment_date:
+                new Date(
+                    dateValue
+                ).toISOString(),
+
+            payment_note:
+                note || null
+        }
+    );
+
+
+    if (error) {
+
+        console.error(error);
+
+        alert(
+            "Não foi possível registar o pagamento."
+        );
+
+        return;
+
+    }
+
+
+    alert(
+        "Pagamento registado com sucesso."
+    );
+
+
+    const amountInput =
+        accountElement(
+            "manual-payment-amount"
+        );
+
+
+    const referenceInput =
+        accountElement(
+            "manual-payment-reference"
+        );
+
+
+    const noteInput =
+        accountElement(
+            "manual-payment-note"
+        );
+
+
+    if (amountInput) {
+        amountInput.value = "";
+    }
+
+
+    if (referenceInput) {
+        referenceInput.value = "";
+    }
+
+
+    if (noteInput) {
+        noteInput.value = "";
+    }
+
+
+    await loadAccountManagement();
+
+    await selectAccountManagementUser(
+        user.user_id ||
+        user.id
+    );
+
+}
+
+
+/* ============================================================
+   SUSPEND
+   ============================================================ */
+
+async function suspendAccountManagementUser() {
+
+    const user =
+        accountManagementState.selectedUser;
+
+
+    if (!user) {
+        return;
+    }
+
+
+    const days =
+        Number(
+            accountElement(
+                "account-suspension-days"
+            )?.value
+        );
+
+
+    const reason =
+        accountElement(
+            "account-suspension-reason"
+        )?.value.trim();
+
+
+    if (
+        !Number.isInteger(days) ||
+        days < 0
+    ) {
+
+        alert(
+            "Indica um número válido de dias."
+        );
+
+        return;
+
+    }
+
+
+    if (!reason) {
+
+        alert(
+            "Indica o motivo da suspensão."
+        );
+
+        return;
+
+    }
+
+
+    if (
+        !confirm(
+            "Suspender esta conta?"
+        )
+    ) {
+        return;
+    }
+
+
+    const {
+        error
+    } = await supabase.rpc(
+        "admin_suspend_account",
+        {
+            target_user_id:
+                user.user_id ||
+                user.id,
+
+            suspension_reason:
+                reason,
+
+            suspension_days:
+                days
+        }
+    );
+
+
+    if (error) {
+
+        console.error(error);
+
+        alert(
+            "Não foi possível suspender a conta."
+        );
+
+        return;
+
+    }
+
+
+    await loadAccountManagement();
+
+    await selectAccountManagementUser(
+        user.user_id ||
+        user.id
+    );
+
+}
+
+
+/* ============================================================
+   REACTIVATE
+   ============================================================ */
+
+async function reactivateAccountManagementUser() {
+
+    const user =
+        accountManagementState.selectedUser;
+
+
+    if (!user) {
+        return;
+    }
+
+
+    if (
+        !confirm(
+            "Reactivar esta conta?"
+        )
+    ) {
+        return;
+    }
+
+
+    const {
+        error
+    } = await supabase.rpc(
+        "admin_reactivate_account",
+        {
+            target_user_id:
+                user.user_id ||
+                user.id
+        }
+    );
+
+
+    if (error) {
+
+        console.error(error);
+
+        alert(
+            "Não foi possível reactivar a conta."
+        );
+
+        return;
+
+    }
+
+
+    await loadAccountManagement();
+
+    await selectAccountManagementUser(
+        user.user_id ||
+        user.id
+    );
+
+}
+
+
+/* ============================================================
+   AUDIT LOG
+   ============================================================ */
+
+async function loadAuditLog() {
+
+    const container =
+        accountElement(
+            "admin-audit-log-results"
+        );
+
+
+    if (!container) {
+        return;
+    }
+
+
+    const {
+        data,
+        error
+    } = await supabase.rpc(
+        "admin_get_audit_log"
+    );
+
+
+    if (error) {
+
+        console.error(
+            "Erro ao carregar audit log:",
+            error
+        );
+
+
+        container.innerHTML = `
+            <div class="admin-empty-state">
+                Não foi possível carregar o registo.
+            </div>
+        `;
+
+        return;
+
+    }
+
+
+    accountManagementState.auditLog =
+        Array.isArray(data)
+            ? data
+            : [];
+
+
+    renderAuditLog();
+
+}
+
+
+/* ============================================================
+   AUDIT LABELS
+   ============================================================ */
+
+function formatAuditAction(
+    action
+) {
+
+    const values = {
+
+        grant_grace_period:
+            "Aplicou período de tolerância",
+
+        remove_grace_period:
+            "Removeu período de tolerância",
+
+        create_payment_waiver:
+            "Criou isenção de pagamento",
+
+        remove_payment_waiver:
+            "Removeu isenção de pagamento",
+
+        create_manual_payment:
+            "Registou pagamento manual",
+
+        suspend_account:
+            "Suspendeu conta",
+
+        reactivate_account:
+            "Reactivou conta"
+
+    };
+
+
+    return (
+        values[action] ||
+        action ||
+        "Acção administrativa"
+    );
+
+}
+
+
+/* ============================================================
+   RENDER AUDIT
+   ============================================================ */
+
+function renderAuditLog() {
+
+    const container =
+        accountElement(
+            "admin-audit-log-results"
+        );
+
+
+    if (!container) {
+        return;
+    }
+
+
+    const logs =
+        accountManagementState.auditLog;
+
+
+    if (!logs.length) {
+
+        container.innerHTML = `
+            <div class="admin-empty-state">
+                Ainda não existem registos administrativos.
+            </div>
+        `;
+
+        return;
+
+    }
+
+
+    container.innerHTML =
+        logs
+            .map(
+                log => {
+
+                    const details =
+                        log.details || {};
+
+
+                    return `
+
+                        <div
+                            class="admin-audit-row"
+                        >
+
+                            <div
+                                class="admin-audit-action"
+                            >
+
+                                <strong>
+                                    ${
+                                        escapeHTMLLocal(
+                                            formatAuditAction(
+                                                log.action
+                                            )
+                                        )
+                                    }
+                                </strong>
+
+                                <span>
+                                    ${
+                                        escapeHTMLLocal(
+                                            log.admin_name ||
+                                            "Administrador"
+                                        )
+                                    }
+                                </span>
+
+                            </div>
+
+
+                            <div
+                                class="admin-audit-details"
+                            >
+
+                                ${
+                                    details.reason
+                                        ? `
+                                            <span>
+                                                Motivo:
+                                                ${escapeHTMLLocal(
+                                                    details.reason
+                                                )}
+                                            </span>
+                                          `
+                                        : ""
+                                }
+
+
+                                ${
+                                    details.amount
+                                        ? `
+                                            <span>
+                                                Valor:
+                                                ${escapeHTMLLocal(
+                                                    String(
+                                                        details.amount
+                                                    )
+                                                )}
+                                            </span>
+                                          `
+                                        : ""
+                                }
+
+
+                                ${
+                                    details.reference
+                                        ? `
+                                            <span>
+                                                Referência:
+                                                ${escapeHTMLLocal(
+                                                    details.reference
+                                                )}
+                                            </span>
+                                          `
+                                        : ""
+                                }
+
+                            </div>
+
+
+                            <time>
+
+                                ${
+                                    escapeHTMLLocal(
+                                        formatPaymentDate(
+                                            log.created_at
+                                        )
+                                    )
+                                }
+
+                            </time>
+
+                        </div>
+
+                    `;
+
+                }
+            )
+            .join("");
+
+}
+
+
+/* ============================================================
+   EVENTS
+   ============================================================ */
+
+function bindAccountManagementEvents() {
+
+    if (
+        accountManagementState.initialized
+    ) {
+        return;
+    }
+
+
+    const search =
+        accountElement(
+            "account-management-user-search"
+        );
+
+
+    if (search) {
+
+        let timeout;
+
+
+        search.addEventListener(
+            "input",
+            event => {
+
+                clearTimeout(timeout);
+
+
+                timeout =
+                    setTimeout(
+                        () => {
+
+                            searchAccountManagementUsers(
+                                event.target.value
+                            );
+
+                        },
+                        250
+                    );
+
+            }
+        );
+
+    }
+
+
+    const graceButton =
+        accountElement(
+            "grant-grace-button"
+        );
+
+
+    if (graceButton) {
+
+        graceButton.addEventListener(
+            "click",
+            grantAccountGrace
+        );
+
+    }
+
+
+    const removeGrace =
+        accountElement(
+            "remove-grace-button"
+        );
+
+
+    if (removeGrace) {
+
+        removeGrace.addEventListener(
+            "click",
+            removeAccountGrace
+        );
+
+    }
+
+
+    const waiverButton =
+        accountElement(
+            "create-waiver-button"
+        );
+
+
+    if (waiverButton) {
+
+        waiverButton.addEventListener(
+            "click",
+            createAccountWaiver
+        );
+
+    }
+
+
+    const removeWaiver =
+        accountElement(
+            "remove-waiver-button"
+        );
+
+
+    if (removeWaiver) {
+
+        removeWaiver.addEventListener(
+            "click",
+            removeAccountWaiver
+        );
+
+    }
+
+
+    const manualPayment =
+        accountElement(
+            "create-manual-payment-button"
+        );
+
+
+    if (manualPayment) {
+
+        manualPayment.addEventListener(
+            "click",
+            createManualPayment
+        );
+
+    }
+
+
+    const suspend =
+        accountElement(
+            "suspend-account-button"
+        );
+
+
+    if (suspend) {
+
+        suspend.addEventListener(
+            "click",
+            suspendAccountManagementUser
+        );
+
+    }
+
+
+    const reactivate =
+        accountElement(
+            "reactivate-account-button"
+        );
+
+
+    if (reactivate) {
+
+        reactivate.addEventListener(
+            "click",
+            reactivateAccountManagementUser
+        );
+
+    }
+
+
+    const refreshAudit =
+        accountElement(
+            "refresh-audit-log-button"
+        );
+
+
+    if (refreshAudit) {
+
+        refreshAudit.addEventListener(
+            "click",
+            loadAuditLog
+        );
+
+    }
+
+
+    accountManagementState.initialized =
+        true;
+
+}
+
+
+/* ============================================================
+   INITIALISE ACCOUNT MANAGEMENT
+   ============================================================ */
+
+function initAccountManagement() {
+
+    bindAccountManagementEvents();
+
+}
+
+
+/* ============================================================
+   DOM READY
+   ============================================================ */
+
+document.addEventListener(
+    "DOMContentLoaded",
+    () => {
+
+        initAdminPrivateMessages();
+
+        bindPaymentSettingsEvents();
+
+        bindPaymentStatusEvents();
+
+        initAccountManagement();
+
+    }
+);
+
+
+/* ============================================================
    PUBLIC ADMIN APIs
    ============================================================ */
 
@@ -3538,4 +5223,10 @@ window.adminPaymentStatus = {
 
 };
 
-   ();
+
+window.adminAccountManagement = {
+
+    load:
+        loadAccountManagement
+
+};
