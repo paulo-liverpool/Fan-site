@@ -591,46 +591,207 @@
                  UTILIZADORES
                  ================================================== -->
 
-            <section
-                class="admin-section"
-                id="section-users"
-            >
+           <section
+    class="admin-section"
+    id="section-users"
+>
 
-                <div class="admin-section-header">
+    <div class="admin-section-header">
 
-                    <div>
+        <div>
 
-                        <div class="admin-eyebrow">
-                            CONTAS
-                        </div>
+            <span class="admin-section-eyebrow">
+                GESTÃO
+            </span>
 
-                        <h1>
-                            Utilizadores
-                        </h1>
+            <h1>
+                Utilizadores
+            </h1>
 
-                        <p>
-                            Gere os utilizadores e respetivas
-                            permissões.
-                        </p>
+            <p>
+                Gere os utilizadores, funções e equipas
+                da plataforma Barça Real.
+            </p>
 
-                    </div>
+        </div>
 
-                </div>
+    </div>
 
 
-                <div class="admin-panel">
+    <div
+        id="users-management"
+        class="users-management"
+    >
 
-                    <div class="admin-empty-state">
+        <div class="users-toolbar">
 
-                        A gestão de utilizadores será adicionada
-                        nesta área.
+            <div class="users-search-wrap">
 
-                    </div>
+                <span class="users-search-icon">
+                    ⌕
+                </span>
 
-                </div>
+                <input
+                    type="search"
+                    id="users-search"
+                    placeholder="Pesquisar por nome, username ou email..."
+                    autocomplete="off"
+                >
 
-            </section>
+            </div>
 
+
+            <div class="users-filter-wrap">
+
+                <label>
+
+                    <span>
+                        Clube
+                    </span>
+
+                    <select id="users-team-filter">
+
+                        <option value="all">
+                            Todos os clubes
+                        </option>
+
+                        <option value="barcelona">
+                            Barcelona
+                        </option>
+
+                        <option value="real-madrid">
+                            Real Madrid
+                        </option>
+
+                        <option value="both">
+                            Ambos
+                        </option>
+
+                    </select>
+
+                </label>
+
+
+                <label>
+
+                    <span>
+                        Função
+                    </span>
+
+                    <select id="users-role-filter">
+
+                        <option value="all">
+                            Todas as funções
+                        </option>
+
+                        <option value="member">
+                            Membro
+                        </option>
+
+                        <option value="contributor">
+                            Colaborador
+                        </option>
+
+                        <option value="editor">
+                            Editor
+                        </option>
+
+                        <option value="administrator">
+                            Administrador
+                        </option>
+
+                    </select>
+
+                </label>
+
+            </div>
+
+        </div>
+
+
+        <div class="users-summary">
+
+            <div class="users-summary-item">
+
+                <span>
+                    UTILIZADORES
+                </span>
+
+                <strong id="users-total-count">
+                    0
+                </strong>
+
+            </div>
+
+
+            <div class="users-summary-item">
+
+                <span>
+                    MEMBROS
+                </span>
+
+                <strong id="users-member-count">
+                    0
+                </strong>
+
+            </div>
+
+
+            <div class="users-summary-item">
+
+                <span>
+                    COLABORADORES
+                </span>
+
+                <strong id="users-contributor-count">
+                    0
+                </strong>
+
+            </div>
+
+
+            <div class="users-summary-item">
+
+                <span>
+                    EDITORES
+                </span>
+
+                <strong id="users-editor-count">
+                    0
+                </strong>
+
+            </div>
+
+
+            <div class="users-summary-item">
+
+                <span>
+                    ADMINISTRADORES
+                </span>
+
+                <strong id="users-administrator-count">
+                    0
+                </strong>
+
+            </div>
+
+        </div>
+
+
+        <div
+            id="users-results"
+            class="users-results"
+        >
+
+            <div class="users-loading">
+                A carregar os utilizadores...
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
 
 
             <!-- ==================================================
