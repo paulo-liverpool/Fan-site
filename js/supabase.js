@@ -191,50 +191,15 @@ function getAccessMessage(
    REDIRECT TO ACCESS PAGE
    ============================================================ */
 
-function redirectForAccess(
-    result
-) {
+function isPaymentPage() {
 
-    const reason =
-        result?.reason ||
-        "payment_required";
+    const path =
+        window.location.pathname.toLowerCase();
 
+    const filename =
+        path.split("/").pop();
 
-    /*
-     * Do not redirect administrators
-     * through the payment flow.
-     */
-
-    if (isAdminPage()) {
-
-        return;
-
-    }
-
-
-    /*
-     * If the project already has a
-     * dedicated payment page, use it.
-     */
-
-    if (isPaymentPage()) {
-
-        return;
-
-    }
-
-
-    const message =
-        encodeURIComponent(
-            getAccessMessage(
-                reason
-            )
-        );
-
-
-    window.location.href =
-        `login.html?access=${message}`;
-
+    return filename === "payment.html";
 }
 
 
