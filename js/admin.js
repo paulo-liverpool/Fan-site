@@ -5837,9 +5837,1599 @@ function escapeAttribute(
     );
 }
 
+// ============================================================
+// 29. UTILIZADORES — USER MANAGEMENT
+// ============================================================
+
+let adminUsers = [];
+
 
 // ============================================================
-// 29. INICIALIZAÇÃO
+// LOAD USERS
+// ============================================================
+
+async function loadUsersManagement() {
+
+    const results =
+        document.getElementById(
+            "users-results"
+        );
+
+    if (!results) return;
+
+    results.innerHTML = `
+        <div class="users-loading">
+            A carregar os utilizadores...
+        </div>
+    `;
+
+    try {
+
+        const {
+            data,
+            error
+        } = await supabaseClient
+            .from("profiles")
+            .select(`
+                id,
+                display_name,
+                username,
+                role_id,
+                supported_team_id,
+                created_at
+            `)
+            .order(
+                "created_at",
+                {
+                    ascending: false
+                }
+            );
+
+        if (error) throw error;
+
+        adminUsers =
+            data || [];
+
+        await enrichAdminUsers();
+
+        renderUsersManagement();
+
+    } catch (error) {
+
+        console.error(
+            "Erro ao carregar utilizadores:",
+            error
+        );
+
+        results.innerHTML = `
+            <div class="users-error">
+
+                <strong>
+                    Não foi possível carregar os utilizadores.
+                </strong>
+
+                <span>
+                    ${escapeHTML(
+                        error.message ||
+                        "Erro desconhecido."
+                    )}
+                </span>
+
+            </div>
+        `;
+    }
+}
+
+
+// ============================================================
+// ENRICH USERS
+// ============================================================
+
+async function enrichAdminUsers() {
+
+    const roleIds =
+        [
+            ...new Set(
+                adminUsers
+                    .map(
+                        user =>
+                            user.role_id
+                    )
+                    .filter(Boolean)
+            )
+        ];
+
+    const teamIds =
+        [
+            ...new Set(
+                adminUsers
+                    .map(
+                        user =>
+                            user.supported_team_id
+                    )
+                    .filter(Boolean)
+            )
+        ];
+
+
+    const roleMap = {};
+    const teamMap = {};
+
+
+    if (roleIds.length) {
+
+        const {
+            data,
+            error
+        } = await supabaseClient
+            .from("roles")
+            .select("id,name")
+            .in(
+                "id",
+                roleIds
+            );
+
+        if (!error) {
+
+            (data || []).forEach(
+                role => {
+                    roleMap[role.id] =
+                        role;
+                }
+            );
+        }
+    }
+
+
+    if (teamIds.length) {
+
+        const {
+            data,
+            error
+        } = await supabaseClient
+            .from("teams")
+            .select(
+                "id,name,short_name,slug"
+            )
+            .in(
+                "id",
+                teamIds
+            );
+
+        if (!error) {
+
+            (data || []).forEach(
+                team => {
+                    teamMap[team.id] =
+                        team;
+                }
+            );
+        }
+    }
+
+
+    adminUsers =
+        adminUsers.map(
+            user => ({
+                ...user,
+
+                role:
+                    roleMap[user.role_id] ||
+                    null,
+
+                team:
+                    teamMap[user.supported_team_id] ||
+                    null
+            })
+        );
+}
+
+
+// ============================================================
+// RENDER USER MANAGEMENT
+// ============================================================
+
+function renderUsersManagement() {
+
+    const results =
+        document.getElementById(
+            "users-results"
+        );
+
+    if (!results) return;
+
+
+    updateUsersSummary();
+
+
+    const search =
+        document.getElementById(
+            "users-search"
+        )?.value
+            .trim()
+            .toLowerCase() ||
+        "";
+
+
+    const teamFilter =
+        document.getElementById(
+            "users-team-filter"
+        )?.value ||
+        "all";
+
+
+    const roleFilter =
+        document.getElementById(
+            "users-role-filter"
+        )?.value ||
+        "all";
+
+
+    let filtered =
+        [...adminUsers];
+
+
+    if (search) {
+
+        filtered =
+            filtered.filter(
+                user => {
+
+                    const values = [
+
+                        user.display_name,
+
+                        user.username,
+
+                        user.email,
+
+                        user.role?.name,
+
+                        user.team?.name,
+
+                        user.team?.short_name
+
+                    ];
+
+                    return values.some(
+                        value =>
+                            String(
+                                value || ""
+                            )
+                                .toLowerCase()
+                                .includes(
+                                    search
+                                )
+                    );
+                }
+            );
+    }
+
+
+    if (teamFilter !== "all") {
+
+        filtered =
+            filtered.filter(
+                user => {
+
+                    if (
+                        teamFilter ===
+                        "both"
+                    ) {
+                        return !user.supported_team_id;
+                    }
+
+                    return (
+                        user.team?.slug ===
+                        teamFilter
+                    );
+                }
+            );
+    }
+
+
+    if (roleFilter !== "all") {
+
+        filtered =
+            filtered.filter(
+                user =>
+                    user.role?.name ===
+                    roleFilter
+            );
+    }
+
+
+    if (!filtered.length) {
+
+        results.innerHTML = `
+            <div class="users-empty">
+
+                <strong>
+                    Nenhum utilizador encontrado.
+                </strong>
+
+                <span>
+                    Tenta alterar a pesquisa ou os filtros seleccionados.
+                </span>
+
+            </div>
+        `;
+
+        return;
+    }
+
+
+    results.innerHTML =
+        filtered
+            .map(
+                renderAdminUserCard
+            )
+            .join("");
+
+
+    bindUserManagementActions();
+}
+
+
+// ============================================================
+// SUMMARY
+// ============================================================
+
+function updateUsersSummary() {
+
+    const total =
+        adminUsers.length;
+
+
+    const members =
+        adminUsers.filter(
+            user =>
+                user.role?.name ===
+                "member"
+        ).length;
+
+
+    const contributors =
+        adminUsers.filter(
+            user =>
+                user.role?.name ===
+                "contributor"
+        ).length;
+
+
+    const editors =
+        adminUsers.filter(
+            user =>
+                user.role?.name ===
+                "editor"
+        ).length;
+
+
+    const administrators =
+        adminUsers.filter(
+            user =>
+                user.role?.name ===
+                "administrator"
+        ).length;
+
+
+    const values = {
+
+        "users-total-count":
+            total,
+
+        "users-member-count":
+            members,
+
+        "users-contributor-count":
+            contributors,
+
+        "users-editor-count":
+            editors,
+
+        "users-administrator-count":
+            administrators
+    };
+
+
+    Object.entries(
+        values
+    ).forEach(
+        ([id, value]) => {
+
+            const element =
+                document.getElementById(
+                    id
+                );
+
+            if (element) {
+                element.textContent =
+                    value;
+            }
+        }
+    );
+}
+
+
+// ============================================================
+// USER CARD
+// ============================================================
+
+function renderAdminUserCard(
+    user
+) {
+
+    const name =
+        user.display_name ||
+        user.username ||
+        "Utilizador";
+
+
+    const initial =
+        name
+            .charAt(0)
+            .toUpperCase();
+
+
+    const roleName =
+        user.role?.name ||
+        "member";
+
+
+    const roleLabel =
+        getRoleLabel(
+            roleName
+        );
+
+
+    const roleClass =
+        `role-${roleName}`;
+
+
+    const teamLabel =
+        user.team?.short_name ||
+        user.team?.name ||
+        "Ambos";
+
+
+    return `
+
+        <article
+            class="admin-user-card"
+            data-user-id="${escapeAttribute(
+                user.id
+            )}"
+        >
+
+            <div class="admin-user-avatar">
+                ${escapeHTML(initial)}
+            </div>
+
+
+            <div class="admin-user-main">
+
+                <div class="admin-user-name-row">
+
+                    <span class="admin-user-name">
+                        ${escapeHTML(name)}
+                    </span>
+
+                    ${
+                        user.username
+                            ? `
+                                <span class="admin-user-username">
+                                    @${escapeHTML(
+                                        user.username
+                                    )}
+                                </span>
+                            `
+                            : ""
+                    }
+
+                </div>
+
+
+                ${
+                    user.email
+                        ? `
+                            <div class="admin-user-email">
+                                ${escapeHTML(
+                                    user.email
+                                )}
+                            </div>
+                        `
+                        : `
+                            <div class="admin-user-email">
+                                Email disponível apenas no Auth
+                            </div>
+                        `
+                }
+
+
+                <div class="admin-user-meta">
+
+                    <span
+                        class="admin-user-badge ${escapeAttribute(
+                            roleClass
+                        )}"
+                    >
+                        ${escapeHTML(
+                            roleLabel
+                        )}
+                    </span>
+
+
+                    <span class="admin-user-badge team">
+
+                        ${escapeHTML(
+                            teamLabel
+                        )}
+
+                    </span>
+
+
+                    <span class="admin-user-date">
+
+                        Registado
+                        ${escapeHTML(
+                            formatDate(
+                                user.created_at
+                            )
+                        )}
+
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <div class="admin-user-actions">
+
+                <button
+                    type="button"
+                    class="admin-user-action"
+                    data-user-action="view"
+                    data-user-id="${escapeAttribute(
+                        user.id
+                    )}"
+                >
+                    Ver perfil
+                </button>
+
+
+                <button
+                    type="button"
+                    class="admin-user-action primary"
+                    data-user-action="role"
+                    data-user-id="${escapeAttribute(
+                        user.id
+                    )}"
+                >
+                    Alterar função
+                </button>
+
+            </div>
+
+        </article>
+    `;
+}
+
+
+// ============================================================
+// ROLE LABEL
+// ============================================================
+
+function getRoleLabel(
+    role
+) {
+
+    const labels = {
+
+        member:
+            "Membro",
+
+        contributor:
+            "Colaborador",
+
+        editor:
+            "Editor",
+
+        administrator:
+            "Administrador"
+    };
+
+
+    return (
+        labels[role] ||
+        role ||
+        "Membro"
+    );
+}
+
+
+// ============================================================
+// USER ACTIONS
+// ============================================================
+
+function bindUserManagementActions() {
+
+    document
+        .querySelectorAll(
+            "[data-user-action]"
+        )
+        .forEach(
+            button => {
+
+                if (
+                    button.dataset.bound ===
+                    "true"
+                ) {
+                    return;
+                }
+
+
+                button.dataset.bound =
+                    "true";
+
+
+                button.addEventListener(
+                    "click",
+                    async () => {
+
+                        const id =
+                            button.dataset.userId;
+
+                        const action =
+                            button.dataset.userAction;
+
+
+                        if (!id || !action) {
+                            return;
+                        }
+
+
+                        if (
+                            action ===
+                            "view"
+                        ) {
+
+                            await openUserDetails(
+                                id
+                            );
+
+                            return;
+                        }
+
+
+                        if (
+                            action ===
+                            "role"
+                        ) {
+
+                            await openUserRoleModal(
+                                id
+                            );
+
+                        }
+
+                    }
+                );
+            }
+        );
+}
+
+
+// ============================================================
+// USER DETAILS
+// ============================================================
+
+async function openUserDetails(
+    id
+) {
+
+    const user =
+        adminUsers.find(
+            item =>
+                item.id === id
+        );
+
+
+    if (!user) return;
+
+
+    closeModalById(
+        "admin-user-details-modal"
+    );
+
+
+    const name =
+        user.display_name ||
+        user.username ||
+        "Utilizador";
+
+
+    const initial =
+        name
+            .charAt(0)
+            .toUpperCase();
+
+
+    const modal =
+        document.createElement(
+            "div"
+        );
+
+
+    modal.id =
+        "admin-user-details-modal";
+
+
+    modal.className =
+        "admin-modal-overlay";
+
+
+    modal.innerHTML = `
+
+        <div class="admin-modal">
+
+            <div class="admin-modal-header">
+
+                <div>
+
+                    <span class="admin-modal-eyebrow">
+                        UTILIZADOR
+                    </span>
+
+                    <h2>
+                        Perfil
+                    </h2>
+
+                </div>
+
+
+                <button
+                    type="button"
+                    class="admin-modal-close"
+                    id="close-user-details"
+                    aria-label="Fechar"
+                >
+                    ×
+                </button>
+
+            </div>
+
+
+            <div class="admin-user-details">
+
+                <div class="admin-user-details-header">
+
+                    <div class="admin-user-details-avatar">
+                        ${escapeHTML(initial)}
+                    </div>
+
+                    <div>
+
+                        <h3>
+                            ${escapeHTML(name)}
+                        </h3>
+
+                        <p>
+                            ${
+                                user.username
+                                    ? `@${escapeHTML(
+                                        user.username
+                                    )}`
+                                    : "Sem username"
+                            }
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <div class="admin-user-details-grid">
+
+                    <div class="admin-user-detail-item">
+
+                        <span>
+                            Nome
+                        </span>
+
+                        <strong>
+                            ${escapeHTML(
+                                user.display_name ||
+                                "—"
+                            )}
+                        </strong>
+
+                    </div>
+
+
+                    <div class="admin-user-detail-item">
+
+                        <span>
+                            Username
+                        </span>
+
+                        <strong>
+                            ${
+                                user.username
+                                    ? `@${escapeHTML(
+                                        user.username
+                                    )}`
+                                    : "—"
+                            }
+                        </strong>
+
+                    </div>
+
+
+                    <div class="admin-user-detail-item">
+
+                        <span>
+                            Função
+                        </span>
+
+                        <strong>
+                            ${escapeHTML(
+                                getRoleLabel(
+                                    user.role?.name
+                                )
+                            )}
+                        </strong>
+
+                    </div>
+
+
+                    <div class="admin-user-detail-item">
+
+                        <span>
+                            Clube
+                        </span>
+
+                        <strong>
+                            ${escapeHTML(
+                                user.team?.name ||
+                                "Ambos os clubes"
+                            )}
+                        </strong>
+
+                    </div>
+
+
+                    <div class="admin-user-detail-item">
+
+                        <span>
+                            Registo
+                        </span>
+
+                        <strong>
+                            ${escapeHTML(
+                                formatDate(
+                                    user.created_at
+                                )
+                            )}
+                        </strong>
+
+                    </div>
+
+
+                    <div class="admin-user-detail-item">
+
+                        <span>
+                            ID
+                        </span>
+
+                        <strong>
+                            ${escapeHTML(
+                                user.id
+                            )}
+                        </strong>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="admin-modal-actions">
+
+                <button
+                    type="button"
+                    class="admin-button secondary"
+                    id="close-user-details-button"
+                >
+                    Fechar
+                </button>
+
+
+                <button
+                    type="button"
+                    class="admin-button primary"
+                    id="details-change-role"
+                >
+                    Alterar função
+                </button>
+
+            </div>
+
+        </div>
+    `;
+
+
+    document.body.appendChild(
+        modal
+    );
+
+
+    const close = () => {
+        closeModalById(
+            "admin-user-details-modal"
+        );
+    };
+
+
+    document
+        .getElementById(
+            "close-user-details"
+        )
+        ?.addEventListener(
+            "click",
+            close
+        );
+
+
+    document
+        .getElementById(
+            "close-user-details-button"
+        )
+        ?.addEventListener(
+            "click",
+            close
+        );
+
+
+    document
+        .getElementById(
+            "details-change-role"
+        )
+        ?.addEventListener(
+            "click",
+            async () => {
+
+                close();
+
+                setTimeout(
+                    () =>
+                        openUserRoleModal(
+                            id
+                        ),
+                    50
+                );
+            }
+        );
+
+
+    modal.addEventListener(
+        "click",
+        event => {
+
+            if (
+                event.target ===
+                modal
+            ) {
+                close();
+            }
+
+        }
+    );
+}
+
+
+// ============================================================
+// CHANGE ROLE MODAL
+// ============================================================
+
+async function openUserRoleModal(
+    id
+) {
+
+    const user =
+        adminUsers.find(
+            item =>
+                item.id === id
+        );
+
+
+    if (!user) return;
+
+
+    const currentRole =
+        user.role?.name ||
+        "member";
+
+
+    closeModalById(
+        "admin-user-role-modal"
+    );
+
+
+    const name =
+        user.display_name ||
+        user.username ||
+        "este utilizador";
+
+
+    const modal =
+        document.createElement(
+            "div"
+        );
+
+
+    modal.id =
+        "admin-user-role-modal";
+
+
+    modal.className =
+        "admin-modal-overlay";
+
+
+    modal.innerHTML = `
+
+        <div class="admin-modal">
+
+            <div class="admin-modal-header">
+
+                <div>
+
+                    <span class="admin-modal-eyebrow">
+                        FUNÇÃO
+                    </span>
+
+                    <h2>
+                        Alterar função
+                    </h2>
+
+                    <p class="admin-modal-subtitle">
+                        Altera a função de
+                        ${escapeHTML(name)}.
+                    </p>
+
+                </div>
+
+
+                <button
+                    type="button"
+                    class="admin-modal-close"
+                    id="close-user-role-modal"
+                    aria-label="Fechar"
+                >
+                    ×
+                </button>
+
+            </div>
+
+
+            <form id="user-role-form">
+
+                <div class="admin-role-warning">
+
+                    As funções determinam o nível de acesso
+                    do utilizador dentro da plataforma.
+
+                </div>
+
+
+                <div class="admin-form-group">
+
+                    <label for="user-role-select">
+                        Nova função
+                    </label>
+
+                    <select id="user-role-select">
+
+                        <option value="member">
+                            Membro
+                        </option>
+
+                        <option value="contributor">
+                            Colaborador
+                        </option>
+
+                        <option value="editor">
+                            Editor
+                        </option>
+
+                        <option value="administrator">
+                            Administrador
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <div
+                    id="user-role-message"
+                    class="admin-form-message"
+                ></div>
+
+
+                <div class="admin-modal-actions">
+
+                    <button
+                        type="button"
+                        class="admin-button secondary"
+                        id="cancel-user-role"
+                    >
+                        Cancelar
+                    </button>
+
+
+                    <button
+                        type="submit"
+                        class="admin-button primary"
+                        id="save-user-role"
+                    >
+                        Guardar função
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+    `;
+
+
+    document.body.appendChild(
+        modal
+    );
+
+
+    const select =
+        document.getElementById(
+            "user-role-select"
+        );
+
+
+    if (select) {
+        select.value =
+            currentRole;
+    }
+
+
+    const close = () => {
+
+        closeModalById(
+            "admin-user-role-modal"
+        );
+
+    };
+
+
+    document
+        .getElementById(
+            "close-user-role-modal"
+        )
+        ?.addEventListener(
+            "click",
+            close
+        );
+
+
+    document
+        .getElementById(
+            "cancel-user-role"
+        )
+        ?.addEventListener(
+            "click",
+            close
+        );
+
+
+    document
+        .getElementById(
+            "user-role-form"
+        )
+        ?.addEventListener(
+            "submit",
+            event =>
+                saveUserRole(
+                    event,
+                    user
+                )
+        );
+
+
+    modal.addEventListener(
+        "click",
+        event => {
+
+            if (
+                event.target ===
+                modal
+            ) {
+                close();
+            }
+
+        }
+    );
+}
+
+
+// ============================================================
+// SAVE ROLE
+// ============================================================
+
+async function saveUserRole(
+    event,
+    user
+) {
+
+    event.preventDefault();
+
+
+    const select =
+        document.getElementById(
+            "user-role-select"
+        );
+
+
+    const message =
+        document.getElementById(
+            "user-role-message"
+        );
+
+
+    const button =
+        document.getElementById(
+            "save-user-role"
+        );
+
+
+    const roleName =
+        select?.value ||
+        "member";
+
+
+    if (button) {
+
+        button.disabled =
+            true;
+
+        button.textContent =
+            "A guardar...";
+
+    }
+
+
+    try {
+
+        const {
+            data: role,
+            error: roleError
+        } = await supabaseClient
+            .from("roles")
+            .select("id,name")
+            .eq(
+                "name",
+                roleName
+            )
+            .single();
+
+
+        if (
+            roleError ||
+            !role
+        ) {
+
+            throw new Error(
+                "Não foi possível encontrar a função seleccionada."
+            );
+
+        }
+
+
+        const {
+            error
+        } = await supabaseClient
+            .from("profiles")
+            .update({
+
+                role_id:
+                    role.id
+
+            })
+            .eq(
+                "id",
+                user.id
+            );
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        if (message) {
+
+            message.textContent =
+                "Função actualizada com sucesso.";
+
+        }
+
+
+        await loadUsersManagement();
+
+        await loadDashboardCounts();
+
+
+        setTimeout(
+            () => {
+
+                closeModalById(
+                    "admin-user-role-modal"
+                );
+
+            },
+            500
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Erro ao alterar função:",
+            error
+        );
+
+
+        if (message) {
+
+            message.textContent =
+                error.message ||
+                "Não foi possível alterar a função.";
+
+        }
+
+
+        if (button) {
+
+            button.disabled =
+                false;
+
+            button.textContent =
+                "Guardar função";
+
+        }
+
+    }
+}
+
+
+// ============================================================
+// USER SEARCH + FILTERS
+// ============================================================
+
+function setupUsersManagement() {
+
+    document
+        .getElementById(
+            "users-search"
+        )
+        ?.addEventListener(
+            "input",
+            renderUsersManagement
+        );
+
+
+    document
+        .getElementById(
+            "users-team-filter"
+        )
+        ?.addEventListener(
+            "change",
+            renderUsersManagement
+        );
+
+
+    document
+        .getElementById(
+            "users-role-filter"
+        )
+        ?.addEventListener(
+            "change",
+            renderUsersManagement
+        );
+}
+
+
+// ============================================================
+// 30. TECLADO / MODAIS
+// ============================================================
+
+document.addEventListener(
+    "keydown",
+    event => {
+
+        if (
+            event.key !==
+            "Escape"
+        ) {
+            return;
+        }
+
+
+        const modalIds = [
+
+            "news-edit-modal",
+
+            "news-create-modal",
+
+            "featured-edit-modal",
+
+            "featured-modal",
+
+            "admin-user-details-modal",
+
+            "admin-user-role-modal"
+
+        ];
+
+
+        for (
+            const id of modalIds
+        ) {
+
+            const modal =
+                document.getElementById(
+                    id
+                );
+
+
+            if (modal) {
+
+                closeModalById(
+                    id
+                );
+
+                return;
+
+            }
+        }
+    }
+);
+
+
+function closeModalById(
+    id
+) {
+
+    const modal =
+        document.getElementById(
+            id
+        );
+
+
+    if (modal) {
+        modal.remove();
+    }
+}
+
+
+// ============================================================
+// 31. UTILITÁRIOS
+// ============================================================
+
+function normalizeStatus(
+    status
+) {
+
+    const labels = {
+
+        draft:
+            "Rascunho",
+
+        published:
+            "Publicado",
+
+        archived:
+            "Arquivado"
+
+    };
+
+
+    return {
+
+        value:
+            status ||
+            "draft",
+
+        label:
+            labels[status] ||
+            "Rascunho"
+
+    };
+}
+
+
+function formatDate(
+    value
+) {
+
+    if (!value) return "—";
+
+
+    const date =
+        new Date(value);
+
+
+    if (
+        Number.isNaN(
+            date.getTime()
+        )
+    ) {
+        return "—";
+    }
+
+
+    return date.toLocaleDateString(
+        "pt-PT",
+        {
+            day: "2-digit",
+            month: "short",
+            year: "numeric"
+        }
+    );
+}
+
+
+function escapeHTML(
+    value
+) {
+
+    return String(
+        value ?? ""
+    )
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+        .replace(
+            /</g,
+            "&lt;"
+        )
+        .replace(
+            />/g,
+            "&gt;"
+        )
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+}
+
+
+function escapeAttribute(
+    value
+) {
+
+    return escapeHTML(
+        value
+    );
+}
+
+
+// ============================================================
+// 32. INICIALIZAÇÃO
 // ============================================================
 
 async function initAdmin() {
@@ -5847,9 +7437,11 @@ async function initAdmin() {
     const authorized =
         await verifyAdministrator();
 
+
     if (!authorized) {
         return;
     }
+
 
     setupNavigation();
 
@@ -5863,12 +7455,71 @@ async function initAdmin() {
 
     setupDashboardRetry();
 
+    setupUsersManagement();
+
+
     await loadDashboardCounts();
 
     await loadRecentActivity();
 
     await loadFeaturedLibrary();
+
 }
+
+
+// ============================================================
+// USER NAVIGATION HOOK
+// ============================================================
+
+const originalSetupNavigation =
+    setupNavigation;
+
+
+setupNavigation = function () {
+
+    originalSetupNavigation();
+
+
+    const navItems =
+        document.querySelectorAll(
+            "[data-section]"
+        );
+
+
+    navItems.forEach(
+        item => {
+
+            if (
+                item.dataset.usersBound ===
+                "true"
+            ) {
+                return;
+            }
+
+
+            item.dataset.usersBound =
+                "true";
+
+
+            item.addEventListener(
+                "click",
+                async () => {
+
+                    if (
+                        item.dataset.section ===
+                        "users"
+                    ) {
+
+                        await loadUsersManagement();
+
+                    }
+
+                }
+            );
+
+        }
+    );
+};
 
 
 document.addEventListener(
