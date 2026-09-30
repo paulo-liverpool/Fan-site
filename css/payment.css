@@ -1,0 +1,298 @@
+/* ============================================================
+   BARÇA REAL
+   PAYMENT PAGE
+   ============================================================ */
+
+.payment-page {
+
+    min-height: 100vh;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    padding: 24px;
+
+    background:
+        radial-gradient(
+            circle at top,
+            rgba(30, 70, 140, 0.18),
+            transparent 45%
+        ),
+        #08090c;
+
+}
+
+.payment-card {
+
+    width: 100%;
+
+    max-width: 480px;
+
+    padding: 32px 26px;
+
+    border-radius: 18px;
+
+    background: #111318;
+
+    border: 1px solid rgba(255, 255, 255, 0.08);
+
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.45);
+
+    text-align: center;
+
+}
+
+.payment-logo {
+
+    display: flex;
+
+    justify-content: center;
+
+    margin-bottom: 18px;
+
+}
+
+.payment-logo-mark {
+
+    width: 58px;
+
+    height: 58px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    border-radius: 16px;
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--team-primary, #8b5cf6),
+            var(--team-secondary, #2563eb)
+        );
+
+    color: #fff;
+
+    font-size: 20px;
+
+    font-weight: 800;
+
+    box-shadow:
+        0 8px 30px rgba(0, 0, 0, 0.35);
+
+}
+
+.payment-card h1 {
+
+    margin: 0 0 10px;
+
+    color: #fff;
+
+    font-size: 25px;
+
+}
+
+.payment-message {
+
+    margin: 0 auto 24px;
+
+    max-width: 390px;
+
+    color: #a9adb7;
+
+    font-size: 14px;
+
+    line-height: 1.6;
+
+}
+
+.payment-status {
+
+    margin-bottom: 18px;
+
+    padding: 12px 14px;
+
+    border-radius: 10px;
+
+    background: rgba(255, 255, 255, 0.04);
+
+    color: #cfd2da;
+
+    font-size: 13px;
+
+}
+
+.payment-details {
+
+    margin-bottom: 20px;
+
+    border-radius: 12px;
+
+    overflow: hidden;
+
+    border: 1px solid rgba(255, 255, 255, 0.06);
+
+}
+
+.payment-detail-row {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 20px;
+
+    padding: 14px 16px;
+
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+
+    text-align: left;
+
+}
+
+.payment-detail-row:last-child {
+
+    border-bottom: none;
+
+}
+
+.payment-detail-row span {
+
+    color: #9297a3;
+
+    font-size: 13px;
+
+}
+
+.payment-detail-row strong {
+
+    color: #fff;
+
+    font-size: 14px;
+
+    text-align: right;
+
+}
+
+.payment-action-area {
+
+    margin-top: 20px;
+
+}
+
+.payment-button {
+
+    width: 100%;
+
+    border: none;
+
+    border-radius: 12px;
+
+    padding: 14px 18px;
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--team-primary, #8b5cf6),
+            var(--team-secondary, #2563eb)
+        );
+
+    color: #fff;
+
+    font-size: 15px;
+
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition:
+        transform 0.2s ease,
+        opacity 0.2s ease;
+
+}
+
+.payment-button:hover {
+
+    transform: translateY(-1px);
+
+}
+
+.payment-button:disabled {
+
+    opacity: 0.5;
+
+    cursor: not-allowed;
+
+    transform: none;
+
+}
+
+.payment-instructions {
+
+    margin: 14px 0 20px;
+
+    color: #777d89;
+
+    font-size: 12px;
+
+    line-height: 1.5;
+
+}
+
+.logout-button {
+
+    border: none;
+
+    background: transparent;
+
+    color: #777d89;
+
+    font-size: 13px;
+
+    cursor: pointer;
+
+    padding: 8px 12px;
+
+}
+
+.logout-button:hover {
+
+    color: #fff;
+
+}
+
+.hidden {
+
+    display: none !important;
+
+}
+
+@media (max-width: 520px) {
+
+    .payment-page {
+
+        padding: 16px;
+
+    }
+
+    .payment-card {
+
+        padding: 26px 18px;
+
+    }
+
+    .payment-card h1 {
+
+        font-size: 22px;
+
+    }
+
+}
