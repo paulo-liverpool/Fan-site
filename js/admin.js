@@ -29,67 +29,47 @@ async function verifyAdministrator() {
             error: profileError
         } = await supabaseClient
             .from("profiles")
-            .select("id, display_name, username, role_id")
-            .eq("id", user.id)
-            .single();
+          const {
+    data: profile,
+    error: profileError
+} = await supabaseClient
+    .from("profiles")
+    .select(`
+        id,
+        display_name,
+        username,
+        role_id,
+        is_active
+    `)
+    .eq("id", user.id)
+    .single();
 
-        if (profileError || !profile) {
-            window.location.href = "login.html";
-            return false;
-        }
+if (profileError || !profile) {
 
-        const {
-            data: role,
-            error: roleError
-        } = await supabaseClient
-            .from("roles")
-            .select("id, name")
-            .eq("id", profile.role_id)
-            .single();
+    console.error(
+        "Erro ao carregar perfil do administrador:",
+        profileError
+    );
 
-        if (roleError || !role || role.name !== "administrator") {
-            window.location.href = "home.html";
-            return false;
-        }
+    await supabaseClient.auth.signOut();
 
-        currentAdmin = {
-            user,
-            profile,
-            role
-        };
+    window.location.href =
+        "login.html";
 
-        const profileButton =
-            document.getElementById("admin-profile-button");
-
-        if (profileButton) {
-
-            const name =
-                profile.display_name ||
-                profile.username ||
-                user.email ||
-                "Administrador";
-
-            profileButton.textContent =
-                name.charAt(0).toUpperCase();
-
-            profileButton.title = name;
-        }
-
-        return true;
-
-    } catch (error) {
-
-        console.error(
-            "Erro ao verificar administrador:",
-            error
-        );
-
-        window.location.href = "login.html";
-
-        return false;
-    }
+    return false;
 }
 
+
+if (profile.is_active === false) {
+
+    await supabaseClient.auth.signOut();
+
+    window.location.href =
+        "login.html?suspended=1";
+
+    return false;
+}
+        }
 
 // ============================================================
 // 2. NAVEGAÇÃO
