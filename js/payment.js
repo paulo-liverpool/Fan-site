@@ -1,6 +1,6 @@
 /* ============================================================
    BARÇA REAL
-   PAYMENT PAGE
+   PAYMENT / SUBSCRIPTION PAGE
    ============================================================ */
 
 (function () {
@@ -20,14 +20,12 @@
 
         waiver: null,
 
-        loading: false
+        payments: [],
+
+        submitting: false
 
     };
 
-
-    /* ========================================================
-       ELEMENTS
-       ======================================================== */
 
     const elements = {
 
@@ -46,14 +44,44 @@
                 "payment-price"
             ),
 
-        currency:
-            document.getElementById(
-                "payment-currency"
-            ),
-
         subscriptionStatus:
             document.getElementById(
                 "payment-subscription-status"
+            ),
+
+        form:
+            document.getElementById(
+                "payment-form"
+            ),
+
+        method:
+            document.getElementById(
+                "payment-method"
+            ),
+
+        reference:
+            document.getElementById(
+                "payment-reference"
+            ),
+
+        note:
+            document.getElementById(
+                "payment-note"
+            ),
+
+        button:
+            document.getElementById(
+                "payment-button"
+            ),
+
+        pending:
+            document.getElementById(
+                "payment-pending"
+            ),
+
+        pendingReference:
+            document.getElementById(
+                "pending-reference"
             ),
 
         graceRow:
@@ -76,14 +104,9 @@
                 "payment-waiver"
             ),
 
-        button:
+        history:
             document.getElementById(
-                "payment-button"
-            ),
-
-        actionArea:
-            document.getElementById(
-                "payment-action-area"
+                "payment-history-list"
             ),
 
         instructions:
@@ -103,13 +126,41 @@
        HELPERS
        ======================================================== */
 
+    function escapeHTML(
+        value
+    ) {
+
+        return String(
+            value ?? ""
+        )
+            .replace(
+                /&/g,
+                "&amp;"
+            )
+            .replace(
+                /</g,
+                "&lt;"
+            )
+            .replace(
+                />/g,
+                "&gt;"
+            )
+            .replace(
+                /"/g,
+                "&quot;"
+            )
+            .replace(
+                /'/g,
+                "&#039;"
+            );
+
+    }
+
+
     function formatMoney(
         amount,
         currency
     ) {
-
-        const value =
-            Number(amount || 0);
 
         try {
 
@@ -121,11 +172,15 @@
                         currency || "AOA",
                     maximumFractionDigits: 0
                 }
-            ).format(value);
+            ).format(
+                Number(amount || 0)
+            );
 
         } catch (error) {
 
-            return `${value.toLocaleString(
+            return `${Number(
+                amount || 0
+            ).toLocaleString(
                 "pt-AO"
             )} ${currency || "AOA"}`;
 
@@ -165,66 +220,110 @@
     }
 
 
-    function getReasonFromUrl() {
+    function formatDateTime(
+        value
+    ) {
 
-        const params =
-            new URLSearchParams(
-                window.location.search
-            );
+        if (!value) {
+            return "—";
+        }
 
-        return (
-            params.get("reason") ||
-            "payment_required"
+        const date =
+            new Date(value);
+
+        if (
+            Number.isNaN(
+                date.getTime()
+            )
+        ) {
+            return "—";
+        }
+
+        return date.toLocaleString(
+            "pt-AO",
+            {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit"
+            }
         );
 
     }
 
 
-    function setMessage(
-        reason
+    function formatPaymentMethod(
+        method
     ) {
 
-        const messages = {
+        const labels = {
 
-            suspended:
-                "A tua conta está suspensa. Contacta a administração para obter mais informações.",
+            transferencia_bancaria:
+                "Transferência bancária",
 
-            subscription_required:
-                "É necessária uma subscrição ativa para continuar a utilizar a plataforma.",
+            multicaixa_express:
+                "Multicaixa Express",
 
-            payment_required:
-                "O teu pagamento está em falta. Regulariza a subscrição para recuperar o acesso.",
+            deposito:
+                "Depósito bancário",
 
-            payment_waiver:
-                "A tua conta tem uma isenção de pagamento ativa.",
-
-            grace_period:
-                "Estás dentro do teu período de tolerância.",
-
-            subscription_active:
-                "A tua subscrição está ativa."
+            outro:
+                "Outro"
 
         };
 
-        elements.message.textContent =
-            messages[reason] ||
-            messages.payment_required;
+        return (
+            labels[method] ||
+            method ||
+            "—"
+        );
 
     }
 
 
-    function setStatus(
-        text
+    function formatPaymentStatus(
+        status
     ) {
 
-        elements.status.textContent =
-            text;
+        const labels = {
+
+            pending:
+                "Pendente",
+
+            paid:
+                "Pago",
+
+            failed:
+                "Falhado",
+
+            cancelled:
+                "Cancelado"
+
+        };
+
+        return (
+            labels[status] ||
+            status ||
+            "—"
+        );
+
+    }
+
+
+    function getStatusClass(
+        status
+    ) {
+
+        return `payment-status-${String(
+            status || ""
+        ).toLowerCase()}`;
 
     }
 
 
     /* ========================================================
-       LOAD USER
+       AUTH
        ======================================================== */
 
     async function loadUser() {
@@ -239,7 +338,7 @@
         if (error) {
 
             console.error(
-                "Erro ao obter utilizador:",
+                "Erro ao carregar utilizador:",
                 error
             );
 
@@ -253,7 +352,7 @@
 
 
     /* ========================================================
-       LOAD PLATFORM SETTINGS
+       SETTINGS
        ======================================================== */
 
     async function loadSettings() {
@@ -263,7 +362,9 @@
             error
         } =
             await supabaseClient
-                .from("platform_settings")
+                .from(
+                    "platform_settings"
+                )
                 .select(
                     `
                     payments_active,
@@ -296,7 +397,7 @@
 
 
     /* ========================================================
-       LOAD ACCESS DATA
+       ACCESS
        ======================================================== */
 
     async function loadAccess() {
@@ -326,7 +427,7 @@
 
 
     /* ========================================================
-       LOAD SUBSCRIPTION
+       SUBSCRIPTION
        ======================================================== */
 
     async function loadSubscription() {
@@ -340,9 +441,12 @@
             error
         } =
             await supabaseClient
-                .from("subscriptions")
+                .from(
+                    "subscriptions"
+                )
                 .select(
                     `
+                    id,
                     status,
                     monthly_price,
                     currency,
@@ -384,7 +488,7 @@
 
 
     /* ========================================================
-       LOAD WAIVER
+       WAIVER
        ======================================================== */
 
     async function loadWaiver() {
@@ -398,7 +502,9 @@
             error
         } =
             await supabaseClient
-                .from("subscription_waivers")
+                .from(
+                    "subscription_waivers"
+                )
                 .select(
                     `
                     id,
@@ -442,34 +548,175 @@
 
 
     /* ========================================================
+       PAYMENT HISTORY
+       ======================================================== */
+
+    async function loadPayments() {
+
+        const {
+            data,
+            error
+        } =
+            await supabaseClient.rpc(
+                "get_user_payment_history"
+            );
+
+        if (error) {
+
+            console.error(
+                "Erro ao carregar histórico:",
+                error
+            );
+
+            return [];
+
+        }
+
+        if (
+            !data ||
+            data.success !== true
+        ) {
+
+            return [];
+
+        }
+
+        return data.payments || [];
+
+    }
+
+
+    /* ========================================================
+       RENDER HISTORY
+       ======================================================== */
+
+    function renderPaymentHistory() {
+
+        if (!state.payments.length) {
+
+            elements.history.innerHTML = `
+                <div class="payment-history-item">
+                    <div class="payment-history-meta">
+                        Ainda não existem pagamentos registados.
+                    </div>
+                </div>
+            `;
+
+            return;
+
+        }
+
+
+        elements.history.innerHTML =
+            state.payments
+                .map(
+                    payment => {
+
+                        const status =
+                            String(
+                                payment.status ||
+                                ""
+                            ).toLowerCase();
+
+                        return `
+                            <div class="payment-history-item">
+
+                                <div class="payment-history-top">
+
+                                    <span class="payment-history-amount">
+                                        ${escapeHTML(
+                                            formatMoney(
+                                                payment.amount,
+                                                payment.currency
+                                            )
+                                        )}
+                                    </span>
+
+                                    <span
+                                        class="payment-history-status ${escapeHTML(
+                                            getStatusClass(
+                                                status
+                                            )
+                                        )}"
+                                    >
+                                        ${escapeHTML(
+                                            formatPaymentStatus(
+                                                status
+                                            )
+                                        )}
+                                    </span>
+
+                                </div>
+
+                                <div class="payment-history-meta">
+
+                                    <span>
+                                        ${escapeHTML(
+                                            formatPaymentMethod(
+                                                payment.payment_method
+                                            )
+                                        )}
+                                    </span>
+
+                                    <span>
+                                        ${escapeHTML(
+                                            formatDateTime(
+                                                payment.created_at
+                                            )
+                                        )}
+                                    </span>
+
+                                </div>
+
+                                <div class="payment-history-reference">
+
+                                    Referência:
+                                    ${escapeHTML(
+                                        payment.transaction_reference ||
+                                        "—"
+                                    )}
+
+                                </div>
+
+                            </div>
+                        `;
+
+                    }
+                )
+                .join("");
+
+    }
+
+
+    /* ========================================================
        RENDER
        ======================================================== */
 
     function render() {
 
         const settings =
-            state.settings;
+            state.settings || {};
 
         const subscription =
             state.subscription;
 
-        const access =
-            state.access;
+        const currency =
+            settings.currency ||
+            subscription?.currency ||
+            "AOA";
+
+        const price =
+            settings.monthly_price ??
+            subscription?.monthly_price ??
+            0;
+
 
         elements.price.textContent =
             formatMoney(
-                settings?.monthly_price ??
-                    subscription?.monthly_price ??
-                    0,
-                settings?.currency ??
-                    subscription?.currency ??
-                    "AOA"
+                price,
+                currency
             );
 
-        elements.currency.textContent =
-            settings?.currency ??
-            subscription?.currency ??
-            "AOA";
 
         elements.subscriptionStatus.textContent =
             subscription?.status
@@ -478,6 +725,10 @@
                 )
                 : "Sem subscrição";
 
+
+        /* ====================================================
+           GRACE
+           ==================================================== */
 
         if (
             subscription?.grace_until &&
@@ -504,6 +755,10 @@
         }
 
 
+        /* ====================================================
+           WAIVER
+           ==================================================== */
+
         if (state.waiver) {
 
             elements.waiverRow.classList.remove(
@@ -526,65 +781,146 @@
         }
 
 
-        const reason =
-            access?.reason ||
-            getReasonFromUrl();
-
+        /* ====================================================
+           ACTIVE ACCESS
+           ==================================================== */
 
         if (
-            reason === "suspended"
+            state.access?.allowed === true
         ) {
 
-            elements.actionArea.classList.add(
+            elements.form.classList.add(
                 "hidden"
             );
 
-            elements.instructions.textContent =
-                "A tua conta está suspensa. Contacta a administração para resolver a situação.";
-
-            setStatus(
-                "Conta suspensa"
+            elements.pending.classList.add(
+                "hidden"
             );
 
-            return;
+            elements.status.textContent =
+                "O teu acesso está disponível.";
 
-        }
+            elements.message.textContent =
+                "A tua subscrição está ativa.";
 
-
-        if (
-            access?.allowed === true
-        ) {
+            elements.instructions.textContent =
+                "O teu acesso está disponível. Podes continuar para a plataforma.";
 
             elements.button.textContent =
                 "Continuar";
 
-            elements.instructions.textContent =
-                "O teu acesso está disponível.";
-
             elements.button.disabled =
                 false;
 
-            setStatus(
-                "Acesso disponível"
-            );
+            elements.button.onclick =
+                function () {
+
+                    window.location.href =
+                        "index.html";
+
+                };
 
             return;
 
         }
 
 
-        elements.button.textContent =
-            "Efetuar pagamento";
+        /* ====================================================
+           PENDING PAYMENT
+           ==================================================== */
 
-        elements.instructions.textContent =
-            "Depois de efetuares o pagamento, a administração irá confirmar a transação e ativar o teu acesso.";
+        const pendingPayment =
+            state.payments.find(
+                payment =>
+                    payment.status ===
+                    "pending"
+            );
+
+
+        if (pendingPayment) {
+
+            elements.form.classList.add(
+                "hidden"
+            );
+
+            elements.pending.classList.remove(
+                "hidden"
+            );
+
+            elements.pendingReference.textContent =
+                `Referência: ${
+                    pendingPayment.transaction_reference ||
+                    "—"
+                }`;
+
+            elements.status.textContent =
+                "Pagamento pendente de confirmação.";
+
+            elements.message.textContent =
+                "Recebemos o teu registo de pagamento.";
+
+            elements.instructions.textContent =
+                "A administração irá confirmar o pagamento. Depois da confirmação, o teu acesso será ativado.";
+
+            return;
+
+        }
+
+
+        /* ====================================================
+           SUSPENDED
+           ==================================================== */
+
+        if (
+            state.access?.reason ===
+            "suspended"
+        ) {
+
+            elements.form.classList.add(
+                "hidden"
+            );
+
+            elements.pending.classList.add(
+                "hidden"
+            );
+
+            elements.status.textContent =
+                "Conta suspensa.";
+
+            elements.message.textContent =
+                "A tua conta está suspensa.";
+
+            elements.instructions.textContent =
+                "Contacta a administração para resolver a situação.";
+
+            return;
+
+        }
+
+
+        /* ====================================================
+           PAYMENT REQUIRED
+           ==================================================== */
+
+        elements.form.classList.remove(
+            "hidden"
+        );
+
+        elements.pending.classList.add(
+            "hidden"
+        );
+
+        elements.status.textContent =
+            "Pagamento necessário.";
+
+        elements.message.textContent =
+            "A tua subscrição precisa de ser regularizada.";
+
+        elements.button.textContent =
+            "Enviar pagamento para confirmação";
 
         elements.button.disabled =
             false;
-
-        setStatus(
-            "Pagamento necessário"
-        );
 
     }
 
@@ -621,35 +957,193 @@
 
 
     /* ========================================================
-       CONTINUE
+       SUBMIT PAYMENT
        ======================================================== */
 
-    async function handlePaymentButton() {
+    async function submitPayment() {
 
-        /*
-         * There is currently no automatic payment
-         * provider connected.
-         *
-         * The button therefore takes the user
-         * back to the platform when access is already
-         * available, otherwise displays the payment
-         * instructions.
-         */
+        if (state.submitting) {
+            return;
+        }
 
-        if (
-            state.access?.allowed === true
-        ) {
 
-            window.location.href =
-                "index.html";
+        const method =
+            elements.method.value.trim();
+
+        const reference =
+            elements.reference.value.trim();
+
+        const note =
+            elements.note.value.trim();
+
+
+        if (!method) {
+
+            alert(
+                "Seleciona o método de pagamento."
+            );
+
+            elements.method.focus();
 
             return;
 
         }
 
+
+        if (!reference) {
+
+            alert(
+                "Introduz a referência da transação."
+            );
+
+            elements.reference.focus();
+
+            return;
+
+        }
+
+
+        state.submitting =
+            true;
+
+        elements.button.disabled =
+            true;
+
+        elements.button.textContent =
+            "A enviar...";
+
+
+        const {
+            data,
+            error
+        } =
+            await supabaseClient.rpc(
+                "submit_user_payment",
+                {
+                    payment_method_value:
+                        method,
+
+                    payment_reference_value:
+                        reference,
+
+                    payment_note_value:
+                        note || null
+                }
+            );
+
+
+        state.submitting =
+            false;
+
+
+        if (error) {
+
+            console.error(
+                "Erro ao enviar pagamento:",
+                error
+            );
+
+            elements.button.disabled =
+                false;
+
+            elements.button.textContent =
+                "Enviar pagamento para confirmação";
+
+            alert(
+                "Não foi possível registar o pagamento. Tenta novamente."
+            );
+
+            return;
+
+        }
+
+
+        if (
+            !data ||
+            data.success !== true
+        ) {
+
+            elements.button.disabled =
+                false;
+
+            elements.button.textContent =
+                "Enviar pagamento para confirmação";
+
+            const messages = {
+
+                payment_method_required:
+                    "Seleciona o método de pagamento.",
+
+                payment_reference_required:
+                    "Introduz a referência da transação.",
+
+                payments_inactive:
+                    "Os pagamentos estão temporariamente desativados.",
+
+                price_not_configured:
+                    "O preço da subscrição ainda não foi configurado.",
+
+                settings_not_found:
+                    "As definições de pagamento não estão disponíveis."
+
+            };
+
+            alert(
+                messages[data?.reason] ||
+                "Não foi possível registar o pagamento."
+            );
+
+            return;
+
+        }
+
+
+        elements.reference.value =
+            "";
+
+        elements.note.value =
+            "";
+
+        await refreshPageData();
+
         alert(
-            "Para regularizar a tua subscrição, efetua o pagamento através do método definido pela administração. Depois envia o comprovativo para confirmação."
+            data.existing
+                ? "Já existe um pagamento pendente para a tua conta."
+                : "Pagamento enviado para confirmação."
         );
+
+    }
+
+
+    /* ========================================================
+       REFRESH
+       ======================================================== */
+
+    async function refreshPageData() {
+
+        const results =
+            await Promise.all([
+                loadAccess(),
+                loadSubscription(),
+                loadWaiver(),
+                loadPayments()
+            ]);
+
+        state.access =
+            results[0];
+
+        state.subscription =
+            results[1];
+
+        state.waiver =
+            results[2];
+
+        state.payments =
+            results[3];
+
+        render();
+
+        renderPaymentHistory();
 
     }
 
@@ -689,16 +1183,9 @@
 
     async function initialize() {
 
-        setMessage(
-            getReasonFromUrl()
-        );
-
-        setStatus(
-            "A carregar..."
-        );
-
         state.user =
             await loadUser();
+
 
         if (!state.user) {
 
@@ -715,8 +1202,10 @@
                 loadSettings(),
                 loadAccess(),
                 loadSubscription(),
-                loadWaiver()
+                loadWaiver(),
+                loadPayments()
             ]);
+
 
         state.settings =
             results[0];
@@ -730,8 +1219,13 @@
         state.waiver =
             results[3];
 
+        state.payments =
+            results[4];
+
 
         render();
+
+        renderPaymentHistory();
 
     }
 
@@ -740,24 +1234,16 @@
        EVENTS
        ======================================================== */
 
-    if (elements.button) {
-
-        elements.button.addEventListener(
-            "click",
-            handlePaymentButton
-        );
-
-    }
+    elements.button.addEventListener(
+        "click",
+        submitPayment
+    );
 
 
-    if (elements.logout) {
-
-        elements.logout.addEventListener(
-            "click",
-            logout
-        );
-
-    }
+    elements.logout.addEventListener(
+        "click",
+        logout
+    );
 
 
     initialize();
