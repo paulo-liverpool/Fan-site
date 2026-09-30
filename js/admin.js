@@ -5870,14 +5870,15 @@ async function loadUsersManagement() {
             error
         } = await supabaseClient
             .from("profiles")
-            .select(`
-                id,
-                display_name,
-                username,
-                role_id,
-                supported_team_id,
-                created_at
-            `)
+          .select(`
+    id,
+    display_name,
+    username,
+    role_id,
+    supported_team_id,
+    is_active,
+    created_at
+`)
             .order(
                 "created_at",
                 {
@@ -6138,7 +6139,37 @@ function renderUsersManagement() {
             );
     }
 
+    const statusFilter =
+    document.getElementById(
+        "users-status-filter"
+    )?.value ||
+    "all";
 
+
+if (statusFilter !== "all") {
+
+    filtered =
+        filtered.filter(
+            user => {
+
+                if (
+                    statusFilter ===
+                    "active"
+                ) {
+                    return user.is_active !== false;
+                }
+
+                if (
+                    statusFilter ===
+                    "inactive"
+                ) {
+                    return user.is_active === false;
+                }
+
+                return true;
+            }
+        );
+}
     if (!filtered.length) {
 
         results.innerHTML = `
@@ -6290,7 +6321,14 @@ function renderAdminUserCard(
         user.team?.short_name ||
         user.team?.name ||
         "Ambos";
+const isActive =
+    user.is_active !== false;
 
+
+const statusLabel =
+    isActive
+        ? "Activo"
+        : "Suspenso";
 
     return `
 
@@ -6367,7 +6405,15 @@ function renderAdminUserCard(
 
                     </span>
 
-
+                    <span
+    class="admin-user-badge ${
+        isActive
+            ? "user-status-active"
+            : "user-status-inactive"
+    }"
+>
+    ${statusLabel}
+</span>
                     <span class="admin-user-date">
 
                         Registado
@@ -7245,6 +7291,14 @@ function setupUsersManagement() {
             "change",
             renderUsersManagement
         );
+    document
+    .getElementById(
+        "users-status-filter"
+    )
+    ?.addEventListener(
+        "change",
+        renderUsersManagement
+    );
 }
 
 
