@@ -170,7 +170,7 @@ function setupNavigation() {
 
                 closeMobileSidebar();
 
-                if (target === "featured") {
+                               if (target === "featured") {
                     await loadFeaturedLibrary();
                 }
 
@@ -178,10 +178,15 @@ function setupNavigation() {
                     await loadNewsLibrary();
                 }
 
+                if (target === "users") {
+                    await loadUsersManagement();
+                }
+               
                 if (target === "dashboard") {
                     await loadDashboardCounts();
                     await loadRecentActivity();
                 }
+
             }
         );
     });
@@ -8624,54 +8629,33 @@ document.addEventListener(
     "keydown",
     event => {
 
-        if (
-            event.key !==
-            "Escape"
-        ) {
+        if (event.key !== "Escape") {
             return;
         }
 
-
         const modalIds = [
-
-            "news-edit-modal",
-
-            "news-create-modal",
-
-            "featured-edit-modal",
-
-            "featured-modal",
-
             "admin-user-details-modal",
-
-            "admin-user-role-modal"
-
+            "admin-user-role-modal",
+            "news-edit-modal",
+            "news-create-modal",
+            "featured-edit-modal",
+            "featured-modal"
         ];
 
-
-        for (
-            const id of modalIds
-        ) {
+        for (const id of modalIds) {
 
             const modal =
-                document.getElementById(
-                    id
-                );
-
+                document.getElementById(id);
 
             if (modal) {
 
-                closeModalById(
-                    id
-                );
+                closeModalById(id);
 
                 return;
-
             }
         }
     }
 );
-
 
 function closeModalById(
     id
@@ -8839,55 +8823,6 @@ async function initAdmin() {
 // USER NAVIGATION HOOK
 // ============================================================
 
-const originalSetupNavigation =
-    setupNavigation;
-
-
-setupNavigation = function () {
-
-    originalSetupNavigation();
-
-
-    const navItems =
-        document.querySelectorAll(
-            "[data-section]"
-        );
-
-
-    navItems.forEach(
-        item => {
-
-            if (
-                item.dataset.usersBound ===
-                "true"
-            ) {
-                return;
-            }
-
-
-            item.dataset.usersBound =
-                "true";
-
-
-            item.addEventListener(
-                "click",
-                async () => {
-
-                    if (
-                        item.dataset.section ===
-                        "users"
-                    ) {
-
-                        await loadUsersManagement();
-
-                    }
-
-                }
-            );
-
-        }
-    );
-};
 
 
 document.addEventListener(
