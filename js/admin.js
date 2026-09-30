@@ -178,15 +178,26 @@ function setupNavigation() {
                     await loadNewsLibrary();
                 }
 
-                if (target === "users") {
-                    await loadUsersManagement();
-                }
-               
-                if (target === "dashboard") {
-                    await loadDashboardCounts();
-                    await loadRecentActivity();
-                }
+            if (target === "users") {
 
+    await loadUsersManagement();
+
+}
+
+
+if (target === "private-messages") {
+
+    if (
+        window.adminPrivateMessages &&
+        typeof window.adminPrivateMessages.load ===
+            "function"
+    ) {
+
+        await window.adminPrivateMessages.load();
+
+    }
+
+}
             }
         );
     });
