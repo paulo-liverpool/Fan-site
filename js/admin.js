@@ -198,6 +198,21 @@ if (target === "private-messages") {
     }
 
 }
+
+
+if (target === "payment-settings") {
+
+    if (
+        window.adminPaymentSettings &&
+        typeof window.adminPaymentSettings.load ===
+            "function"
+    ) {
+
+        await window.adminPaymentSettings.load();
+
+    }
+
+}
             }
         );
     });
