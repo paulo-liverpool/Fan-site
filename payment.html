@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Pagamento | Barça Real</title>
+
+    <link
+        rel="stylesheet"
+        href="css/global.css"
+    >
+
+    <link
+        rel="stylesheet"
+        href="css/payment.css"
+    >
+
+</head>
+
+<body>
+
+    <main class="payment-page">
+
+        <section class="payment-card">
+
+            <div class="payment-logo">
+
+                <div class="payment-logo-mark">
+                    BR
+                </div>
+
+            </div>
+
+            <h1>
+                Mantém o teu acesso
+            </h1>
+
+            <p
+                id="payment-message"
+                class="payment-message"
+            >
+                O teu acesso à plataforma requer uma subscrição ativa.
+            </p>
+
+            <div
+                id="payment-status"
+                class="payment-status"
+            >
+                A carregar informações da subscrição...
+            </div>
+
+            <div
+                id="payment-details"
+                class="payment-details"
+            >
+
+                <div class="payment-detail-row">
+
+                    <span>
+                        Mensalidade
+                    </span>
+
+                    <strong id="payment-price">
+                        —
+                    </strong>
+
+                </div>
+
+                <div class="payment-detail-row">
+
+                    <span>
+                        Moeda
+                    </span>
+
+                    <strong id="payment-currency">
+                        AOA
+                    </strong>
+
+                </div>
+
+                <div class="payment-detail-row">
+
+                    <span>
+                        Estado
+                    </span>
+
+                    <strong id="payment-subscription-status">
+                        —
+                    </strong>
+
+                </div>
+
+                <div
+                    id="payment-grace-row"
+                    class="payment-detail-row hidden"
+                >
+
+                    <span>
+                        Período de tolerância
+                    </span>
+
+                    <strong id="payment-grace">
+                        —
+                    </strong>
+
+                </div>
+
+                <div
+                    id="payment-waiver-row"
+                    class="payment-detail-row hidden"
+                >
+
+                    <span>
+                        Isenção
+                    </span>
+
+                    <strong id="payment-waiver">
+                        —
+                    </strong>
+
+                </div>
+
+            </div>
+
+            <div
+                id="payment-action-area"
+                class="payment-action-area"
+            >
+
+                <button
+                    id="payment-button"
+                    class="payment-button"
+                    type="button"
+                >
+                    Efetuar pagamento
+                </button>
+
+            </div>
+
+            <p
+                id="payment-instructions"
+                class="payment-instructions"
+            >
+                O pagamento será confirmado pela administração.
+            </p>
+
+            <button
+                id="logout-button"
+                class="logout-button"
+                type="button"
+            >
+                Terminar sessão
+            </button>
+
+        </section>
+
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script src="js/supabase.js"></script>
+
+    <script src="js/payment.js"></script>
+
+</body>
+
+</html>
