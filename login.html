@@ -722,17 +722,19 @@ async function routeUser(user) {
     // GET PROFILE + ROLE
     // --------------------------------------------------------
 
-    const {
-        data: profile,
-        error: profileError
-    } = await supabaseClient
-        .from("profiles")
-        .select(`
-            supported_team_id,
-            role_id
-        `)
-        .eq("id", user.id)
-        .single();
+  const {
+    data: profile,
+    error: profileError
+} = await supabaseClient
+    .from("profiles")
+    .select(`
+        supported_team_id,
+        role_id,
+        is_active
+    `)
+    .eq("id", user.id)
+    .single();
+    
 
 
     if (profileError || !profile) {
@@ -744,7 +746,21 @@ async function routeUser(user) {
         return;
     }
 
+// --------------------------------------------------------
+// ACCOUNT STATUS
+// --------------------------------------------------------
 
+if (profile.is_active === false) {
+
+    // Sign the suspended user out immediately.
+    await supabaseClient.auth.signOut();
+
+    showMessage(
+        "A tua conta está suspensa. Contacta a administração do Barça Real."
+    );
+
+    return;
+}
     // --------------------------------------------------------
     // ADMINISTRATOR
     // --------------------------------------------------------
