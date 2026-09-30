@@ -228,6 +228,21 @@ if (target === "payment-status") {
     }
 
 }
+
+
+if (target === "account-management") {
+
+    if (
+        window.adminAccountManagement &&
+        typeof window.adminAccountManagement.load ===
+            "function"
+    ) {
+
+        await window.adminAccountManagement.load();
+
+    }
+
+}
             }
         );
     });
