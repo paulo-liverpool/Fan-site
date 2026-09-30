@@ -5901,11 +5901,13 @@ async function loadUsersManagement() {
 
     if (!results) return;
 
+
     results.innerHTML = `
         <div class="users-loading">
             A carregar os utilizadores...
         </div>
     `;
+
 
     try {
 
@@ -5913,31 +5915,24 @@ async function loadUsersManagement() {
             data,
             error
         } = await supabaseClient
-            .from("profiles")
-          .select(`
-    id,
-    display_name,
-    username,
-    role_id,
-    supported_team_id,
-    is_active,
-    created_at
-`)
-            .order(
-                "created_at",
-                {
-                    ascending: false
-                }
+            .rpc(
+                "admin_get_users"
             );
 
-        if (error) throw error;
+
+        if (error) {
+            throw error;
+        }
+
 
         adminUsers =
-            data || [];
+            Array.isArray(data)
+                ? data
+                : [];
 
-        await enrichAdminUsers();
 
         renderUsersManagement();
+
 
     } catch (error) {
 
@@ -5945,6 +5940,7 @@ async function loadUsersManagement() {
             "Erro ao carregar utilizadores:",
             error
         );
+
 
         results.innerHTML = `
             <div class="users-error">
@@ -5964,109 +5960,13 @@ async function loadUsersManagement() {
         `;
     }
 }
-
-
 // ============================================================
 // ENRICH USERS
 // ============================================================
 
 async function enrichAdminUsers() {
 
-    const roleIds =
-        [
-            ...new Set(
-                adminUsers
-                    .map(
-                        user =>
-                            user.role_id
-                    )
-                    .filter(Boolean)
-            )
-        ];
-
-    const teamIds =
-        [
-            ...new Set(
-                adminUsers
-                    .map(
-                        user =>
-                            user.supported_team_id
-                    )
-                    .filter(Boolean)
-            )
-        ];
-
-
-    const roleMap = {};
-    const teamMap = {};
-
-
-    if (roleIds.length) {
-
-        const {
-            data,
-            error
-        } = await supabaseClient
-            .from("roles")
-            .select("id,name")
-            .in(
-                "id",
-                roleIds
-            );
-
-        if (!error) {
-
-            (data || []).forEach(
-                role => {
-                    roleMap[role.id] =
-                        role;
-                }
-            );
-        }
-    }
-
-
-    if (teamIds.length) {
-
-        const {
-            data,
-            error
-        } = await supabaseClient
-            .from("teams")
-            .select(
-                "id,name,short_name,slug"
-            )
-            .in(
-                "id",
-                teamIds
-            );
-
-        if (!error) {
-
-            (data || []).forEach(
-                team => {
-                    teamMap[team.id] =
-                        team;
-                }
-            );
-        }
-    }
-
-
-    adminUsers =
-        adminUsers.map(
-            user => ({
-                ...user,
-
-                role:
-                    roleMap[user.role_id] ||
-                    null,
-
-                team:
-                    teamMap[user.supported_team_id] ||
-                    null
-            })
-        );
+    return;
 }
 
 
@@ -6372,7 +6272,7 @@ const isActive =
 const statusLabel =
     isActive
         ? "Activo"
-        : "Suspenso";
+        : "Inactivo";
 
     return `
 
@@ -6474,54 +6374,32 @@ const statusLabel =
             </div>
 
 
-            <div class="admin-user-actions">
+        <div class="admin-user-actions">
 
-                <button
-                    type="button"
-                    class="admin-user-action"
-                    data-user-action="view"
-                    data-user-id="${escapeAttribute(
-                        user.id
-                    )}"
-                >
-                    Ver perfil
-                </button>
+    <button
+        type="button"
+        class="admin-user-action"
+        data-user-action="view"
+        data-user-id="${escapeAttribute(
+            user.id
+        )}"
+    >
+        Ver perfil
+    </button>
 
 
-                <button
-                    type="button"
-                    class="admin-user-action primary"
-                    data-user-action="role"
-                    data-user-id="${escapeAttribute(
-                        user.id
-                    )}"
-                >
-                    Alterar função
-                </button>
-                <button
-    type="button"
-    class="admin-user-action ${
-        isActive
-            ? "danger"
-            : "success"
-    }"
-    data-user-action="${
-        isActive
-            ? "suspend"
-            : "reactivate"
-    }"
-    data-user-id="${escapeAttribute(
-        user.id
-    )}"
->
-    ${
-        isActive
-            ? "Suspender"
-            : "Reactivar"
-    }
-</button>
+    <button
+        type="button"
+        class="admin-user-action primary"
+        data-user-action="edit-access"
+        data-user-id="${escapeAttribute(
+            user.id
+        )}"
+    >
+        Editar acesso
+    </button>
 
-            </div>
+</div>
 
         </article>
     `;
@@ -6570,90 +6448,64 @@ function bindUserManagementActions() {
         .querySelectorAll(
             "[data-user-action]"
         )
-        .forEach(
-            button => {
+        .forEach(button => {
 
-                if (
-                    button.dataset.bound ===
-                    "true"
-                ) {
-                    return;
-                }
-
-
-                button.dataset.bound =
-                    "true";
-
-
-                button.addEventListener(
-                    "click",
-                    async () => {
-
-                        const id =
-                            button.dataset.userId;
-
-                        const action =
-                            button.dataset.userAction;
-
-
-                        if (!id || !action) {
-                            return;
-                        }
-
-
-                        if (
-                            action ===
-                            "view"
-                        ) {
-
-                            await openUserDetails(
-                                id
-                            );
-
-                            return;
-                        }
-
-
-                        if (
-                            action ===
-                            "role"
-                        ) {
-
-                            await openUserRoleModal(
-                                id
-                            );
-
-                        }
-                    if (
-    action ===
-    "suspend"
-) {
-
-    await changeUserStatus(
-        id,
-        false
-    );
-
-    return;
-}
-
-
-if (
-    action ===
-    "reactivate"
-) {
-
-    await changeUserStatus(
-        id,
-        true
-    );
-
-}
-                        
-                    }
-                );
+            if (
+                button.dataset.bound ===
+                "true"
+            ) {
+                return;
             }
-        );
+
+
+            button.dataset.bound =
+                "true";
+
+
+            button.addEventListener(
+                "click",
+                async () => {
+
+                    const id =
+                        button.dataset.userId;
+
+                    const action =
+                        button.dataset.userAction;
+
+
+                    if (!id || !action) {
+                        return;
+                    }
+
+
+                    if (
+                        action ===
+                        "view"
+                    ) {
+
+                        await openUserDetails(
+                            id
+                        );
+
+                        return;
+                    }
+
+
+                    if (
+                        action ===
+                        "edit-access"
+                    ) {
+
+                        await openUserAccessModal(
+                            id
+                        );
+
+                    }
+
+                }
+            );
+
+        });
 }
 
 // ============================================================
@@ -6665,92 +6517,9 @@ async function changeUserStatus(
     isActive
 ) {
 
-    const user =
-        adminUsers.find(
-            item =>
-                item.id === id
-        );
-
-
-    if (!user) return;
-
-
-    const name =
-        user.display_name ||
-        user.username ||
-        "este utilizador";
-
-
-    if (
-        !isActive &&
-        user.id ===
-        currentAdmin?.user?.id
-    ) {
-
-        alert(
-            "Não podes suspender a tua própria conta."
-        );
-
-        return;
-    }
-
-
-    const actionText =
-        isActive
-            ? "reactivar"
-            : "suspender";
-
-
-    const confirmed =
-        confirm(
-            `Tens a certeza que queres ${actionText} a conta de "${name}"?`
-        );
-
-
-    if (!confirmed) {
-        return;
-    }
-
-
-    try {
-
-        const {
-            error
-        } = await supabaseClient
-            .from("profiles")
-            .update({
-                is_active:
-                    isActive
-            })
-            .eq(
-                "id",
-                id
-            );
-
-
-        if (error) {
-            throw error;
-        }
-
-
-        await loadUsersManagement();
-
-        await loadDashboardCounts();
-
-
-    } catch (error) {
-
-        console.error(
-            "Erro ao alterar estado do utilizador:",
-            error
-        );
-
-
-        alert(
-            error.message ||
-            "Não foi possível alterar o estado da conta."
-        );
-    }
+    await openUserAccessModal(
+        id
+    );
 }
 // ============================================================
 // USER DETAILS
@@ -6859,13 +6628,13 @@ async function openUserDetails(
                 </button>
 
 
-                <button
-                    type="button"
-                    class="admin-button primary"
-                    id="details-change-role"
-                >
-                    Alterar função
-                </button>
+             <button
+    type="button"
+    class="admin-button primary"
+    id="details-edit-access"
+>
+    Editar acesso
+</button>
 
             </div>
 
@@ -6907,27 +6676,26 @@ async function openUserDetails(
         );
 
 
-    document
-        .getElementById(
-            "details-change-role"
-        )
-        ?.addEventListener(
-            "click",
-            async () => {
+  document
+    .getElementById(
+        "details-edit-access"
+    )
+    ?.addEventListener(
+        "click",
+        async () => {
 
-                close();
+            close();
 
-                setTimeout(
-                    () =>
-                        openUserRoleModal(
-                            id
-                        ),
-                    50
-                );
+            setTimeout(
+                () =>
+                    openUserAccessModal(
+                        id
+                    ),
+                50
+            );
 
-            }
-        );
-
+        }
+    );
 
     modal.addEventListener(
         "click",
@@ -7066,10 +6834,10 @@ function renderAdminUserDetails(
         "Ambos os clubes";
 
 
-    const statusLabel =
-        data.is_active === false
-            ? "Suspenso"
-            : "Activo";
+   const statusLabel =
+    data.is_active === false
+        ? "Inactivo"
+        : "Activo";
 
 
     const statusClass =
@@ -8198,7 +7966,11 @@ function modalSubtitleForUser(
 // CHANGE ROLE MODAL
 // ============================================================
 
-async function openUserRoleModal(
+// ============================================================
+// USER ACCESS MODAL
+// ============================================================
+
+async function openUserAccessModal(
     id
 ) {
 
@@ -8212,13 +7984,13 @@ async function openUserRoleModal(
     if (!user) return;
 
 
-    const currentRole =
-        user.role?.name ||
-        "member";
+    const isSelf =
+        user.id ===
+        currentAdmin?.user?.id;
 
 
     closeModalById(
-        "admin-user-role-modal"
+        "admin-user-access-modal"
     );
 
 
@@ -8228,6 +8000,20 @@ async function openUserRoleModal(
         "este utilizador";
 
 
+    const currentRole =
+        user.role?.name ||
+        "member";
+
+
+    const currentTeam =
+        user.team?.slug ||
+        "both";
+
+
+    const currentStatus =
+        user.is_active !== false;
+
+
     const modal =
         document.createElement(
             "div"
@@ -8235,7 +8021,7 @@ async function openUserRoleModal(
 
 
     modal.id =
-        "admin-user-role-modal";
+        "admin-user-access-modal";
 
 
     modal.className =
@@ -8251,16 +8037,15 @@ async function openUserRoleModal(
                 <div>
 
                     <span class="admin-modal-eyebrow">
-                        FUNÇÃO
+                        ACESSO
                     </span>
 
                     <h2>
-                        Alterar função
+                        Editar acesso
                     </h2>
 
                     <p class="admin-modal-subtitle">
-                        Altera a função de
-                        ${escapeHTML(name)}.
+                        ${escapeHTML(name)}
                     </p>
 
                 </div>
@@ -8269,7 +8054,7 @@ async function openUserRoleModal(
                 <button
                     type="button"
                     class="admin-modal-close"
-                    id="close-user-role-modal"
+                    id="close-user-access-modal"
                     aria-label="Fechar"
                 >
                     ×
@@ -8278,23 +8063,78 @@ async function openUserRoleModal(
             </div>
 
 
-            <form id="user-role-form">
+            <form id="user-access-form">
 
-                <div class="admin-role-warning">
+                <div class="admin-form-group">
 
-                    As funções determinam o nível de acesso
-                    do utilizador dentro da plataforma.
+                    <label>
+                        Email
+                    </label>
+
+                    <input
+                        type="text"
+                        value="${escapeAttribute(
+                            user.email ||
+                            "—"
+                        )}"
+                        disabled
+                    >
 
                 </div>
 
 
                 <div class="admin-form-group">
 
-                    <label for="user-role-select">
-                        Nova função
+                    <label for="user-access-team">
+                        Clube
                     </label>
 
-                    <select id="user-role-select">
+                    <select
+                        id="user-access-team"
+                        ${
+                            isSelf
+                                ? "disabled"
+                                : ""
+                        }
+                    >
+
+                        <option
+                            value="both"
+                        >
+                            Ambos os clubes
+                        </option>
+
+                        <option
+                            value="barcelona"
+                        >
+                            FC Barcelona
+                        </option>
+
+                        <option
+                            value="real-madrid"
+                        >
+                            Real Madrid
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <div class="admin-form-group">
+
+                    <label for="user-access-role">
+                        Função
+                    </label>
+
+                    <select
+                        id="user-access-role"
+                        ${
+                            isSelf
+                                ? "disabled"
+                                : ""
+                        }
+                    >
 
                         <option value="member">
                             Membro
@@ -8317,8 +8157,57 @@ async function openUserRoleModal(
                 </div>
 
 
+                <div class="admin-form-group">
+
+                    <label for="user-access-status">
+                        Estado da conta
+                    </label>
+
+                    <select
+                        id="user-access-status"
+                        ${
+                            isSelf
+                                ? "disabled"
+                                : ""
+                        }
+                    >
+
+                        <option value="active">
+                            Activo
+                        </option>
+
+                        <option value="inactive">
+                            Inactivo
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                ${
+                    isSelf
+                        ? `
+                            <div class="admin-role-warning">
+
+                                A tua própria conta de administrador
+                                não pode ser alterada a partir daqui.
+
+                            </div>
+                        `
+                        : `
+                            <div class="admin-role-warning">
+
+                                A função, o clube e o estado da conta
+                                serão actualizados em conjunto.
+
+                            </div>
+                        `
+                }
+
+
                 <div
-                    id="user-role-message"
+                    id="user-access-message"
                     class="admin-form-message"
                 ></div>
 
@@ -8328,7 +8217,7 @@ async function openUserRoleModal(
                     <button
                         type="button"
                         class="admin-button secondary"
-                        id="cancel-user-role"
+                        id="cancel-user-access"
                     >
                         Cancelar
                     </button>
@@ -8337,9 +8226,14 @@ async function openUserRoleModal(
                     <button
                         type="submit"
                         class="admin-button primary"
-                        id="save-user-role"
+                        id="save-user-access"
+                        ${
+                            isSelf
+                                ? "disabled"
+                                : ""
+                        }
                     >
-                        Guardar função
+                        Guardar alterações
                     </button>
 
                 </div>
@@ -8355,22 +8249,51 @@ async function openUserRoleModal(
     );
 
 
-    const select =
+    const teamSelect =
         document.getElementById(
-            "user-role-select"
+            "user-access-team"
         );
 
 
-    if (select) {
-        select.value =
+    const roleSelect =
+        document.getElementById(
+            "user-access-role"
+        );
+
+
+    const statusSelect =
+        document.getElementById(
+            "user-access-status"
+        );
+
+
+    if (teamSelect) {
+
+        teamSelect.value =
+            currentTeam;
+    }
+
+
+    if (roleSelect) {
+
+        roleSelect.value =
             currentRole;
+    }
+
+
+    if (statusSelect) {
+
+        statusSelect.value =
+            currentStatus
+                ? "active"
+                : "inactive";
     }
 
 
     const close = () => {
 
         closeModalById(
-            "admin-user-role-modal"
+            "admin-user-access-modal"
         );
 
     };
@@ -8378,7 +8301,7 @@ async function openUserRoleModal(
 
     document
         .getElementById(
-            "close-user-role-modal"
+            "close-user-access-modal"
         )
         ?.addEventListener(
             "click",
@@ -8388,7 +8311,7 @@ async function openUserRoleModal(
 
     document
         .getElementById(
-            "cancel-user-role"
+            "cancel-user-access"
         )
         ?.addEventListener(
             "click",
@@ -8398,12 +8321,12 @@ async function openUserRoleModal(
 
     document
         .getElementById(
-            "user-role-form"
+            "user-access-form"
         )
         ?.addEventListener(
             "submit",
             event =>
-                saveUserRole(
+                saveUserAccess(
                     event,
                     user
                 )
@@ -8427,10 +8350,10 @@ async function openUserRoleModal(
 
 
 // ============================================================
-// SAVE ROLE
+// SAVE USER ACCESS
 // ============================================================
 
-async function saveUserRole(
+async function saveUserAccess(
     event,
     user
 ) {
@@ -8438,27 +8361,50 @@ async function saveUserRole(
     event.preventDefault();
 
 
-    const select =
-        document.getElementById(
-            "user-role-select"
+    if (
+        user.id ===
+        currentAdmin?.user?.id
+    ) {
+
+        alert(
+            "Não podes alterar o teu próprio acesso de administrador."
         );
+
+        return;
+    }
+
+
+    const role =
+        document.getElementById(
+            "user-access-role"
+        )?.value ||
+        "member";
+
+
+    const team =
+        document.getElementById(
+            "user-access-team"
+        )?.value ||
+        "both";
+
+
+    const status =
+        document.getElementById(
+            "user-access-status"
+        )?.value ||
+        "active";
 
 
     const message =
         document.getElementById(
-            "user-role-message"
+            "user-access-message"
         );
 
 
     const button =
         document.getElementById(
-            "save-user-role"
+            "save-user-access"
         );
-
-
-    const roleName =
-        select?.value ||
-        "member";
 
 
     if (button) {
@@ -8475,43 +8421,24 @@ async function saveUserRole(
     try {
 
         const {
-            data: role,
-            error: roleError
-        } = await supabaseClient
-            .from("roles")
-            .select("id,name")
-            .eq(
-                "name",
-                roleName
-            )
-            .single();
-
-
-        if (
-            roleError ||
-            !role
-        ) {
-
-            throw new Error(
-                "Não foi possível encontrar a função seleccionada."
-            );
-
-        }
-
-
-        const {
             error
         } = await supabaseClient
-            .from("profiles")
-            .update({
+            .rpc(
+                "admin_update_user",
+                {
+                    target_user_id:
+                        user.id,
 
-                role_id:
-                    role.id
+                    new_role_name:
+                        role,
 
-            })
-            .eq(
-                "id",
-                user.id
+                    new_team_slug:
+                        team,
+
+                    new_is_active:
+                        status ===
+                        "active"
+                }
             );
 
 
@@ -8523,7 +8450,7 @@ async function saveUserRole(
         if (message) {
 
             message.textContent =
-                "Função actualizada com sucesso.";
+                "Acesso actualizado com sucesso.";
 
         }
 
@@ -8537,7 +8464,7 @@ async function saveUserRole(
             () => {
 
                 closeModalById(
-                    "admin-user-role-modal"
+                    "admin-user-access-modal"
                 );
 
             },
@@ -8548,7 +8475,7 @@ async function saveUserRole(
     } catch (error) {
 
         console.error(
-            "Erro ao alterar função:",
+            "Erro ao actualizar acesso do utilizador:",
             error
         );
 
@@ -8557,7 +8484,7 @@ async function saveUserRole(
 
             message.textContent =
                 error.message ||
-                "Não foi possível alterar a função.";
+                "Não foi possível actualizar o acesso.";
 
         }
 
@@ -8568,13 +8495,12 @@ async function saveUserRole(
                 false;
 
             button.textContent =
-                "Guardar função";
+                "Guardar alterações";
 
         }
 
     }
 }
-
 
 // ============================================================
 // USER SEARCH + FILTERS
@@ -8633,10 +8559,10 @@ document.addEventListener(
             return;
         }
 
-        const modalIds = [
-            "admin-user-details-modal",
-            "admin-user-role-modal",
-            "news-edit-modal",
+       const modalIds = [
+    "admin-user-details-modal",
+    "admin-user-access-modal",
+    "news-edit-modal",
             "news-create-modal",
             "featured-edit-modal",
             "featured-modal"
