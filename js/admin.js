@@ -24,52 +24,111 @@ async function verifyAdministrator() {
             return false;
         }
 
-        const {
+               const {
             data: profile,
             error: profileError
         } = await supabaseClient
             .from("profiles")
-          const {
-    data: profile,
-    error: profileError
-} = await supabaseClient
-    .from("profiles")
-    .select(`
-        id,
-        display_name,
-        username,
-        role_id,
-        is_active
-    `)
-    .eq("id", user.id)
-    .single();
+            .select(`
+                id,
+                display_name,
+                username,
+                role_id,
+                is_active
+            `)
+            .eq("id", user.id)
+            .single();
 
-if (profileError || !profile) {
+        if (profileError || !profile) {
 
-    console.error(
-        "Erro ao carregar perfil do administrador:",
-        profileError
-    );
+            console.error(
+                "Erro ao carregar perfil do administrador:",
+                profileError
+            );
 
-    await supabaseClient.auth.signOut();
+            await supabaseClient.auth.signOut();
 
-    window.location.href =
-        "login.html";
+            window.location.href =
+                "login.html";
 
-    return false;
-}
-
-
-if (profile.is_active === false) {
-
-    await supabaseClient.auth.signOut();
-
-    window.location.href =
-        "login.html?suspended=1";
-
-    return false;
-}
+            return false;
         }
+
+        if (profile.is_active === false) {
+
+            await supabaseClient.auth.signOut();
+
+            window.location.href =
+                "login.html?suspended=1";
+
+            return false;
+        }
+
+        const {
+            data: role,
+            error: roleError
+        } = await supabaseClient
+            .from("roles")
+            .select(`
+                id,
+                name,
+                description
+            `)
+            .eq("id", profile.role_id)
+            .single();
+
+        if (roleError || !role) {
+
+            console.error(
+                "Erro ao carregar função do administrador:",
+                roleError
+            );
+
+            await supabaseClient.auth.signOut();
+
+            window.location.href =
+                "login.html";
+
+            return false;
+        }
+
+        if (role.name !== "administrator") {
+
+            console.error(
+                "Utilizador sem permissões de administrador."
+            );
+
+            await supabaseClient.auth.signOut();
+
+            window.location.href =
+                "login.html";
+
+            return false;
+        }
+
+        currentAdmin = {
+            user,
+            profile,
+            role
+        };
+
+        return true;
+
+    } catch (error) {
+
+        console.error(
+            "Erro na verificação do administrador:",
+            error
+        );
+
+        await supabaseClient.auth.signOut();
+
+        window.location.href =
+            "login.html";
+
+        return false;
+    }
+}
 
 // ============================================================
 // 2. NAVEGAÇÃO
