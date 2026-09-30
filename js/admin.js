@@ -6739,7 +6739,7 @@ async function openUserDetails(
 
     modal.innerHTML = `
 
-        <div class="admin-modal">
+        <div class="admin-modal admin-user-details-modal">
 
             <div class="admin-modal-header">
 
@@ -6752,6 +6752,10 @@ async function openUserDetails(
                     <h2>
                         Perfil
                     </h2>
+
+                    <p class="admin-modal-subtitle">
+                        A carregar informações...
+                    </p>
 
                 </div>
 
@@ -6768,136 +6772,13 @@ async function openUserDetails(
             </div>
 
 
-            <div class="admin-user-details">
+            <div
+                class="admin-user-details"
+                id="admin-user-details-content"
+            >
 
-                <div class="admin-user-details-header">
-
-                    <div class="admin-user-details-avatar">
-                        ${escapeHTML(initial)}
-                    </div>
-
-                    <div>
-
-                        <h3>
-                            ${escapeHTML(name)}
-                        </h3>
-
-                        <p>
-                            ${
-                                user.username
-                                    ? `@${escapeHTML(
-                                        user.username
-                                    )}`
-                                    : "Sem username"
-                            }
-                        </p>
-
-                    </div>
-
-                </div>
-
-
-                <div class="admin-user-details-grid">
-
-                    <div class="admin-user-detail-item">
-
-                        <span>
-                            Nome
-                        </span>
-
-                        <strong>
-                            ${escapeHTML(
-                                user.display_name ||
-                                "—"
-                            )}
-                        </strong>
-
-                    </div>
-
-
-                    <div class="admin-user-detail-item">
-
-                        <span>
-                            Username
-                        </span>
-
-                        <strong>
-                            ${
-                                user.username
-                                    ? `@${escapeHTML(
-                                        user.username
-                                    )}`
-                                    : "—"
-                            }
-                        </strong>
-
-                    </div>
-
-
-                    <div class="admin-user-detail-item">
-
-                        <span>
-                            Função
-                        </span>
-
-                        <strong>
-                            ${escapeHTML(
-                                getRoleLabel(
-                                    user.role?.name
-                                )
-                            )}
-                        </strong>
-
-                    </div>
-
-
-                    <div class="admin-user-detail-item">
-
-                        <span>
-                            Clube
-                        </span>
-
-                        <strong>
-                            ${escapeHTML(
-                                user.team?.name ||
-                                "Ambos os clubes"
-                            )}
-                        </strong>
-
-                    </div>
-
-
-                    <div class="admin-user-detail-item">
-
-                        <span>
-                            Registo
-                        </span>
-
-                        <strong>
-                            ${escapeHTML(
-                                formatDate(
-                                    user.created_at
-                                )
-                            )}
-                        </strong>
-
-                    </div>
-
-
-                    <div class="admin-user-detail-item">
-
-                        <span>
-                            ID
-                        </span>
-
-                        <strong>
-                            ${escapeHTML(
-                                user.id
-                            )}
-                        </strong>
-
-                    </div>
-
+                <div class="users-loading">
+                    A carregar dados do utilizador...
                 </div>
 
             </div>
@@ -6934,9 +6815,11 @@ async function openUserDetails(
 
 
     const close = () => {
+
         closeModalById(
             "admin-user-details-modal"
         );
+
     };
 
 
@@ -6977,6 +6860,7 @@ async function openUserDetails(
                         ),
                     50
                 );
+
             }
         );
 
@@ -6994,7 +6878,1256 @@ async function openUserDetails(
 
         }
     );
+
+
+    // ========================================================
+    // LOAD DETAILS
+    // ========================================================
+
+    try {
+
+        const {
+            data,
+            error
+        } = await supabaseClient
+            .rpc(
+                "admin_get_user_details",
+                {
+                    target_user_id:
+                        id
+                }
+            );
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        if (!data) {
+            throw new Error(
+                "Não foi possível carregar os dados do utilizador."
+            );
+        }
+
+
+        renderAdminUserDetails(
+            data
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Erro ao carregar detalhes do utilizador:",
+            error
+        );
+
+
+        const content =
+            document.getElementById(
+                "admin-user-details-content"
+            );
+
+
+        if (content) {
+
+            content.innerHTML = `
+
+                <div class="users-empty">
+
+                    <strong>
+                        Não foi possível carregar o perfil.
+                    </strong>
+
+                    <span>
+                        ${escapeHTML(
+                            error.message ||
+                            "Ocorreu um erro ao carregar os dados."
+                        )}
+                    </span>
+
+                </div>
+
+            `;
+
+        }
+
+    }
 }
+
+
+// ============================================================
+// RENDER USER DETAILS
+// ============================================================
+
+function renderAdminUserDetails(
+    data
+) {
+
+    const content =
+        document.getElementById(
+            "admin-user-details-content"
+        );
+
+
+    if (!content) return;
+
+
+    const name =
+        data.display_name ||
+        data.username ||
+        "Utilizador";
+
+
+    const initial =
+        name
+            .charAt(0)
+            .toUpperCase();
+
+
+    const roleName =
+        data.role?.name ||
+        "member";
+
+
+    const roleLabel =
+        getRoleLabel(
+            roleName
+        );
+
+
+    const teamLabel =
+        data.team?.name ||
+        "Ambos os clubes";
+
+
+    const statusLabel =
+        data.is_active === false
+            ? "Suspenso"
+            : "Activo";
+
+
+    const statusClass =
+        data.is_active === false
+            ? "user-status-inactive"
+            : "user-status-active";
+
+
+    const subscription =
+        data.subscription ||
+        null;
+
+
+    const commentStats =
+        data.comment_stats ||
+        {};
+
+
+    const notificationStats =
+        data.notification_stats ||
+        {};
+
+
+    const paymentStats =
+        data.payment_stats ||
+        {};
+
+
+    const recentComments =
+        Array.isArray(
+            data.recent_comments
+        )
+            ? data.recent_comments
+            : [];
+
+
+    const recentPayments =
+        Array.isArray(
+            data.recent_payments
+        )
+            ? data.recent_payments
+            : [];
+
+
+    const formatDateTime = value => {
+
+        if (!value) {
+            return "—";
+        }
+
+
+        const date =
+            new Date(value);
+
+
+        if (
+            Number.isNaN(
+                date.getTime()
+            )
+        ) {
+            return "—";
+        }
+
+
+        return date.toLocaleString(
+            "pt-PT",
+            {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit"
+            }
+        );
+
+    };
+
+
+    const formatMoney = (
+        amount,
+        currency = "AOA"
+    ) => {
+
+        if (
+            amount === null ||
+            amount === undefined
+        ) {
+            return "—";
+        }
+
+
+        return new Intl.NumberFormat(
+            "pt-AO",
+            {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }
+        ).format(
+            Number(amount)
+        ) +
+        " " +
+        currency;
+
+    };
+
+
+    const subscriptionStatus =
+        subscription?.status ||
+        "free";
+
+
+    const subscriptionStatusLabel = {
+
+        free:
+            "Gratuita",
+
+        active:
+            "Activa",
+
+        pending:
+            "Pendente",
+
+        cancelled:
+            "Cancelada",
+
+        expired:
+            "Expirada",
+
+        paused:
+            "Pausada"
+
+    }[
+        subscriptionStatus
+    ] ||
+    subscriptionStatus;
+
+
+    const paymentStatusLabel = status => {
+
+        const labels = {
+
+            paid:
+                "Pago",
+
+            pending:
+                "Pendente",
+
+            failed:
+                "Falhou",
+
+            cancelled:
+                "Cancelado",
+
+            refunded:
+                "Reembolsado"
+
+        };
+
+
+        return (
+            labels[status] ||
+            status ||
+            "—"
+        );
+
+    };
+
+
+    content.innerHTML = `
+
+        <!-- ================================================= -->
+        <!-- ACCOUNT HEADER -->
+        <!-- ================================================= -->
+
+        <div class="admin-user-details-header">
+
+            <div class="admin-user-details-avatar">
+
+                ${
+                    data.avatar_url
+                        ? `
+                            <img
+                                src="${escapeAttribute(
+                                    data.avatar_url
+                                )}"
+                                alt=""
+                            >
+                        `
+                        : escapeHTML(
+                            initial
+                        )
+                }
+
+            </div>
+
+
+            <div>
+
+                <h3>
+                    ${escapeHTML(
+                        name
+                    )}
+                </h3>
+
+
+                <p>
+
+                    ${
+                        data.username
+                            ? `@${escapeHTML(
+                                data.username
+                            )}`
+                            : "Sem username"
+                    }
+
+                </p>
+
+
+                <div class="admin-user-meta">
+
+                    <span
+                        class="admin-user-badge ${escapeAttribute(
+                            `role-${roleName}`
+                        )}"
+                    >
+                        ${escapeHTML(
+                            roleLabel
+                        )}
+                    </span>
+
+
+                    <span class="admin-user-badge team">
+                        ${escapeHTML(
+                            teamLabel
+                        )}
+                    </span>
+
+
+                    <span
+                        class="admin-user-badge ${statusClass}"
+                    >
+                        ${statusLabel}
+                    </span>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ================================================= -->
+        <!-- ACCOUNT -->
+        <!-- ================================================= -->
+
+        <section class="admin-user-details-section">
+
+            <div class="admin-user-details-section-header">
+
+                <div>
+
+                    <span class="admin-modal-eyebrow">
+                        CONTA
+                    </span>
+
+                    <h3>
+                        Informações da conta
+                    </h3>
+
+                </div>
+
+            </div>
+
+
+            <div class="admin-user-details-grid">
+
+                <div class="admin-user-detail-item">
+
+                    <span>
+                        Nome
+                    </span>
+
+                    <strong>
+                        ${escapeHTML(
+                            data.display_name ||
+                            "—"
+                        )}
+                    </strong>
+
+                </div>
+
+
+                <div class="admin-user-detail-item">
+
+                    <span>
+                        Username
+                    </span>
+
+                    <strong>
+                        ${
+                            data.username
+                                ? `@${escapeHTML(
+                                    data.username
+                                )}`
+                                : "—"
+                        }
+                    </strong>
+
+                </div>
+
+
+                <div class="admin-user-detail-item">
+
+                    <span>
+                        Email
+                    </span>
+
+                    <strong>
+                        ${escapeHTML(
+                            data.email ||
+                            "—"
+                        )}
+                    </strong>
+
+                </div>
+
+
+                <div class="admin-user-detail-item">
+
+                    <span>
+                        Email confirmado
+                    </span>
+
+                    <strong>
+                        ${
+                            data.email_confirmed_at
+                                ? "Sim"
+                                : "Não"
+                        }
+                    </strong>
+
+                </div>
+
+
+                <div class="admin-user-detail-item">
+
+                    <span>
+                        Clube
+                    </span>
+
+                    <strong>
+                        ${escapeHTML(
+                            teamLabel
+                        )}
+                    </strong>
+
+                </div>
+
+
+                <div class="admin-user-detail-item">
+
+                    <span>
+                        Função
+                    </span>
+
+                    <strong>
+                        ${escapeHTML(
+                            roleLabel
+                        )}
+                    </strong>
+
+                </div>
+
+
+                <div class="admin-user-detail-item">
+
+                    <span>
+                        Registo
+                    </span>
+
+                    <strong>
+                        ${escapeHTML(
+                            formatDateTime(
+                                data.created_at
+                            )
+                        )}
+                    </strong>
+
+                </div>
+
+
+                <div class="admin-user-detail-item">
+
+                    <span>
+                        Último acesso
+                    </span>
+
+                    <strong>
+                        ${escapeHTML(
+                            formatDateTime(
+                                data.last_sign_in_at
+                            )
+                        )}
+                    </strong>
+
+                </div>
+
+
+                <div class="admin-user-detail-item">
+
+                    <span>
+                        Estado
+                    </span>
+
+                    <strong>
+                        ${statusLabel}
+                    </strong>
+
+                </div>
+
+
+                <div class="admin-user-detail-item">
+
+                    <span>
+                        User ID
+                    </span>
+
+                    <strong class="admin-user-id-value">
+                        ${escapeHTML(
+                            data.id
+                        )}
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+            ${
+                data.bio
+                    ? `
+                        <div class="admin-user-bio">
+
+                            <span>
+                                Biografia
+                            </span>
+
+                            <p>
+                                ${escapeHTML(
+                                    data.bio
+                                )}
+                            </p>
+
+                        </div>
+                    `
+                    : ""
+            }
+
+        </section>
+
+
+        <!-- ================================================= -->
+        <!-- COMMUNITY ACTIVITY -->
+        <!-- ================================================= -->
+
+        <section class="admin-user-details-section">
+
+            <div class="admin-user-details-section-header">
+
+                <div>
+
+                    <span class="admin-modal-eyebrow">
+                        ACTIVIDADE
+                    </span>
+
+                    <h3>
+                        Actividade da comunidade
+                    </h3>
+
+                </div>
+
+            </div>
+
+
+            <div class="admin-user-stat-grid">
+
+                <div class="admin-user-stat">
+
+                    <strong>
+                        ${Number(
+                            commentStats.total || 0
+                        )}
+                    </strong>
+
+                    <span>
+                        Comentários
+                    </span>
+
+                </div>
+
+
+                <div class="admin-user-stat">
+
+                    <strong>
+                        ${Number(
+                            commentStats.replies || 0
+                        )}
+                    </strong>
+
+                    <span>
+                        Respostas
+                    </span>
+
+                </div>
+
+
+                <div class="admin-user-stat">
+
+                    <strong>
+                        ${Number(
+                            commentStats.likes_received || 0
+                        )}
+                    </strong>
+
+                    <span>
+                        Likes recebidos
+                    </span>
+
+                </div>
+
+
+                <div class="admin-user-stat">
+
+                    <strong>
+                        ${Number(
+                            commentStats.dislikes_received || 0
+                        )}
+                    </strong>
+
+                    <span>
+                        Dislikes recebidos
+                    </span>
+
+                </div>
+
+
+                <div class="admin-user-stat">
+
+                    <strong>
+                        ${Number(
+                            notificationStats.total || 0
+                        )}
+                    </strong>
+
+                    <span>
+                        Notificações
+                    </span>
+
+                </div>
+
+
+                <div class="admin-user-stat">
+
+                    <strong>
+                        ${Number(
+                            notificationStats.unread || 0
+                        )}
+                    </strong>
+
+                    <span>
+                        Não lidas
+                    </span>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ================================================= -->
+        <!-- RECENT COMMENTS -->
+        <!-- ================================================= -->
+
+        <section class="admin-user-details-section">
+
+            <div class="admin-user-details-section-header">
+
+                <div>
+
+                    <span class="admin-modal-eyebrow">
+                        COMUNIDADE
+                    </span>
+
+                    <h3>
+                        Comentários recentes
+                    </h3>
+
+                </div>
+
+            </div>
+
+
+            ${
+                recentComments.length
+                    ? `
+                        <div class="admin-user-comment-list">
+
+                            ${recentComments
+                                .map(
+                                    comment => `
+
+                                        <article
+                                            class="admin-user-comment"
+                                        >
+
+                                            <div class="admin-user-comment-meta">
+
+                                                <span>
+                                                    ${escapeHTML(
+                                                        formatDateTime(
+                                                            comment.created_at
+                                                        )
+                                                    )}
+                                                </span>
+
+                                                <span>
+                                                    ${
+                                                        comment.parent_id
+                                                            ? "Resposta"
+                                                            : "Comentário"
+                                                    }
+                                                </span>
+
+                                            </div>
+
+
+                                            <p>
+                                                ${escapeHTML(
+                                                    comment.body
+                                                )}
+                                            </p>
+
+
+                                            <span class="admin-user-comment-article">
+
+                                                Artigo:
+                                                ${escapeHTML(
+                                                    comment.article_key ||
+                                                    "—"
+                                                )}
+
+                                            </span>
+
+                                        </article>
+
+                                    `
+                                )
+                                .join("")}
+
+                        </div>
+                    `
+                    : `
+                        <div class="users-empty">
+
+                            <strong>
+                                Nenhum comentário.
+                            </strong>
+
+                            <span>
+                                Este utilizador ainda não publicou comentários.
+                            </span>
+
+                        </div>
+                    `
+            }
+
+        </section>
+
+
+        <!-- ================================================= -->
+        <!-- SUBSCRIPTION -->
+        <!-- ================================================= -->
+
+        <section class="admin-user-details-section">
+
+            <div class="admin-user-details-section-header">
+
+                <div>
+
+                    <span class="admin-modal-eyebrow">
+                        SUBSCRIÇÃO
+                    </span>
+
+                    <h3>
+                        Estado da subscrição
+                    </h3>
+
+                </div>
+
+            </div>
+
+
+            ${
+                subscription
+                    ? `
+
+                        <div class="admin-user-subscription-status">
+
+                            <span class="admin-user-badge">
+
+                                ${escapeHTML(
+                                    subscriptionStatusLabel
+                                )}
+
+                            </span>
+
+                        </div>
+
+
+                        <div class="admin-user-details-grid">
+
+                            <div class="admin-user-detail-item">
+
+                                <span>
+                                    Preço mensal
+                                </span>
+
+                                <strong>
+                                    ${escapeHTML(
+                                        formatMoney(
+                                            subscription.monthly_price,
+                                            subscription.currency
+                                        )
+                                    )}
+                                </strong>
+
+                            </div>
+
+
+                            <div class="admin-user-detail-item">
+
+                                <span>
+                                    Período iniciado
+                                </span>
+
+                                <strong>
+                                    ${escapeHTML(
+                                        formatDateTime(
+                                            subscription.current_period_start
+                                        )
+                                    )}
+                                </strong>
+
+                            </div>
+
+
+                            <div class="admin-user-detail-item">
+
+                                <span>
+                                    Período termina
+                                </span>
+
+                                <strong>
+                                    ${escapeHTML(
+                                        formatDateTime(
+                                            subscription.current_period_end
+                                        )
+                                    )}
+                                </strong>
+
+                            </div>
+
+
+                            <div class="admin-user-detail-item">
+
+                                <span>
+                                    Próximo pagamento
+                                </span>
+
+                                <strong>
+                                    ${escapeHTML(
+                                        formatDateTime(
+                                            subscription.next_payment_due_at
+                                        )
+                                    )}
+                                </strong>
+
+                            </div>
+
+
+                            <div class="admin-user-detail-item">
+
+                                <span>
+                                    Período de tolerância
+                                </span>
+
+                                <strong>
+                                    ${escapeHTML(
+                                        formatDateTime(
+                                            subscription.grace_until
+                                        )
+                                    )}
+                                </strong>
+
+                            </div>
+
+
+                            <div class="admin-user-detail-item">
+
+                                <span>
+                                    Renovação automática
+                                </span>
+
+                                <strong>
+                                    ${
+                                        subscription.auto_renew
+                                            ? "Sim"
+                                            : "Não"
+                                    }
+                                </strong>
+
+                            </div>
+
+                        </div>
+
+
+                        ${
+                            subscription.admin_note
+                                ? `
+                                    <div class="admin-user-bio">
+
+                                        <span>
+                                            Nota administrativa
+                                        </span>
+
+                                        <p>
+                                            ${escapeHTML(
+                                                subscription.admin_note
+                                            )}
+                                        </p>
+
+                                    </div>
+                                `
+                                : ""
+                        }
+
+                    `
+                    : `
+
+                        <div class="users-empty">
+
+                            <strong>
+                                Sem subscrição registada.
+                            </strong>
+
+                            <span>
+                                Este utilizador ainda não possui uma subscrição.
+                            </span>
+
+                        </div>
+
+                    `
+            }
+
+        </section>
+
+
+        <!-- ================================================= -->
+        <!-- PAYMENTS -->
+        <!-- ================================================= -->
+
+        <section class="admin-user-details-section">
+
+            <div class="admin-user-details-section-header">
+
+                <div>
+
+                    <span class="admin-modal-eyebrow">
+                        PAGAMENTOS
+                    </span>
+
+                    <h3>
+                        Histórico de pagamentos
+                    </h3>
+
+                </div>
+
+            </div>
+
+
+            <div class="admin-user-stat-grid">
+
+                <div class="admin-user-stat">
+
+                    <strong>
+                        ${Number(
+                            paymentStats.total || 0
+                        )}
+                    </strong>
+
+                    <span>
+                        Pagamentos
+                    </span>
+
+                </div>
+
+
+                <div class="admin-user-stat">
+
+                    <strong>
+                        ${Number(
+                            paymentStats.paid || 0
+                        )}
+                    </strong>
+
+                    <span>
+                        Pagos
+                    </span>
+
+                </div>
+
+
+                <div class="admin-user-stat">
+
+                    <strong>
+                        ${Number(
+                            paymentStats.pending || 0
+                        )}
+                    </strong>
+
+                    <span>
+                        Pendentes
+                    </span>
+
+                </div>
+
+
+                <div class="admin-user-stat">
+
+                    <strong>
+                        ${Number(
+                            paymentStats.failed || 0
+                        )}
+                    </strong>
+
+                    <span>
+                        Falhados
+                    </span>
+
+                </div>
+
+
+                <div class="admin-user-stat">
+
+                    <strong>
+                        ${escapeHTML(
+                            formatMoney(
+                                paymentStats.total_paid ||
+                                0,
+                                "AOA"
+                            )
+                        )}
+                    </strong>
+
+                    <span>
+                        Total pago
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            ${
+                recentPayments.length
+                    ? `
+
+                        <div class="admin-user-payment-list">
+
+                            ${recentPayments
+                                .map(
+                                    payment => `
+
+                                        <article
+                                            class="admin-user-payment"
+                                        >
+
+                                            <div>
+
+                                                <strong>
+                                                    ${escapeHTML(
+                                                        formatMoney(
+                                                            payment.amount,
+                                                            payment.currency
+                                                        )
+                                                    )}
+                                                </strong>
+
+                                                <span>
+                                                    ${escapeHTML(
+                                                        paymentStatusLabel(
+                                                            payment.status
+                                                        )
+                                                    )}
+                                                </span>
+
+                                            </div>
+
+
+                                            <div>
+
+                                                <span>
+                                                    ${
+                                                        payment.payment_method
+                                                            ? escapeHTML(
+                                                                payment.payment_method
+                                                            )
+                                                            : "Método não indicado"
+                                                    }
+                                                </span>
+
+                                                <span>
+                                                    ${escapeHTML(
+                                                        formatDateTime(
+                                                            payment.paid_at ||
+                                                            payment.created_at
+                                                        )
+                                                    )}
+                                                </span>
+
+                                            </div>
+
+
+                                            ${
+                                                payment.transaction_reference
+                                                    ? `
+                                                        <small>
+                                                            Ref:
+                                                            ${escapeHTML(
+                                                                payment.transaction_reference
+                                                            )}
+                                                        </small>
+                                                    `
+                                                    : ""
+                                            }
+
+                                        </article>
+
+                                    `
+                                )
+                                .join("")}
+
+                        </div>
+
+                    `
+                    : `
+
+                        <div class="users-empty">
+
+                            <strong>
+                                Nenhum pagamento.
+                            </strong>
+
+                            <span>
+                                Este utilizador ainda não possui pagamentos registados.
+                            </span>
+
+                        </div>
+
+                    `
+            }
+
+        </section>
+
+    `;
+
+
+    const subtitle =
+        modalSubtitleForUser(
+            data
+        );
+
+
+    const modalSubtitle =
+        document.querySelector(
+            "#admin-user-details-modal .admin-modal-subtitle"
+        );
+
+
+    if (modalSubtitle) {
+
+        modalSubtitle.textContent =
+            subtitle;
+
+    }
+}
+
+
+// ============================================================
+// USER DETAILS SUBTITLE
+// ============================================================
+
+function modalSubtitleForUser(
+    data
+) {
+
+    const role =
+        getRoleLabel(
+            data.role?.name
+        );
+
+
+    const team =
+        data.team?.short_name ||
+        data.team?.name ||
+        "Ambos";
+
+
+    return `${role} · ${team}`;
+}
+
 
 
 // ============================================================
