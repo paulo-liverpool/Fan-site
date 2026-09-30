@@ -3307,3 +3307,323 @@
     }
 
 }
+/* ============================================================
+   ACCOUNT MANAGEMENT
+   ============================================================ */
+
+.account-management-selected {
+
+    margin-top: 20px;
+
+}
+
+
+.payment-management-search {
+
+    position: relative;
+
+}
+
+
+.payment-management-search input {
+
+    width: 100%;
+
+}
+
+
+.account-management-user-results {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 6px;
+
+    margin-top: 10px;
+
+}
+
+
+.account-management-user-result {
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: flex-start;
+
+    gap: 3px;
+
+    width: 100%;
+
+    padding: 12px 14px;
+
+    border: 1px solid
+        rgba(255,255,255,0.07);
+
+    border-radius: 10px;
+
+    background:
+        rgba(255,255,255,0.025);
+
+    color: inherit;
+
+    cursor: pointer;
+
+    text-align: left;
+
+}
+
+
+.account-management-user-result:hover {
+
+    background:
+        rgba(255,255,255,0.07);
+
+}
+
+
+.account-management-user-result span {
+
+    font-size: 12px;
+
+    opacity: 0.55;
+
+}
+
+
+.account-management-user-header {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 20px;
+
+    margin-bottom: 24px;
+
+}
+
+
+.account-management-user-header h2 {
+
+    margin: 4px 0;
+
+}
+
+
+.account-management-user-header > div > span {
+
+    font-size: 12px;
+
+    opacity: 0.55;
+
+}
+
+
+.account-management-grid {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    gap: 16px;
+
+}
+
+
+.account-management-card {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 12px;
+
+    padding: 18px;
+
+    border:
+        1px solid
+        rgba(255,255,255,0.07);
+
+    border-radius: 14px;
+
+    background:
+        rgba(255,255,255,0.025);
+
+}
+
+
+.account-management-card-title {
+
+    font-size: 15px;
+
+    font-weight: 700;
+
+}
+
+
+.account-management-current {
+
+    padding: 10px 12px;
+
+    border-radius: 9px;
+
+    background:
+        rgba(255,255,255,0.04);
+
+    font-size: 12px;
+
+    opacity: 0.75;
+
+}
+
+
+.account-management-card input,
+.account-management-card select,
+.account-management-card textarea {
+
+    width: 100%;
+
+}
+
+
+.account-management-actions {
+
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 8px;
+
+    margin-top: 4px;
+
+}
+
+
+.admin-audit-log {
+
+    display: flex;
+
+    flex-direction: column;
+
+    margin-top: 16px;
+
+}
+
+
+.admin-audit-row {
+
+    display: grid;
+
+    grid-template-columns:
+        minmax(180px, 1fr)
+        minmax(180px, 1fr)
+        150px;
+
+    gap: 20px;
+
+    padding: 15px 0;
+
+    border-bottom:
+        1px solid
+        rgba(255,255,255,0.06);
+
+}
+
+
+.admin-audit-action {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 4px;
+
+}
+
+
+.admin-audit-action strong {
+
+    font-size: 13px;
+
+}
+
+
+.admin-audit-action span {
+
+    font-size: 11px;
+
+    opacity: 0.55;
+
+}
+
+
+.admin-audit-details {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 4px;
+
+    font-size: 11px;
+
+    opacity: 0.7;
+
+}
+
+
+.admin-audit-row time {
+
+    font-size: 11px;
+
+    opacity: 0.5;
+
+    text-align: right;
+
+}
+
+
+@media (max-width: 850px) {
+
+    .account-management-grid {
+
+        grid-template-columns: 1fr;
+
+    }
+
+
+    .admin-audit-row {
+
+        grid-template-columns: 1fr;
+
+        gap: 8px;
+
+    }
+
+
+    .admin-audit-row time {
+
+        text-align: left;
+
+    }
+
+}
+
+
+@media (max-width: 600px) {
+
+    .account-management-user-header {
+
+        align-items: flex-start;
+
+        flex-direction: column;
+
+    }
+
+}
