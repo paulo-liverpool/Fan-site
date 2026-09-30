@@ -1548,6 +1548,809 @@
     );
 
 
+      /* ========================================================
+       PAYMENT SETTINGS
+       ======================================================== */
+
+    const paymentSettingsState = {
+
+        settings: null,
+
+        loading: false,
+
+        saving: false
+
+    };
+
+
+    /* ========================================================
+       PAYMENT SETTINGS — HELPERS
+       ======================================================== */
+
+    function getPaymentElement(id) {
+
+        return document.getElementById(id);
+
+    }
+
+
+    function formatPaymentAmount(
+        amount,
+        currency
+    ) {
+
+        const value =
+            Number(amount || 0);
+
+
+        return new Intl.NumberFormat(
+            "pt-AO",
+            {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2
+            }
+        ).format(value) +
+        " " +
+        (currency || "AOA");
+
+    }
+
+
+    function formatPaymentDate(value) {
+
+        if (!value) {
+            return "Ainda não actualizado";
+        }
+
+
+        const date =
+            new Date(value);
+
+
+        if (
+            Number.isNaN(
+                date.getTime()
+            )
+        ) {
+
+            return "Ainda não actualizado";
+
+        }
+
+
+        return date.toLocaleString(
+            "pt-AO",
+            {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit"
+            }
+        );
+
+    }
+
+
+    function showPaymentSettingsMessage(
+        message,
+        type = "success"
+    ) {
+
+        if (
+            typeof window.showAdminToast ===
+            "function"
+        ) {
+
+            window.showAdminToast(
+                message,
+                type
+            );
+
+            return;
+
+        }
+
+
+        alert(message);
+
+    }
+
+
+    /* ========================================================
+       PAYMENT SETTINGS — LOAD
+       ======================================================== */
+
+    async function loadPaymentSettings() {
+
+        if (
+            paymentSettingsState.loading
+        ) {
+            return;
+        }
+
+
+        paymentSettingsState.loading =
+            true;
+
+
+        try {
+
+            const {
+                data,
+                error
+            } = await supabaseClient
+                .from("platform_settings")
+                .select(`
+                    id,
+                    payments_active,
+                    enforce_payment,
+                    monthly_price,
+                    currency,
+                    grace_period_days,
+                    updated_by,
+                    updated_at
+                `)
+                .eq(
+                    "id",
+                    "global"
+                )
+                .maybeSingle();
+
+
+            if (error) {
+                throw error;
+            }
+
+
+            if (!data) {
+
+                throw new Error(
+                    "A configuração global da plataforma não foi encontrada."
+                );
+
+            }
+
+
+            paymentSettingsState.settings =
+                data;
+
+
+            populatePaymentSettings(
+                data
+            );
+
+
+        } catch (error) {
+
+            console.error(
+                "Erro ao carregar configurações de pagamento:",
+                error
+            );
+
+
+            showPaymentSettingsMessage(
+                error.message ||
+                "Não foi possível carregar as configurações de pagamento.",
+                "error"
+            );
+
+
+        } finally {
+
+            paymentSettingsState.loading =
+                false;
+
+        }
+
+    }
+
+
+    /* ========================================================
+       PAYMENT SETTINGS — POPULATE
+       ======================================================== */
+
+    function populatePaymentSettings(
+        settings
+    ) {
+
+        const paymentsActive =
+            getPaymentElement(
+                "payment-setting-payments-active"
+            );
+
+
+        const enforcePayment =
+            getPaymentElement(
+                "payment-setting-enforce-payment"
+            );
+
+
+        const monthlyPrice =
+            getPaymentElement(
+                "payment-setting-monthly-price"
+            );
+
+
+        const currency =
+            getPaymentElement(
+                "payment-setting-currency"
+            );
+
+
+        const gracePeriod =
+            getPaymentElement(
+                "payment-setting-grace-period"
+            );
+
+
+        if (paymentsActive) {
+
+            paymentsActive.checked =
+                Boolean(
+                    settings.payments_active
+                );
+
+        }
+
+
+        if (enforcePayment) {
+
+            enforcePayment.checked =
+                Boolean(
+                    settings.enforce_payment
+                );
+
+        }
+
+
+        if (monthlyPrice) {
+
+            monthlyPrice.value =
+                settings.monthly_price ??
+                0;
+
+        }
+
+
+        if (currency) {
+
+            currency.value =
+                settings.currency ||
+                "AOA";
+
+        }
+
+
+        if (gracePeriod) {
+
+            gracePeriod.value =
+                settings.grace_period_days ??
+                7;
+
+        }
+
+
+        updatePaymentCurrencyLabel();
+
+        updatePaymentSummary();
+
+        updatePaymentLastUpdated(
+            settings.updated_at
+        );
+
+    }
+
+
+    /* ========================================================
+       PAYMENT SETTINGS — FORM VALUES
+       ======================================================== */
+
+    function getPaymentFormValues() {
+
+        return {
+
+            payments_active:
+                Boolean(
+                    getPaymentElement(
+                        "payment-setting-payments-active"
+                    )?.checked
+                ),
+
+            enforce_payment:
+                Boolean(
+                    getPaymentElement(
+                        "payment-setting-enforce-payment"
+                    )?.checked
+                ),
+
+            monthly_price:
+                Number(
+                    getPaymentElement(
+                        "payment-setting-monthly-price"
+                    )?.value || 0
+                ),
+
+            currency:
+                getPaymentElement(
+                    "payment-setting-currency"
+                )?.value ||
+                "AOA",
+
+            grace_period_days:
+                Number(
+                    getPaymentElement(
+                        "payment-setting-grace-period"
+                    )?.value || 0
+                )
+
+        };
+
+    }
+
+
+    /* ========================================================
+       PAYMENT SETTINGS — SUMMARY
+       ======================================================== */
+
+    function updatePaymentSummary() {
+
+        const settings =
+            getPaymentFormValues();
+
+
+        const price =
+            getPaymentElement(
+                "payment-summary-price"
+            );
+
+
+        const status =
+            getPaymentElement(
+                "payment-summary-status"
+            );
+
+
+        const enforce =
+            getPaymentElement(
+                "payment-summary-enforce"
+            );
+
+
+        const grace =
+            getPaymentElement(
+                "payment-summary-grace"
+            );
+
+
+        if (price) {
+
+            price.textContent =
+                formatPaymentAmount(
+                    settings.monthly_price,
+                    settings.currency
+                );
+
+        }
+
+
+        if (status) {
+
+            status.textContent =
+                settings.payments_active
+                    ? "Activos"
+                    : "Inactivos";
+
+        }
+
+
+        if (enforce) {
+
+            enforce.textContent =
+                settings.enforce_payment
+                    ? "Sim"
+                    : "Não";
+
+        }
+
+
+        if (grace) {
+
+            grace.textContent =
+                `${settings.grace_period_days} dias`;
+
+        }
+
+    }
+
+
+    function updatePaymentCurrencyLabel() {
+
+        const currency =
+            getPaymentElement(
+                "payment-setting-currency"
+            );
+
+
+        const label =
+            getPaymentElement(
+                "payment-setting-currency-label"
+            );
+
+
+        if (
+            currency &&
+            label
+        ) {
+
+            label.textContent =
+                currency.value ||
+                "AOA";
+
+        }
+
+    }
+
+
+    function updatePaymentLastUpdated(
+        value
+    ) {
+
+        const element =
+            getPaymentElement(
+                "payment-settings-last-updated"
+            );
+
+
+        if (!element) {
+            return;
+        }
+
+
+        element.textContent =
+            "Última alteração: " +
+            formatPaymentDate(value);
+
+    }
+
+
+    /* ========================================================
+       PAYMENT SETTINGS — VALIDATION
+       ======================================================== */
+
+    function validatePaymentSettings(
+        settings
+    ) {
+
+        if (
+            !Number.isFinite(
+                settings.monthly_price
+            ) ||
+            settings.monthly_price < 0
+        ) {
+
+            return "O preço mensal não pode ser negativo.";
+
+        }
+
+
+        if (
+            !Number.isInteger(
+                settings.grace_period_days
+            ) ||
+            settings.grace_period_days < 0
+        ) {
+
+            return "O período de tolerância deve ser um número inteiro igual ou superior a zero.";
+
+        }
+
+
+        if (
+            !settings.currency
+        ) {
+
+            return "Seleccione uma moeda.";
+
+        }
+
+
+        if (
+            settings.enforce_payment &&
+            !settings.payments_active
+        ) {
+
+            return "Não é possível exigir pagamentos enquanto o sistema de pagamentos estiver inactivo.";
+
+        }
+
+
+        return null;
+
+    }
+
+
+    /* ========================================================
+       PAYMENT SETTINGS — SAVE
+       ======================================================== */
+
+    async function savePaymentSettings() {
+
+        if (
+            paymentSettingsState.saving
+        ) {
+            return;
+        }
+
+
+        const settings =
+            getPaymentFormValues();
+
+
+        const validationError =
+            validatePaymentSettings(
+                settings
+            );
+
+
+        if (validationError) {
+
+            showPaymentSettingsMessage(
+                validationError,
+                "error"
+            );
+
+            return;
+
+        }
+
+
+        paymentSettingsState.saving =
+            true;
+
+
+        const button =
+            getPaymentElement(
+                "save-payment-settings-button"
+            );
+
+
+        if (button) {
+
+            button.disabled =
+                true;
+
+            button.textContent =
+                "A guardar...";
+
+        }
+
+
+        try {
+
+            const {
+                data: {
+                    user
+                } = {},
+                error: userError
+            } =
+                await supabaseClient
+                    .auth
+                    .getUser();
+
+
+            if (userError) {
+                throw userError;
+            }
+
+
+            if (!user) {
+
+                throw new Error(
+                    "Sessão de administrador não encontrada."
+                );
+
+            }
+
+
+            const {
+                data,
+                error
+            } = await supabaseClient
+                .from("platform_settings")
+                .update({
+
+                    payments_active:
+                        settings.payments_active,
+
+                    enforce_payment:
+                        settings.enforce_payment,
+
+                    monthly_price:
+                        settings.monthly_price,
+
+                    currency:
+                        settings.currency,
+
+                    grace_period_days:
+                        settings.grace_period_days,
+
+                    updated_by:
+                        user.id,
+
+                    updated_at:
+                        new Date().toISOString()
+
+                })
+                .eq(
+                    "id",
+                    "global"
+                )
+                .select()
+                .single();
+
+
+            if (error) {
+                throw error;
+            }
+
+
+            paymentSettingsState.settings =
+                data;
+
+
+            populatePaymentSettings(
+                data
+            );
+
+
+            showPaymentSettingsMessage(
+                "Configurações de pagamento guardadas com sucesso."
+            );
+
+
+        } catch (error) {
+
+            console.error(
+                "Erro ao guardar configurações:",
+                error
+            );
+
+
+            showPaymentSettingsMessage(
+                error.message ||
+                "Não foi possível guardar as configurações.",
+                "error"
+            );
+
+
+        } finally {
+
+            paymentSettingsState.saving =
+                false;
+
+
+            if (button) {
+
+                button.disabled =
+                    false;
+
+                button.textContent =
+                    "Guardar configurações";
+
+            }
+
+        }
+
+    }
+
+
+    /* ========================================================
+       PAYMENT SETTINGS — EVENTS
+       ======================================================== */
+
+    function bindPaymentSettingsEvents() {
+
+        const saveButton =
+            getPaymentElement(
+                "save-payment-settings-button"
+            );
+
+
+        const currency =
+            getPaymentElement(
+                "payment-setting-currency"
+            );
+
+
+        const monthlyPrice =
+            getPaymentElement(
+                "payment-setting-monthly-price"
+            );
+
+
+        const gracePeriod =
+            getPaymentElement(
+                "payment-setting-grace-period"
+            );
+
+
+        const paymentsActive =
+            getPaymentElement(
+                "payment-setting-payments-active"
+            );
+
+
+        const enforcePayment =
+            getPaymentElement(
+                "payment-setting-enforce-payment"
+            );
+
+
+        saveButton?.addEventListener(
+            "click",
+            savePaymentSettings
+        );
+
+
+        currency?.addEventListener(
+            "change",
+            () => {
+
+                updatePaymentCurrencyLabel();
+
+                updatePaymentSummary();
+
+            }
+        );
+
+
+        monthlyPrice?.addEventListener(
+            "input",
+            updatePaymentSummary
+        );
+
+
+        gracePeriod?.addEventListener(
+            "input",
+            updatePaymentSummary
+        );
+
+
+        paymentsActive?.addEventListener(
+            "change",
+            updatePaymentSummary
+        );
+
+
+        enforcePayment?.addEventListener(
+            "change",
+            updatePaymentSummary
+        );
+
+    }
+
+
+    /* ========================================================
+       INITIALIZATION
+       ======================================================== */
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        () => {
+
+            initAdminPrivateMessages();
+
+            bindPaymentSettingsEvents();
+
+        }
+    );
+
+
+    /* ========================================================
+       PUBLIC API
+       ======================================================== */
+
     window.adminPrivateMessages = {
 
         load:
@@ -1557,5 +2360,14 @@
             openNewPrivateMessageModal
 
     };
+
+
+    window.adminPaymentSettings = {
+
+        load:
+            loadPaymentSettings
+
+    };
+
 
 })();
