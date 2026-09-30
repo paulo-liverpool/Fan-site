@@ -2899,3 +2899,39 @@
         padding-left: 0;
     }
 }
+/* ============================================================
+   USER ACCOUNT STATUS
+   ============================================================ */
+
+.admin-user-badge.user-status-active {
+    color: #7ee2a8;
+    background: rgba(34, 197, 94, .12);
+}
+
+
+.admin-user-badge.user-status-inactive {
+    color: #ff9b9b;
+    background: rgba(239, 68, 68, .12);
+}
+
+
+.admin-user-action.danger {
+    color: #ff9b9b;
+}
+
+
+.admin-user-action.danger:hover {
+    background: rgba(239, 68, 68, .12);
+    border-color: rgba(239, 68, 68, .25);
+}
+
+
+.admin-user-action.success {
+    color: #7ee2a8;
+}
+
+
+.admin-user-action.success:hover {
+    background: rgba(34, 197, 94, .12);
+    border-color: rgba(34, 197, 94, .25);
+}
