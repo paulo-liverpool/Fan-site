@@ -3,21 +3,12 @@
    SUPABASE CLIENT + ACCESS CONTROL
    ============================================================ */
 
-
-/* ============================================================
-   SUPABASE CONFIGURATION
-   ============================================================ */
-
 const SUPABASE_URL =
     "https://eanimmfehvqzubgychik.supabase.co/";
 
 const SUPABASE_ANON_KEY =
     "sb_publishable_Iley6SypihdYU6w2wBVEcA_kz9Ug3DE";
 
-
-/* ============================================================
-   SUPABASE CLIENT
-   ============================================================ */
 
 const supabaseClient =
     window.supabase.createClient(
@@ -26,28 +17,18 @@ const supabaseClient =
     );
 
 
-/* ============================================================
-   GLOBAL CLIENT
-   ============================================================ */
-
 window.supabaseClient =
     supabaseClient;
 
 
 /*
- * Some existing Barça Real admin/application files
- * use `supabase` directly.
- *
- * Keep that global reference available.
+ * Existing Barça Real files use `supabase`
+ * as the client reference.
  */
 
 window.supabase =
     supabaseClient;
 
-
-/* ============================================================
-   ACCESS CONTROL STATE
-   ============================================================ */
 
 window.barcaRealAccess = {
 
@@ -63,8 +44,7 @@ window.barcaRealAccess = {
 
 
 /* ============================================================
-   PAGES THAT MUST REMAIN ACCESSIBLE
-   WITHOUT PLATFORM PAYMENT
+   PAGE TYPES
    ============================================================ */
 
 function isPublicAccessPage() {
@@ -72,7 +52,6 @@ function isPublicAccessPage() {
     const path =
         window.location.pathname
             .toLowerCase();
-
 
     const filename =
         path.split("/").pop();
@@ -106,16 +85,11 @@ function isPublicAccessPage() {
 }
 
 
-/* ============================================================
-   ADMIN PAGE
-   ============================================================ */
-
 function isAdminPage() {
 
     const path =
         window.location.pathname
             .toLowerCase();
-
 
     return path.endsWith(
         "admin.html"
@@ -124,38 +98,24 @@ function isAdminPage() {
 }
 
 
-/* ============================================================
-   PAYMENT PAGE
-   ============================================================ */
-
 function isPaymentPage() {
 
     const path =
         window.location.pathname
             .toLowerCase();
 
-
     const filename =
         path.split("/").pop();
 
 
-    return (
-
-        filename ===
-            "payment.html"
-
-        ||
-
-        filename ===
-            "payments.html"
-
-    );
+    return filename ===
+        "payment.html";
 
 }
 
 
 /* ============================================================
-   ACCESS MESSAGE
+   ACCESS MESSAGES
    ============================================================ */
 
 function getAccessMessage(
@@ -188,23 +148,46 @@ function getAccessMessage(
 
 
 /* ============================================================
-   REDIRECT TO ACCESS PAGE
+   ACCESS REDIRECT
    ============================================================ */
 
-function isPaymentPage() {
+function redirectForAccess(
+    result
+) {
 
-    const path =
-        window.location.pathname.toLowerCase();
+    const reason =
+        result?.reason ||
+        "payment_required";
 
-    const filename =
-        path.split("/").pop();
 
-    return filename === "payment.html";
+    if (isAdminPage()) {
+        return;
+    }
+
+
+    if (isPaymentPage()) {
+        return;
+    }
+
+
+    const message =
+        encodeURIComponent(
+            getAccessMessage(
+                reason
+            )
+        );
+
+
+    window.location.href =
+        `payment.html?reason=${encodeURIComponent(
+            reason
+        )}&message=${message}`;
+
 }
 
 
 /* ============================================================
-   CHECK PLATFORM ACCESS
+   CHECK ACCESS
    ============================================================ */
 
 async function checkBarcaRealAccess(
@@ -239,8 +222,8 @@ async function checkBarcaRealAccess(
 
 
     /*
-     * Never interfere with the admin page's
-     * existing administrator verification.
+     * Admin access is controlled separately
+     * by the existing admin authorization.
      */
 
     if (isAdminPage()) {
@@ -258,9 +241,67 @@ async function checkBarcaRealAccess(
     }
 
 
+    /*
+     * Payment page must remain accessible
+     * to blocked authenticated users.
+     */
+
+    if (isPaymentPage()) {
+
+        const {
+            data: sessionData
+        } =
+            await supabaseClient.auth
+                .getSession();
+
+
+        const session =
+            sessionData?.session;
+
+
+        if (!session) {
+
+            window.location.href =
+                "login.html";
+
+            return {
+
+                authenticated: false,
+
+                allowed: false,
+
+                reason:
+                    "not_authenticated"
+
+            };
+
+        }
+
+
+        return {
+
+            authenticated: true,
+
+            allowed: true,
+
+            reason:
+                "payment_page"
+
+        };
+
+    }
+
+
+    /* ========================================================
+       SESSION
+       ======================================================== */
+
     const {
+
         data: sessionData,
+
         error: sessionError
+
     } =
         await supabaseClient.auth
             .getSession();
@@ -273,13 +314,15 @@ async function checkBarcaRealAccess(
             sessionError
         );
 
+
         return {
 
             authenticated: false,
 
             allowed: false,
 
-            reason: "session_error"
+            reason:
+                "session_error"
 
         };
 
@@ -298,7 +341,8 @@ async function checkBarcaRealAccess(
 
             allowed: false,
 
-            reason: "not_authenticated"
+            reason:
+                "not_authenticated"
 
         };
 
@@ -332,13 +376,16 @@ async function checkBarcaRealAccess(
     }
 
 
-    /* --------------------------------------------------------
-       CALL SECURE DATABASE ACCESS CHECK
-       -------------------------------------------------------- */
+    /* ========================================================
+       SERVER-SIDE ACCESS CHECK
+       ======================================================== */
 
     const {
+
         data,
+
         error
+
     } =
         await supabaseClient.rpc(
             "check_user_platform_access"
@@ -354,9 +401,8 @@ async function checkBarcaRealAccess(
 
 
         /*
-         * Do not lock existing users out
-         * because of a temporary RPC/network
-         * failure.
+         * Do not lock users out because
+         * of a temporary network/RPC error.
          */
 
         const result = {
@@ -365,9 +411,11 @@ async function checkBarcaRealAccess(
 
             allowed: true,
 
-            reason: "access_check_error",
+            reason:
+                "access_check_error",
 
-            error: error.message
+            error:
+                error.message
 
         };
 
@@ -399,7 +447,8 @@ async function checkBarcaRealAccess(
 
             allowed: true,
 
-            reason: "unknown"
+            reason:
+                "unknown"
 
         };
 
@@ -437,46 +486,30 @@ async function checkBarcaRealAccess(
 }
 
 
-/* ============================================================
-   EXPOSE ACCESS CHECK
-   ============================================================ */
-
 window.checkBarcaRealAccess =
     checkBarcaRealAccess;
 
 
 /* ============================================================
-   AUTOMATIC ACCESS GUARD
+   AUTOMATIC GUARD
    ============================================================ */
 
 async function initializeBarcaRealAccessGuard() {
 
-    /*
-     * Public pages must remain accessible.
-     */
-
     if (isPublicAccessPage()) {
-
         return;
-
     }
 
-
-    /*
-     * Admin has its own administrator
-     * authorization flow.
-     */
 
     if (isAdminPage()) {
-
         return;
-
     }
 
 
-    /*
-     * Run the central access check.
-     */
+    if (isPaymentPage()) {
+        return;
+    }
+
 
     await checkBarcaRealAccess({
 
@@ -486,10 +519,6 @@ async function initializeBarcaRealAccessGuard() {
 
 }
 
-
-/* ============================================================
-   START ACCESS GUARD
-   ============================================================ */
 
 if (
     document.readyState ===
