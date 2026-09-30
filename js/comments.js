@@ -2287,101 +2287,108 @@ function focusComment(commentId) {
     /* ========================================================
        PUBLIC COMPONENT
        ======================================================== */
-
-    async function init(
+async function init(
     articleKey,
     focusCommentId = null
 ) {
 
-        const host =
-            document.querySelector(
-                "#fan-comments"
-            );
-
-
-        if (!host) {
-            return;
-        }
-
-
-        const client =
-            getSupabase();
-
-
-        if (!client) {
-            return;
-        }
-
-
-        const {
-            data: {
-                user
-            }
-        } = await client.auth.getUser();
-
-
-        if (!user) {
-
-            host.innerHTML = `
-
-                <div class="fan-comments-status">
-                    Inicia sessão para participar na discussão.
-                </div>
-
-            `;
-
-            return;
-        }
-
-
-        state.articleKey =
-            String(articleKey || "");
-
-
-        state.user =
-            user;
-
-
-        state.profile =
-            await loadProfile(
-                user.id
-            );
-
-
-        state.comments = [];
-
-        state.reactions = [];
-
-        state.profiles.clear();
-
-        state.sort = "best";
-
-        state.replyingTo = null;
-
-
-        renderShell(
-            host
+    const host =
+        document.querySelector(
+            "#fan-comments"
         );
 
 
-        setupEvents(
-            host
+    if (!host) {
+        return;
+    }
+
+
+    const client =
+        getSupabase();
+
+
+    if (!client) {
+        return;
+    }
+
+
+    const {
+        data: {
+            user
+        }
+    } = await client.auth.getUser();
+
+
+    if (!user) {
+
+        host.innerHTML = `
+
+            <div class="fan-comments-status">
+                Inicia sessão para participar na discussão.
+            </div>
+
+        `;
+
+        return;
+    }
+
+
+    state.articleKey =
+        String(articleKey || "");
+
+
+    state.user =
+        user;
+
+
+    state.profile =
+        await loadProfile(
+            user.id
         );
 
 
-        await loadComments(
-                   if (focusCommentId) {
+    state.comments = [];
 
-            focusComment(
-                focusCommentId
-            );
+    state.reactions = [];
 
-        }
-            host
+    state.profiles.clear();
+
+    state.sort = "best";
+
+    state.replyingTo = null;
+
+
+    renderShell(
+        host
+    );
+
+
+    setupEvents(
+        host
+    );
+
+
+    await loadComments(
+        host
+    );
+
+
+    /*
+     * If Community opened this article with
+     * a specific comment, wait until the
+     * comments have actually been rendered,
+     * then move to that comment.
+     */
+    if (focusCommentId) {
+
+        focusComment(
+            focusCommentId
         );
 
     }
 
+}
+ 
 
     /* ========================================================
        GLOBAL
