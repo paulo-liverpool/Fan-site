@@ -215,6 +215,17 @@
     </span>
 
 </button>
+                <button
+    class="admin-nav-item"
+    data-section="payment-status"
+>
+    <span class="admin-nav-icon">
+        ▣
+    </span>
+    <span>
+        Estado dos Pagamentos
+    </span>
+</button>
 
 
             </nav>
@@ -1242,7 +1253,183 @@
 
 </section>
 
+<section
+    class="admin-section"
+    id="section-payment-status"
+>
 
+    <div class="admin-section-header">
+
+        <div>
+
+            <div class="admin-eyebrow">
+                SUBSCRIÇÕES
+            </div>
+
+            <h1>
+                Estado dos Pagamentos
+            </h1>
+
+            <p>
+                Consulta e gere os pagamentos das subscrições.
+            </p>
+
+        </div>
+
+        <div>
+
+            <button
+                type="button"
+                class="admin-secondary-button"
+                id="refresh-payment-status-button"
+            >
+                Actualizar
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- ======================================================
+         PAYMENT SUMMARY
+         ====================================================== -->
+
+    <div class="payment-status-summary">
+
+        <div class="payment-status-summary-card">
+
+            <span>
+                Total
+            </span>
+
+            <strong id="payment-status-total">
+                0
+            </strong>
+
+        </div>
+
+
+        <div class="payment-status-summary-card">
+
+            <span>
+                Pagos
+            </span>
+
+            <strong id="payment-status-paid">
+                0
+            </strong>
+
+        </div>
+
+
+        <div class="payment-status-summary-card">
+
+            <span>
+                Pendentes
+            </span>
+
+            <strong id="payment-status-pending">
+                0
+            </strong>
+
+        </div>
+
+
+        <div class="payment-status-summary-card">
+
+            <span>
+                Falhados
+            </span>
+
+            <strong id="payment-status-failed">
+                0
+            </strong>
+
+        </div>
+
+    </div>
+
+
+    <!-- ======================================================
+         FILTERS
+         ====================================================== -->
+
+    <div class="admin-panel">
+
+        <div class="users-management-toolbar">
+
+            <div class="admin-search">
+
+                <input
+                    type="search"
+                    id="payment-status-search"
+                    placeholder="Pesquisar utilizador ou referência..."
+                    autocomplete="off"
+                >
+
+            </div>
+
+
+            <select
+                id="payment-status-filter"
+                class="admin-filter-select"
+            >
+
+                <option value="all">
+                    Todos os estados
+                </option>
+
+                <option value="paid">
+                    Pagos
+                </option>
+
+                <option value="pending">
+                    Pendentes
+                </option>
+
+                <option value="failed">
+                    Falhados
+                </option>
+
+            </select>
+
+
+            <select
+                id="payment-method-filter"
+                class="admin-filter-select"
+            >
+
+                <option value="all">
+                    Todos os métodos
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <div
+            id="payment-status-message"
+            class="admin-message"
+            style="display:none;"
+        ></div>
+
+
+        <div
+            id="admin-payment-status-results"
+            class="payment-status-list"
+        >
+
+            <div class="admin-empty-state">
+                A carregar pagamentos...
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
         </main>
 
     </div>
