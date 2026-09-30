@@ -213,6 +213,21 @@ if (target === "payment-settings") {
     }
 
 }
+
+
+if (target === "payment-status") {
+
+    if (
+        window.adminPaymentStatus &&
+        typeof window.adminPaymentStatus.load ===
+            "function"
+    ) {
+
+        await window.adminPaymentStatus.load();
+
+    }
+
+}
             }
         );
     });
