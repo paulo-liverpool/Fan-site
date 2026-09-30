@@ -185,20 +185,36 @@
 
 
 
-                <button
-                    class="admin-nav-item"
-                    data-section="settings"
-                >
+            <button
+    class="admin-nav-item"
+    data-section="settings"
+>
 
-                    <span class="admin-nav-icon">
-                        ⚙
-                    </span>
+    <span class="admin-nav-icon">
+        ⚙
+    </span>
 
-                    <span>
-                        Definições
-                    </span>
+    <span>
+        Definições
+    </span>
 
-                </button>
+</button>
+
+
+<button
+    class="admin-nav-item"
+    data-section="payment-settings"
+>
+
+    <span class="admin-nav-icon">
+        ₳
+    </span>
+
+    <span>
+        Pagamentos
+    </span>
+
+</button>
 
 
             </nav>
@@ -820,44 +836,411 @@
                  DEFINIÇÕES
                  ================================================== -->
 
-            <section
-                class="admin-section"
-                id="section-settings"
+           <!-- ==================================================
+     DEFINIÇÕES
+     ================================================== -->
+
+<section
+    class="admin-section"
+    id="section-settings"
+>
+
+    <div class="admin-section-header">
+
+        <div>
+
+            <div class="admin-eyebrow">
+                SISTEMA
+            </div>
+
+            <h1>
+                Definições
+            </h1>
+
+            <p>
+                Configurações gerais da plataforma.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="admin-panel">
+
+        <div class="admin-empty-state">
+
+            As definições gerais da plataforma serão
+            adicionadas nesta área.
+
+        </div>
+
+    </div>
+
+</section>
+
+
+
+<!-- ==================================================
+     PAGAMENTOS
+     ================================================== -->
+
+<section
+    class="admin-section"
+    id="section-payment-settings"
+>
+
+    <div class="admin-section-header">
+
+        <div>
+
+            <div class="admin-eyebrow">
+                SUBSCRIÇÕES
+            </div>
+
+            <h1>
+                Pagamentos
+            </h1>
+
+            <p>
+                Gere o preço da subscrição e as regras
+                gerais de pagamento da plataforma.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="payment-settings-grid">
+
+
+        <!-- ==========================================
+             ESTADO DOS PAGAMENTOS
+             ========================================== -->
+
+        <div class="payment-settings-card">
+
+            <div class="payment-settings-card-header">
+
+                <div>
+
+                    <div class="payment-settings-label">
+                        ESTADO DO SISTEMA
+                    </div>
+
+                    <h2>
+                        Pagamentos
+                    </h2>
+
+                </div>
+
+            </div>
+
+
+            <div class="payment-setting-row">
+
+                <div>
+
+                    <strong>
+                        Pagamentos activos
+                    </strong>
+
+                    <span>
+                        Permite que a plataforma aceite e
+                        registe pagamentos de subscrição.
+                    </span>
+
+                </div>
+
+
+                <label class="admin-switch">
+
+                    <input
+                        type="checkbox"
+                        id="payment-setting-payments-active"
+                    >
+
+                    <span class="admin-switch-slider"></span>
+
+                </label>
+
+            </div>
+
+
+            <div class="payment-setting-row">
+
+                <div>
+
+                    <strong>
+                        Exigir pagamento
+                    </strong>
+
+                    <span>
+                        Exige uma subscrição válida para
+                        manter o acesso dos utilizadores.
+                    </span>
+
+                </div>
+
+
+                <label class="admin-switch">
+
+                    <input
+                        type="checkbox"
+                        id="payment-setting-enforce-payment"
+                    >
+
+                    <span class="admin-switch-slider"></span>
+
+                </label>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- ==========================================
+             PREÇO
+             ========================================== -->
+
+        <div class="payment-settings-card">
+
+            <div class="payment-settings-card-header">
+
+                <div>
+
+                    <div class="payment-settings-label">
+                        SUBSCRIÇÃO
+                    </div>
+
+                    <h2>
+                        Preço e período
+                    </h2>
+
+                </div>
+
+            </div>
+
+
+            <div class="payment-form-grid">
+
+
+                <div class="payment-form-field">
+
+                    <label
+                        for="payment-setting-monthly-price"
+                    >
+                        Preço mensal
+                    </label>
+
+
+                    <div class="payment-price-input">
+
+                        <input
+                            type="number"
+                            id="payment-setting-monthly-price"
+                            min="0"
+                            step="1"
+                            inputmode="numeric"
+                        >
+
+                        <span
+                            id="payment-setting-currency-label"
+                        >
+                            AOA
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="payment-form-field">
+
+                    <label
+                        for="payment-setting-currency"
+                    >
+                        Moeda
+                    </label>
+
+
+                    <select
+                        id="payment-setting-currency"
+                    >
+
+                        <option value="AOA">
+                            AOA — Kwanza
+                        </option>
+
+                        <option value="USD">
+                            USD — Dólar
+                        </option>
+
+                        <option value="EUR">
+                            EUR — Euro
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+
+                <div class="payment-form-field">
+
+                    <label
+                        for="payment-setting-grace-period"
+                    >
+                        Período de tolerância
+                    </label>
+
+
+                    <div class="payment-number-with-suffix">
+
+                        <input
+                            type="number"
+                            id="payment-setting-grace-period"
+                            min="0"
+                            step="1"
+                            inputmode="numeric"
+                        >
+
+                        <span>
+                            dias
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- ==========================================
+             RESUMO
+             ========================================== -->
+
+        <div class="payment-settings-card">
+
+            <div class="payment-settings-card-header">
+
+                <div>
+
+                    <div class="payment-settings-label">
+                        RESUMO
+                    </div>
+
+                    <h2>
+                        Configuração actual
+                    </h2>
+
+                </div>
+
+            </div>
+
+
+            <div class="payment-settings-summary">
+
+
+                <div>
+
+                    <span>
+                        Preço mensal
+                    </span>
+
+                    <strong
+                        id="payment-summary-price"
+                    >
+                        —
+                    </strong>
+
+                </div>
+
+
+                <div>
+
+                    <span>
+                        Pagamentos
+                    </span>
+
+                    <strong
+                        id="payment-summary-status"
+                    >
+                        —
+                    </strong>
+
+                </div>
+
+
+                <div>
+
+                    <span>
+                        Pagamento obrigatório
+                    </span>
+
+                    <strong
+                        id="payment-summary-enforce"
+                    >
+                        —
+                    </strong>
+
+                </div>
+
+
+                <div>
+
+                    <span>
+                        Período de tolerância
+                    </span>
+
+                    <strong
+                        id="payment-summary-grace"
+                    >
+                        —
+                    </strong>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- ==========================================
+             ACÇÕES
+             ========================================== -->
+
+        <div class="payment-settings-actions">
+
+            <span
+                id="payment-settings-last-updated"
+                class="payment-settings-last-updated"
             >
-
-                <div class="admin-section-header">
-
-                    <div>
-
-                        <div class="admin-eyebrow">
-                            SISTEMA
-                        </div>
-
-                        <h1>
-                            Definições
-                        </h1>
-
-                        <p>
-                            Configurações gerais da plataforma.
-                        </p>
-
-                    </div>
-
-                </div>
+                —
+            </span>
 
 
-                <div class="admin-panel">
+            <button
+                type="button"
+                class="admin-primary-button"
+                id="save-payment-settings-button"
+            >
+                Guardar configurações
+            </button>
 
-                    <div class="admin-empty-state">
+        </div>
 
-                        As definições da plataforma serão
-                        adicionadas nesta área.
 
-                    </div>
+    </div>
 
-                </div>
-
-            </section>
+</section>
 
 
         </main>
