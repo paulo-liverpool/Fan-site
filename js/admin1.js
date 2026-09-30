@@ -2360,14 +2360,1182 @@
             openNewPrivateMessageModal
 
     };
+/* ============================================================
+   BARÇA REAL — ADMIN PAYMENT STATUS
+   ============================================================ */
 
 
-    window.adminPaymentSettings = {
+/* ============================================================
+   PAYMENT STATUS STATE
+   ============================================================ */
 
-        load:
-            loadPaymentSettings
+const paymentStatusState = {
+
+    payments: [],
+
+    filteredPayments: [],
+
+    search: "",
+
+    status: "all",
+
+    paymentMethod: "all",
+
+    initialized: false
+
+};
+
+
+/* ============================================================
+   PAYMENT STATUS HELPERS
+   ============================================================ */
+
+function getPaymentStatusElement(id) {
+
+    return document.getElementById(id);
+
+}
+
+
+function formatPaymentStatus(status) {
+
+    const values = {
+
+        paid: "Pago",
+
+        pending: "Pendente",
+
+        failed: "Falhou",
+
+        cancelled: "Cancelado",
+
+        refunded: "Reembolsado"
 
     };
 
+    return values[status] || status || "—";
 
-})();
+}
+
+
+function formatPaymentStatusClass(status) {
+
+    const values = {
+
+        paid: "is-paid",
+
+        pending: "is-pending",
+
+        failed: "is-failed",
+
+        cancelled: "is-failed",
+
+        refunded: "is-pending"
+
+    };
+
+    return values[status] || "";
+
+}
+
+
+function formatPaymentAmount(amount, currency) {
+
+    const numericAmount =
+        Number(amount || 0);
+
+    return new Intl.NumberFormat(
+        "pt-AO",
+        {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2
+        }
+    ).format(numericAmount)
+    + " "
+    + (currency || "AOA");
+
+}
+
+
+function formatPaymentDate(value) {
+
+    if (!value) {
+        return "—";
+    }
+
+    const date =
+        new Date(value);
+
+    if (
+        Number.isNaN(
+            date.getTime()
+        )
+    ) {
+        return "—";
+    }
+
+    return new Intl.DateTimeFormat(
+        "pt-AO",
+        {
+            dateStyle: "short",
+            timeStyle: "short"
+        }
+    ).format(date);
+
+}
+
+
+function getPaymentUserName(payment) {
+
+    return (
+        payment.user_name ||
+        payment.username ||
+        "Utilizador"
+    );
+
+}
+
+
+/* ============================================================
+   LOAD PAYMENTS
+   ============================================================ */
+
+async function loadPaymentStatus() {
+
+    const results =
+        getPaymentStatusElement(
+            "admin-payment-status-results"
+        );
+
+    if (results) {
+
+        results.innerHTML = `
+            <div class="admin-empty-state">
+                A carregar pagamentos...
+            </div>
+        `;
+
+    }
+
+
+    const {
+        data,
+        error
+    } = await supabase.rpc(
+        "admin_get_subscription_payments"
+    );
+
+
+    if (error) {
+
+        console.error(
+            "Erro ao carregar pagamentos:",
+            error
+        );
+
+        if (results) {
+
+            results.innerHTML = `
+                <div class="admin-empty-state">
+                    Não foi possível carregar os pagamentos.
+                </div>
+            `;
+
+        }
+
+        return;
+
+    }
+
+
+    paymentStatusState.payments =
+        Array.isArray(data)
+            ? data
+            : [];
+
+
+    populatePaymentMethodFilter();
+
+    applyPaymentStatusFilters();
+
+}
+
+
+/* ============================================================
+   PAYMENT METHOD FILTER
+   ============================================================ */
+
+function populatePaymentMethodFilter() {
+
+    const select =
+        getPaymentStatusElement(
+            "payment-method-filter"
+        );
+
+    if (!select) {
+        return;
+    }
+
+
+    const currentValue =
+        paymentStatusState.paymentMethod;
+
+
+    const methods =
+        [
+            ...new Set(
+                paymentStatusState.payments
+                    .map(payment =>
+                        payment.payment_method
+                    )
+                    .filter(Boolean)
+            )
+        ]
+        .sort();
+
+
+    select.innerHTML = `
+
+        <option value="all">
+            Todos os métodos
+        </option>
+
+    `;
+
+
+    methods.forEach(method => {
+
+        const option =
+            document.createElement("option");
+
+        option.value = method;
+
+        option.textContent =
+            formatPaymentMethod(method);
+
+        select.appendChild(option);
+
+    });
+
+
+    if (
+        methods.includes(currentValue)
+    ) {
+
+        select.value =
+            currentValue;
+
+    } else {
+
+        select.value = "all";
+
+        paymentStatusState.paymentMethod =
+            "all";
+
+    }
+
+}
+
+
+/* ============================================================
+   PAYMENT METHOD LABEL
+   ============================================================ */
+
+function formatPaymentMethod(method) {
+
+    const values = {
+
+        cash: "Numerário",
+
+        bank_transfer: "Transferência bancária",
+
+        transfer: "Transferência bancária",
+
+        multicaixa: "Multicaixa",
+
+        multicaixa_express: "Multicaixa Express",
+
+        unitel_money: "Unitel Money",
+
+        paypal: "PayPal",
+
+        stripe: "Stripe",
+
+        card: "Cartão",
+
+        manual: "Manual",
+
+        mobile_money: "Mobile Money"
+
+    };
+
+    return (
+        values[method] ||
+        method ||
+        "Não indicado"
+    );
+
+}
+
+
+/* ============================================================
+   FILTER PAYMENTS
+   ============================================================ */
+
+function applyPaymentStatusFilters() {
+
+    const search =
+        paymentStatusState.search
+            .trim()
+            .toLowerCase();
+
+
+    const status =
+        paymentStatusState.status;
+
+
+    const paymentMethod =
+        paymentStatusState.paymentMethod;
+
+
+    paymentStatusState.filteredPayments =
+        paymentStatusState.payments.filter(
+            payment => {
+
+                const userName =
+                    getPaymentUserName(
+                        payment
+                    )
+                    .toLowerCase();
+
+
+                const username =
+                    (
+                        payment.username ||
+                        ""
+                    )
+                    .toLowerCase();
+
+
+                const reference =
+                    (
+                        payment.transaction_reference ||
+                        ""
+                    )
+                    .toLowerCase();
+
+
+                const provider =
+                    (
+                        payment.provider ||
+                        ""
+                    )
+                    .toLowerCase();
+
+
+                const method =
+                    (
+                        payment.payment_method ||
+                        ""
+                    )
+                    .toLowerCase();
+
+
+                const matchesSearch =
+                    !search ||
+                    userName.includes(search) ||
+                    username.includes(search) ||
+                    reference.includes(search) ||
+                    provider.includes(search) ||
+                    method.includes(search);
+
+
+                const matchesStatus =
+                    status === "all" ||
+                    payment.status === status;
+
+
+                const matchesMethod =
+                    paymentMethod === "all" ||
+                    payment.payment_method ===
+                        paymentMethod;
+
+
+                return (
+                    matchesSearch &&
+                    matchesStatus &&
+                    matchesMethod
+                );
+
+            }
+        );
+
+
+    renderPaymentStatus();
+
+    updatePaymentStatusSummary();
+
+}
+
+
+/* ============================================================
+   SUMMARY
+   ============================================================ */
+
+function updatePaymentStatusSummary() {
+
+    const payments =
+        paymentStatusState.payments;
+
+
+    const total =
+        payments.length;
+
+
+    const paid =
+        payments.filter(
+            payment =>
+                payment.status === "paid"
+        ).length;
+
+
+    const pending =
+        payments.filter(
+            payment =>
+                payment.status === "pending"
+        ).length;
+
+
+    const failed =
+        payments.filter(
+            payment =>
+                payment.status === "failed"
+        ).length;
+
+
+    const totalElement =
+        getPaymentStatusElement(
+            "payment-status-total"
+        );
+
+
+    const paidElement =
+        getPaymentStatusElement(
+            "payment-status-paid"
+        );
+
+
+    const pendingElement =
+        getPaymentStatusElement(
+            "payment-status-pending"
+        );
+
+
+    const failedElement =
+        getPaymentStatusElement(
+            "payment-status-failed"
+        );
+
+
+    if (totalElement) {
+        totalElement.textContent = total;
+    }
+
+
+    if (paidElement) {
+        paidElement.textContent = paid;
+    }
+
+
+    if (pendingElement) {
+        pendingElement.textContent = pending;
+    }
+
+
+    if (failedElement) {
+        failedElement.textContent = failed;
+    }
+
+}
+
+
+/* ============================================================
+   RENDER PAYMENTS
+   ============================================================ */
+
+function renderPaymentStatus() {
+
+    const container =
+        getPaymentStatusElement(
+            "admin-payment-status-results"
+        );
+
+
+    if (!container) {
+        return;
+    }
+
+
+    const payments =
+        paymentStatusState.filteredPayments;
+
+
+    if (!payments.length) {
+
+        container.innerHTML = `
+
+            <div class="admin-empty-state">
+
+                Não foram encontrados pagamentos
+                com estes critérios.
+
+            </div>
+
+        `;
+
+        return;
+
+    }
+
+
+    container.innerHTML =
+        payments
+            .map(
+                payment =>
+                    renderPaymentRow(
+                        payment
+                    )
+            )
+            .join("");
+
+
+    container
+        .querySelectorAll(
+            "[data-payment-action]"
+        )
+        .forEach(button => {
+
+            button.addEventListener(
+                "click",
+                async event => {
+
+                    event.stopPropagation();
+
+
+                    const action =
+                        button.dataset.paymentAction;
+
+
+                    const paymentId =
+                        button.dataset.paymentId;
+
+
+                    if (
+                        action === "paid"
+                    ) {
+
+                        await markPaymentPaid(
+                            paymentId
+                        );
+
+                    }
+
+
+                    if (
+                        action === "failed"
+                    ) {
+
+                        await markPaymentFailed(
+                            paymentId
+                        );
+
+                    }
+
+                }
+            );
+
+        });
+
+}
+
+
+/* ============================================================
+   PAYMENT ROW
+   ============================================================ */
+
+function renderPaymentRow(payment) {
+
+    const statusClass =
+        formatPaymentStatusClass(
+            payment.status
+        );
+
+
+    const statusLabel =
+        formatPaymentStatus(
+            payment.status
+        );
+
+
+    const userName =
+        escapeHTMLLocal(
+            getPaymentUserName(
+                payment
+            )
+        );
+
+
+    const amount =
+        escapeHTMLLocal(
+            formatPaymentAmount(
+                payment.amount,
+                payment.currency
+            )
+        );
+
+
+    const method =
+        escapeHTMLLocal(
+            formatPaymentMethod(
+                payment.payment_method
+            )
+        );
+
+
+    const reference =
+        escapeHTMLLocal(
+            payment.transaction_reference ||
+            "Sem referência"
+        );
+
+
+    const createdAt =
+        escapeHTMLLocal(
+            formatPaymentDate(
+                payment.created_at
+            )
+        );
+
+
+    const dueAt =
+        escapeHTMLLocal(
+            formatPaymentDate(
+                payment.due_at
+            )
+        );
+
+
+    const paidAt =
+        escapeHTMLLocal(
+            formatPaymentDate(
+                payment.paid_at
+            )
+        );
+
+
+    let actions = "";
+
+
+    if (payment.status !== "paid") {
+
+        actions += `
+
+            <button
+                type="button"
+                class="admin-small-button"
+                data-payment-action="paid"
+                data-payment-id="${escapeAttributeLocal(payment.id)}"
+            >
+                Marcar como pago
+            </button>
+
+        `;
+
+    }
+
+
+    if (payment.status !== "failed") {
+
+        actions += `
+
+            <button
+                type="button"
+                class="admin-small-button admin-small-button-danger"
+                data-payment-action="failed"
+                data-payment-id="${escapeAttributeLocal(payment.id)}"
+            >
+                Marcar como falhado
+            </button>
+
+        `;
+
+    }
+
+
+    return `
+
+        <div
+            class="payment-status-row"
+            data-payment-id="${escapeAttributeLocal(payment.id)}"
+        >
+
+            <div class="payment-status-main">
+
+                <div class="payment-status-user">
+
+                    <strong>
+                        ${userName}
+                    </strong>
+
+                    ${
+                        payment.username
+                            ? `
+                                <span>
+                                    @${escapeHTMLLocal(
+                                        payment.username
+                                    )}
+                                </span>
+                              `
+                            : ""
+                    }
+
+                </div>
+
+
+                <div class="payment-status-amount">
+
+                    <strong>
+                        ${amount}
+                    </strong>
+
+                    <span
+                        class="
+                            payment-status-badge
+                            ${statusClass}
+                        "
+                    >
+                        ${statusLabel}
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <div class="payment-status-details">
+
+                <div>
+
+                    <span>
+                        Método
+                    </span>
+
+                    <strong>
+                        ${method}
+                    </strong>
+
+                </div>
+
+
+                <div>
+
+                    <span>
+                        Referência
+                    </span>
+
+                    <strong>
+                        ${reference}
+                    </strong>
+
+                </div>
+
+
+                <div>
+
+                    <span>
+                        Criado
+                    </span>
+
+                    <strong>
+                        ${createdAt}
+                    </strong>
+
+                </div>
+
+
+                <div>
+
+                    <span>
+                        Vencimento
+                    </span>
+
+                    <strong>
+                        ${dueAt}
+                    </strong>
+
+                </div>
+
+
+                <div>
+
+                    <span>
+                        Pago em
+                    </span>
+
+                    <strong>
+                        ${paidAt}
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+            <div class="payment-status-actions">
+
+                ${actions}
+
+            </div>
+
+        </div>
+
+    `;
+
+}
+
+
+/* ============================================================
+   MARK PAYMENT PAID
+   ============================================================ */
+
+async function markPaymentPaid(
+    paymentId
+) {
+
+    if (!paymentId) {
+        return;
+    }
+
+
+    const confirmed =
+        window.confirm(
+            "Marcar este pagamento como pago?"
+        );
+
+
+    if (!confirmed) {
+        return;
+    }
+
+
+    const {
+        error
+    } = await supabase.rpc(
+        "admin_mark_subscription_payment_paid",
+        {
+            target_payment_id:
+                paymentId
+        }
+    );
+
+
+    if (error) {
+
+        console.error(
+            "Erro ao marcar pagamento como pago:",
+            error
+        );
+
+
+        showPaymentStatusMessage(
+            "Não foi possível actualizar o pagamento.",
+            "error"
+        );
+
+        return;
+
+    }
+
+
+    showPaymentStatusMessage(
+        "Pagamento marcado como pago.",
+        "success"
+    );
+
+
+    await loadPaymentStatus();
+
+}
+
+
+/* ============================================================
+   MARK PAYMENT FAILED
+   ============================================================ */
+
+async function markPaymentFailed(
+    paymentId
+) {
+
+    if (!paymentId) {
+        return;
+    }
+
+
+    const confirmed =
+        window.confirm(
+            "Marcar este pagamento como falhado?"
+        );
+
+
+    if (!confirmed) {
+        return;
+    }
+
+
+    const {
+        error
+    } = await supabase.rpc(
+        "admin_mark_subscription_payment_failed",
+        {
+            target_payment_id:
+                paymentId
+        }
+    );
+
+
+    if (error) {
+
+        console.error(
+            "Erro ao marcar pagamento como falhado:",
+            error
+        );
+
+
+        showPaymentStatusMessage(
+            "Não foi possível actualizar o pagamento.",
+            "error"
+        );
+
+        return;
+
+    }
+
+
+    showPaymentStatusMessage(
+        "Pagamento marcado como falhado.",
+        "success"
+    );
+
+
+    await loadPaymentStatus();
+
+}
+
+
+/* ============================================================
+   PAYMENT STATUS MESSAGE
+   ============================================================ */
+
+function showPaymentStatusMessage(
+    message,
+    type
+) {
+
+    const element =
+        getPaymentStatusElement(
+            "payment-status-message"
+        );
+
+
+    if (!element) {
+        return;
+    }
+
+
+    element.textContent =
+        message;
+
+
+    element.style.display =
+        "block";
+
+
+    element.className =
+        "admin-message "
+        + (
+            type === "error"
+                ? "is-error"
+                : "is-success"
+        );
+
+
+    window.setTimeout(
+        () => {
+
+            element.style.display =
+                "none";
+
+        },
+        3500
+    );
+
+}
+
+
+/* ============================================================
+   PAYMENT STATUS EVENTS
+   ============================================================ */
+
+function bindPaymentStatusEvents() {
+
+    if (
+        paymentStatusState.initialized
+    ) {
+        return;
+    }
+
+
+    const search =
+        getPaymentStatusElement(
+            "payment-status-search"
+        );
+
+
+    const status =
+        getPaymentStatusElement(
+            "payment-status-filter"
+        );
+
+
+    const method =
+        getPaymentStatusElement(
+            "payment-method-filter"
+        );
+
+
+    const refresh =
+        getPaymentStatusElement(
+            "refresh-payment-status-button"
+        );
+
+
+    if (search) {
+
+        search.addEventListener(
+            "input",
+            event => {
+
+                paymentStatusState.search =
+                    event.target.value;
+
+                applyPaymentStatusFilters();
+
+            }
+        );
+
+    }
+
+
+    if (status) {
+
+        status.addEventListener(
+            "change",
+            event => {
+
+                paymentStatusState.status =
+                    event.target.value;
+
+                applyPaymentStatusFilters();
+
+            }
+        );
+
+    }
+
+
+    if (method) {
+
+        method.addEventListener(
+            "change",
+            event => {
+
+                paymentStatusState.paymentMethod =
+                    event.target.value;
+
+                applyPaymentStatusFilters();
+
+            }
+        );
+
+    }
+
+
+    if (refresh) {
+
+        refresh.addEventListener(
+            "click",
+            async () => {
+
+                await loadPaymentStatus();
+
+            }
+        );
+
+    }
+
+
+    paymentStatusState.initialized =
+        true;
+
+}
+
+
+/* ============================================================
+   DOM READY
+   ============================================================ */
+
+document.addEventListener(
+    "DOMContentLoaded",
+    () => {
+
+        initAdminPrivateMessages();
+
+        bindPaymentSettingsEvents();
+
+        bindPaymentStatusEvents();
+
+    }
+);
+
+
+/* ============================================================
+   PUBLIC ADMIN APIs
+   ============================================================ */
+
+window.adminPrivateMessages = {
+
+    load:
+        loadAdminPrivateMessages,
+
+    openNew:
+        openNewPrivateMessageModal
+
+};
+
+
+window.adminPaymentSettings = {
+
+    load:
+        loadPaymentSettings
+
+};
+
+
+window.adminPaymentStatus = {
+
+    load:
+        loadPaymentStatus
+
+};
+
+   ();
