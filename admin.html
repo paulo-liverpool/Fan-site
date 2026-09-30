@@ -226,12 +226,410 @@
         Estado dos Pagamentos
     </span>
 </button>
+<button
+    class="admin-nav-item"
+    data-section="account-management"
+>
+    <span class="admin-nav-icon">
+        ◉
+    </span>
 
+    <span>
+        Contas & Subscrições
+    </span>
+</button>
 
             </nav>
 
 
+<section
+    class="admin-section"
+    id="section-account-management"
+>
 
+    <div class="admin-section-header">
+
+        <div>
+
+            <div class="admin-eyebrow">
+                ADMINISTRAÇÃO
+            </div>
+
+            <h1>
+                Contas & Subscrições
+            </h1>
+
+            <p>
+                Gere períodos de tolerância, isenções,
+                pagamentos manuais e suspensões.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- ======================================================
+         USER SEARCH
+         ====================================================== -->
+
+    <div class="admin-panel">
+
+        <div class="payment-management-search">
+
+            <input
+                type="search"
+                id="account-management-user-search"
+                placeholder="Pesquisar utilizador..."
+                autocomplete="off"
+            >
+
+            <div
+                id="account-management-user-results"
+                class="account-management-user-results"
+            ></div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ======================================================
+         SELECTED USER
+         ====================================================== -->
+
+    <div
+        id="account-management-selected-user"
+        class="admin-panel account-management-selected"
+        style="display:none;"
+    >
+
+        <div class="account-management-user-header">
+
+            <div>
+
+                <div class="admin-eyebrow">
+                    UTILIZADOR
+                </div>
+
+                <h2
+                    id="account-management-user-name"
+                >
+                    —
+                </h2>
+
+                <span
+                    id="account-management-user-id"
+                >
+                    —
+                </span>
+
+            </div>
+
+            <div
+                id="account-management-user-status"
+                class="payment-status-badge"
+            >
+                —
+            </div>
+
+        </div>
+
+
+        <div class="account-management-grid">
+
+
+            <!-- ==================================================
+                 GRACE PERIOD
+                 ================================================== -->
+
+            <div class="account-management-card">
+
+                <div class="account-management-card-title">
+                    Período de tolerância
+                </div>
+
+                <div
+                    id="account-grace-current"
+                    class="account-management-current"
+                >
+                    Nenhum período activo.
+                </div>
+
+                <input
+                    type="number"
+                    id="account-grace-days"
+                    min="0"
+                    step="1"
+                    placeholder="Dias"
+                >
+
+                <input
+                    type="text"
+                    id="account-grace-reason"
+                    placeholder="Motivo"
+                >
+
+                <div class="account-management-actions">
+
+                    <button
+                        type="button"
+                        class="admin-primary-button"
+                        id="grant-grace-button"
+                    >
+                        Aplicar tolerância
+                    </button>
+
+                    <button
+                        type="button"
+                        class="admin-small-button"
+                        id="remove-grace-button"
+                    >
+                        Remover
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <!-- ==================================================
+                 WAIVER
+                 ================================================== -->
+
+            <div class="account-management-card">
+
+                <div class="account-management-card-title">
+                    Isenção de pagamento
+                </div>
+
+                <div
+                    id="account-waiver-current"
+                    class="account-management-current"
+                >
+                    Nenhuma isenção activa.
+                </div>
+
+                <input
+                    type="number"
+                    id="account-waiver-days"
+                    min="0"
+                    step="1"
+                    placeholder="Dias"
+                >
+
+                <input
+                    type="text"
+                    id="account-waiver-reason"
+                    placeholder="Motivo da isenção"
+                >
+
+                <div class="account-management-actions">
+
+                    <button
+                        type="button"
+                        class="admin-primary-button"
+                        id="create-waiver-button"
+                    >
+                        Criar isenção
+                    </button>
+
+                    <button
+                        type="button"
+                        class="admin-small-button"
+                        id="remove-waiver-button"
+                    >
+                        Remover
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <!-- ==================================================
+                 MANUAL PAYMENT
+                 ================================================== -->
+
+            <div class="account-management-card">
+
+                <div class="account-management-card-title">
+                    Pagamento manual
+                </div>
+
+                <input
+                    type="number"
+                    id="manual-payment-amount"
+                    min="0.01"
+                    step="0.01"
+                    placeholder="Valor"
+                >
+
+                <select
+                    id="manual-payment-method"
+                >
+
+                    <option value="cash">
+                        Numerário
+                    </option>
+
+                    <option value="bank_transfer">
+                        Transferência bancária
+                    </option>
+
+                    <option value="multicaixa">
+                        Multicaixa
+                    </option>
+
+                    <option value="multicaixa_express">
+                        Multicaixa Express
+                    </option>
+
+                    <option value="unitel_money">
+                        Unitel Money
+                    </option>
+
+                    <option value="card">
+                        Cartão
+                    </option>
+
+                    <option value="other">
+                        Outro
+                    </option>
+
+                </select>
+
+                <input
+                    type="text"
+                    id="manual-payment-reference"
+                    placeholder="Referência da transacção"
+                >
+
+                <input
+                    type="datetime-local"
+                    id="manual-payment-date"
+                >
+
+                <textarea
+                    id="manual-payment-note"
+                    placeholder="Nota administrativa"
+                    rows="3"
+                ></textarea>
+
+                <button
+                    type="button"
+                    class="admin-primary-button"
+                    id="create-manual-payment-button"
+                >
+                    Registar pagamento
+                </button>
+
+            </div>
+
+
+            <!-- ==================================================
+                 SUSPENSION
+                 ================================================== -->
+
+            <div class="account-management-card">
+
+                <div class="account-management-card-title">
+                    Suspensão
+                </div>
+
+                <div
+                    id="account-suspension-current"
+                    class="account-management-current"
+                >
+                    Conta activa.
+                </div>
+
+                <input
+                    type="number"
+                    id="account-suspension-days"
+                    min="0"
+                    step="1"
+                    placeholder="Dias — 0 = permanente"
+                >
+
+                <input
+                    type="text"
+                    id="account-suspension-reason"
+                    placeholder="Motivo da suspensão"
+                >
+
+                <div class="account-management-actions">
+
+                    <button
+                        type="button"
+                        class="admin-small-button admin-small-button-danger"
+                        id="suspend-account-button"
+                    >
+                        Suspender conta
+                    </button>
+
+                    <button
+                        type="button"
+                        class="admin-primary-button"
+                        id="reactivate-account-button"
+                    >
+                        Reactivar conta
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ======================================================
+         AUDIT LOG
+         ====================================================== -->
+
+    <div class="admin-panel">
+
+        <div class="admin-section-header">
+
+            <div>
+
+                <div class="admin-eyebrow">
+                    SEGURANÇA
+                </div>
+
+                <h2>
+                    Registo de actividade
+                </h2>
+
+            </div>
+
+            <button
+                type="button"
+                class="admin-secondary-button"
+                id="refresh-audit-log-button"
+            >
+                Actualizar
+            </button>
+
+        </div>
+
+
+        <div
+            id="admin-audit-log-results"
+            class="admin-audit-log"
+        >
+
+            <div class="admin-empty-state">
+                A carregar registo...
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
             <!-- ==================================================
                  SAIR
                  ================================================== -->
