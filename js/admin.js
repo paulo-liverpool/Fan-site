@@ -6454,6 +6454,28 @@ const statusLabel =
                 >
                     Alterar função
                 </button>
+                <button
+    type="button"
+    class="admin-user-action ${
+        isActive
+            ? "danger"
+            : "success"
+    }"
+    data-user-action="${
+        isActive
+            ? "suspend"
+            : "reactivate"
+    }"
+    data-user-id="${escapeAttribute(
+        user.id
+    )}"
+>
+    ${
+        isActive
+            ? "Suspender"
+            : "Reactivar"
+    }
+</button>
 
             </div>
 
@@ -6558,14 +6580,134 @@ function bindUserManagementActions() {
                             );
 
                         }
+                    if (
+    action ===
+    "suspend"
+) {
 
+    await changeUserStatus(
+        id,
+        false
+    );
+
+    return;
+}
+
+
+if (
+    action ===
+    "reactivate"
+) {
+
+    await changeUserStatus(
+        id,
+        true
+    );
+
+}
+                        
                     }
                 );
             }
         );
 }
 
+// ============================================================
+// CHANGE USER STATUS
+// ============================================================
 
+async function changeUserStatus(
+    id,
+    isActive
+) {
+
+    const user =
+        adminUsers.find(
+            item =>
+                item.id === id
+        );
+
+
+    if (!user) return;
+
+
+    const name =
+        user.display_name ||
+        user.username ||
+        "este utilizador";
+
+
+    if (
+        !isActive &&
+        user.id ===
+        currentAdmin?.user?.id
+    ) {
+
+        alert(
+            "Não podes suspender a tua própria conta."
+        );
+
+        return;
+    }
+
+
+    const actionText =
+        isActive
+            ? "reactivar"
+            : "suspender";
+
+
+    const confirmed =
+        confirm(
+            `Tens a certeza que queres ${actionText} a conta de "${name}"?`
+        );
+
+
+    if (!confirmed) {
+        return;
+    }
+
+
+    try {
+
+        const {
+            error
+        } = await supabaseClient
+            .from("profiles")
+            .update({
+                is_active:
+                    isActive
+            })
+            .eq(
+                "id",
+                id
+            );
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        await loadUsersManagement();
+
+        await loadDashboardCounts();
+
+
+    } catch (error) {
+
+        console.error(
+            "Erro ao alterar estado do utilizador:",
+            error
+        );
+
+
+        alert(
+            error.message ||
+            "Não foi possível alterar o estado da conta."
+        );
+    }
+}
 // ============================================================
 // USER DETAILS
 // ============================================================
