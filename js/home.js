@@ -325,25 +325,58 @@ async function loadHome() {
             return;
         }
 
-        const {
-            data: profile,
-            error: profileError
-        } = await client
-            .from("profiles")
-            .select("supported_team_id")
-            .eq("id", user.id)
-            .maybeSingle();
+     const {
+    data: profile,
+    error: profileError
+} = await client
+    .from("profiles")
+    .select(`
+        supported_team_id,
+        is_active
+    `)
+    .eq("id", user.id)
+    .maybeSingle();
 
-        if (profileError) {
-            console.error("BR: erro ao carregar perfil:", profileError);
-            return;
-        }
+if (profileError) {
+    console.error(
+        "BR: erro ao carregar perfil:",
+        profileError
+    );
+    return;
+}
 
-        if (!profile || !profile.supported_team_id) {
-            window.location.href = "choose-team.html";
-            return;
-        }
+if (!profile) {
+    console.error(
+        "BR: perfil do utilizador não encontrado."
+    );
 
+    await client.auth.signOut();
+
+    window.location.href = "login.html";
+    return;
+}
+
+/*
+ * ACCOUNT STATUS
+ *
+ * A suspended account must not be able to
+ * continue using the homepage even when an
+ * existing Supabase session is still active.
+ */
+if (profile.is_active === false) {
+
+    await client.auth.signOut();
+
+    window.location.href =
+        "login.html?suspended=1";
+
+    return;
+}
+
+if (!profile.supported_team_id) {
+    window.location.href = "choose-team.html";
+    return;
+}
         const {
             data: team,
             error: teamError
